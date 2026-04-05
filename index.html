@@ -43,17 +43,22 @@
      3. WA_NUMBER   → Deine WhatsApp Nummer (nur Zahlen, z.B. 4917612345678)
      4. INSTA_HANDLE → Dein Instagram Handle (ohne @)
      ============================================================ -->
+<!-- Zahlungs-Konfiguration wird aus config.js geladen (separate Datei) -->
+<script src="config.js"></script>
 <script>
-  const CONFIG = {
-    SUMUP_KEY:    'sup_sk_63ioHLaCEUTnbWKNJq02PW5o7CtQzL821',
-    SUMUP_MERCHANT: 'MCENKTPS',
-    PAYPAL_ID:    'BAA0M7NjLoaJgDw-PcmiLDNoXN-5OcMuDLZ4HLp5rDmkrRDM8M3zqtpv4HrEtsPmiPdXUXNYz5xWDjYYAc',
-    WA_NUMBER:    '4917631242035',
-    INSTA_HANDLE: 'kronenwelt',
-    INSTA_URL:    'https://www.instagram.com/kronenwelt',
-    EMAIL_GALERIE:'m.kronenwelt@gmail.com',
-    SHOP_EMAIL:   'm.kronenwelt@gmail.com'
-  };
+  // Fallback falls config.js nicht geladen wurde
+  if (typeof CONFIG === 'undefined') {
+    window.CONFIG = {
+      SUMUP_KEY:      '',
+      SUMUP_MERCHANT: '',
+      PAYPAL_ID:      '',
+      WA_NUMBER:      '4917631242035',
+      INSTA_HANDLE:   'kronenwelt',
+      INSTA_URL:      'https://www.instagram.com/kronenwelt',
+      EMAIL_GALERIE:  'm.kronenwelt@gmail.com',
+      SHOP_EMAIL:     'm.kronenwelt@gmail.com'
+    };
+  }
 </script>
 
 <style>
@@ -488,7 +493,7 @@ button { cursor: pointer; font-family: inherit; }
   display: flex; align-items: center; justify-content: center;
   flex-direction: column; gap: 4px; overflow: hidden;
 }
-/* Foto: <img src="fotos/mila-portrait.jpg"> */
+/* Foto: <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/mila-hero.png"> */
 .story-portrait-lbl { font-size: 10px; color: var(--brown2); letter-spacing: 2px; }
 .s-eyebrow { font-size: 10px; letter-spacing: 4px; color: var(--brown3); margin-bottom: 3px; }
 .s-name { font-family: 'Playfair Display', serif; font-size: 36px; color: var(--brown); font-style: italic; margin-bottom: 14px; }
@@ -1018,7 +1023,7 @@ button { cursor: pointer; font-family: inherit; }
   </div>
   <div class="hero-right">
     <div class="hero-photo">
-      <img src="fotos/mila-hero.jpg" alt="Mila mit Krone" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
+      <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/mila-hero.png" alt="Mila mit Krone" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
     </div>
   </div>
 </section>
@@ -1043,43 +1048,43 @@ button { cursor: pointer; font-family: inherit; }
 
     <div class="prod-card" onclick="selectVariant('Einfarbig');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img p-mint">
-        <img src="fotos/geburtstagskrone.jpg" alt="Einfarbig" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/uni-mint.jpg" alt="Einfarbig" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
       </div>
       <div class="prod-body">
         <div class="prod-name">Einfarbig</div>
         <div class="prod-price">ab 12,00 €</div>
+        <div class="prod-badge">★ Bestseller</div>
       </div>
     </div>
 
     <div class="prod-card" onclick="selectVariant('Party');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img p-pink">
-        <img src="fotos/party-krone.jpg" alt="Party" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/party-krone.jpg" alt="Party" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
       </div>
       <div class="prod-body">
         <div class="prod-name">Party</div>
         <div class="prod-price">ab 12,00 €</div>
-  	<div class="prod-badge">★ Bestseller</div>
-      </div>
-    </div>
-
-    <div class="prod-card" onclick="selectVariant('Glitzer');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
-      <div class="prod-img p-glitter">
-        <img src="fotos/glitzer-krone.jpg" alt="Glitzer" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
-      </div>
-      <div class="prod-body">
-        <div class="prod-name">Glitzer</div>
-        <div class="prod-price">ab 14,00 €</div>
       </div>
     </div>
 
     <div class="prod-card" onclick="selectVariant('Edel & Wild');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img p-royal">
-        <img src="fotos/royal-krone.jpg" alt="Edel &amp; Wild" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/royal-krone.jpg" alt="Edel &amp; Wild" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
       </div>
       <div class="prod-body">
         <div class="prod-name">Edel &amp; Wild</div>
         <div class="prod-price">ab 14,00 €</div>
         <div class="prod-badge" style="background:#22202c;color:#d4b840;border-color:#d4b840">Premium</div>
+      </div>
+    </div>
+
+    <div class="prod-card" onclick="selectVariant('Glitzer');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+      <div class="prod-img p-glitter">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/glitzer-krone.jpg" alt="Glitzer" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
+      </div>
+      <div class="prod-body">
+        <div class="prod-name">Glitzer</div>
+        <div class="prod-price">ab 14,00 €</div>
       </div>
     </div>
 
@@ -1256,16 +1261,14 @@ button { cursor: pointer; font-family: inherit; }
 
   <div class="kg-grid">
     <div class="kg-card kg-card-feat">
-      <div class="kg-img kg-img-lg" style="background:#e4f2f0">
+      <div class="kg-img kg-img-lg" style="background:#e8e4dc">
         <div class="kg-badge kg-badge-gold">★ Foto des Monats</div>
-        <img src="fotos/galerie/mila-geburtstag.jpg" alt="Mila Geburtstagskrone" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Mila – die Königin')">
-        <svg width="58" height="48" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="16" ry="11" fill="#a0c8b8"/><ellipse cx="15" cy="14" rx="6" ry="8" fill="#3d2e22"/><ellipse cx="29" cy="14" rx="6" ry="8" fill="#3d2e22"/><ellipse cx="22" cy="28" rx="9" ry="7" fill="#f5ede4"/><circle cx="18" cy="24" r="2.5" fill="#1a1010"/><circle cx="26" cy="24" r="2.5" fill="#1a1010"/><polygon points="22,6 26,12 30,9 28,18 16,18 14,9 18,12" fill="none" stroke="#3d7878" stroke-width="1.5" stroke-linejoin="round"/></svg>
-        <span style="font-size:10px;color:#6b9090;letter-spacing:1px">Foto hier</span>
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/galerie/mila-geburtstag.jpg" alt="Mila" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Mila – die Königin')">
       </div>
       <div class="kg-body">
         <div class="kg-dog-name">Mila – die Königin</div>
-        <div class="kg-meta">Border Collie · 6 Jahre</div>
-        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#4a9090"></span>Geburtstagskrone · Mint</div>
+        <div class="kg-meta">Border Collie</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#4a9090"></span>Einfarbig · Mint</div>
         <div class="kg-like-row">
           <button class="kg-like-btn" onclick="toggleLike(this)">
             <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
@@ -1276,15 +1279,13 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
     <div class="kg-card">
-      <div class="kg-img kg-img-lg" style="background:#f7eaed">
-        <img src="fotos/galerie/bonie.jpg" alt="Princess Bonnie" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Princess Bonnie')">
-        <svg width="52" height="44" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="15" ry="10" fill="#d0a0a8"/><ellipse cx="15" cy="14" rx="5.5" ry="7.5" fill="#b07880"/><ellipse cx="29" cy="14" rx="5.5" ry="7.5" fill="#b07880"/><ellipse cx="22" cy="28" rx="8" ry="6" fill="#fff0f0"/><circle cx="18" cy="24" r="2.2" fill="#1a1010"/><circle cx="26" cy="24" r="2.2" fill="#1a1010"/><polygon points="22,7 26,13 30,10 28,19 16,19 14,10 18,13" fill="none" stroke="#a05070" stroke-width="1.5" stroke-linejoin="round"/></svg>
-        <span style="font-size:10px;color:#a07080;letter-spacing:1px">Foto hier</span>
+      <div class="kg-img kg-img-lg" style="background:#e8e4dc">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/galerie/luna.jpg" alt="Luna" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Luna')">
       </div>
       <div class="kg-body">
-        <div class="kg-dog-name">Princess Bonnie</div>
-        <div class="kg-meta">Malteser · 3 Jahre</div>
-        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#c07090"></span>Party-Krone · Rosa</div>
+        <div class="kg-dog-name">Luna</div>
+        <div class="kg-meta">Golden Retriever</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#4a9090"></span>Einfarbig · Mint</div>
         <div class="kg-like-row">
           <button class="kg-like-btn" onclick="toggleLike(this)">
             <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
@@ -1295,16 +1296,14 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
     <div class="kg-card">
-      <div class="kg-img kg-img-lg" style="background:#f0ebf7">
+      <div class="kg-img kg-img-lg" style="background:#e8e4dc">
         <div class="kg-badge kg-badge-new">Neu</div>
-        <img src="fotos/galerie/bruno.jpg" alt="Bruno" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Bruno')">
-        <svg width="52" height="44" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="15" ry="10" fill="#b898c8"/><ellipse cx="15" cy="14" rx="5.5" ry="7.5" fill="#806090"/><ellipse cx="29" cy="14" rx="5.5" ry="7.5" fill="#806090"/><ellipse cx="22" cy="28" rx="8" ry="6" fill="#f8f0ff"/><circle cx="18" cy="24" r="2.2" fill="#1a1010"/><circle cx="26" cy="24" r="2.2" fill="#1a1010"/><polygon points="22,7 26,13 30,10 28,19 16,19 14,10 18,13" fill="none" stroke="#7868a0" stroke-width="1.5" stroke-linejoin="round"/></svg>
-        <span style="font-size:10px;color:#7060a0;letter-spacing:1px">Foto hier</span>
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/galerie/cara.jpg" alt="Cara" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Cara')">
       </div>
       <div class="kg-body">
-        <div class="kg-dog-name">Bruno</div>
-        <div class="kg-meta">Zwergpudel · 2 Jahre</div>
-        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#9080b8"></span>Glitzer-Krone · Flieder</div>
+        <div class="kg-dog-name">Cara</div>
+        <div class="kg-meta">Zwergspitz</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#c07090"></span>Party · Rosa mit Punkten</div>
         <div class="kg-like-row">
           <button class="kg-like-btn" onclick="toggleLike(this)">
             <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
@@ -1318,14 +1317,13 @@ button { cursor: pointer; font-family: inherit; }
 
   <div class="kg-grid-bot">
     <div class="kg-card">
-      <div class="kg-img kg-img-sm" style="background:#e8f0f8">
-        <img src="fotos/galerie/cara.jpg" alt="cara" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Cara')">
-        <svg width="44" height="36" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="14" ry="10" fill="#a0b8d0"/><ellipse cx="15" cy="15" rx="5" ry="7" fill="#506880"/><ellipse cx="29" cy="15" rx="5" ry="7" fill="#506880"/><ellipse cx="22" cy="28" rx="8" ry="6" fill="#f0f5ff"/><circle cx="18" cy="24" r="2" fill="#1a1010"/><circle cx="26" cy="24" r="2" fill="#1a1010"/></svg>
+      <div class="kg-img kg-img-sm" style="background:#e8e4dc">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/galerie/eddy.jpg" alt="Eddy" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Eddy')">
       </div>
       <div class="kg-body">
-        <div class="kg-dog-name">Cara</div>
-        <div class="kg-meta">Golden Retriever</div>
-        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#6090b0"></span>Party · Hellblau</div>
+        <div class="kg-dog-name">Eddy</div>
+        <div class="kg-meta">Dackel</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#4a9090"></span>Einfarbig · Mint</div>
         <div class="kg-like-row">
           <button class="kg-like-btn" onclick="toggleLike(this)">
             <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
@@ -1336,14 +1334,13 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
     <div class="kg-card">
-      <div class="kg-img kg-img-sm" style="background:#22202c">
-        <img src="fotos/galerie/royal-boy.jpg" alt="Royal Boy" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Royal Bruno')">
-        <svg width="44" height="36" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="14" ry="10" fill="#281e2c"/><ellipse cx="15" cy="15" rx="5" ry="7" fill="#180e18"/><ellipse cx="29" cy="15" rx="5" ry="7" fill="#180e18"/><ellipse cx="22" cy="28" rx="8" ry="6" fill="#e8d8c8"/><circle cx="18" cy="24" r="2" fill="#1a1010"/><circle cx="26" cy="24" r="2" fill="#1a1010"/></svg>
+      <div class="kg-img kg-img-sm" style="background:#e8e4dc">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/galerie/bruno.jpg" alt="Bruno" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Bruno')">
       </div>
       <div class="kg-body">
-        <div class="kg-dog-name">Royal Boy</div>
-        <div class="kg-meta">Shar Pei</div>
-        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#d4b840"></span>Royal · Schwarz/Gold</div>
+        <div class="kg-dog-name">Bruno</div>
+        <div class="kg-meta">Golden Retriever</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#4a9090"></span>Einfarbig · Mint</div>
         <div class="kg-like-row">
           <button class="kg-like-btn" onclick="toggleLike(this)">
             <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
@@ -1354,14 +1351,13 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
     <div class="kg-card">
-      <div class="kg-img kg-img-sm" style="background:#f5ede4">
-        <img src="fotos/galerie/eddy.jpg" alt="Eddy" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Eddy')">
-        <svg width="44" height="36" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="14" ry="10" fill="#c8a888"/><ellipse cx="15" cy="15" rx="5" ry="7" fill="#906848"/><ellipse cx="29" cy="15" rx="5" ry="7" fill="#906848"/><ellipse cx="22" cy="28" rx="8" ry="6" fill="#fff8f0"/><circle cx="18" cy="24" r="2" fill="#1a1010"/><circle cx="26" cy="24" r="2" fill="#1a1010"/></svg>
+      <div class="kg-img kg-img-sm" style="background:#e8e4dc">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/galerie/bonnie.jpg" alt="Bonnie" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Bonnie')">
       </div>
       <div class="kg-body">
-        <div class="kg-dog-name">Eddy</div>
+        <div class="kg-dog-name">Bonnie</div>
         <div class="kg-meta">Dackel</div>
-        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#4a9090"></span>Geburtstag · Mint</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#c07090"></span>Party · Rosa mit Punkten</div>
         <div class="kg-like-row">
           <button class="kg-like-btn" onclick="toggleLike(this)">
             <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
@@ -1395,7 +1391,7 @@ button { cursor: pointer; font-family: inherit; }
 <section class="section section-brown2" id="about">
   <div class="story-wrap">
     <div class="story-portrait">
-      <img src="fotos/mila-portrait.jpg" alt="Mila" style="width:100%;height:100%;object-fit:cover">
+      <img src="https://res.cloudinary.com/dw6amyijc/image/upload/fotos/mila-hero.png" alt="Mila" style="width:100%;height:100%;object-fit:cover">
       <svg width="80" height="68" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="16" ry="12" fill="#c8b8a8"/><ellipse cx="15" cy="14" rx="6" ry="8" fill="#3d2e22"/><ellipse cx="29" cy="14" rx="6" ry="8" fill="#3d2e22"/><ellipse cx="22" cy="28" rx="9" ry="7" fill="#f5ede4"/><circle cx="18" cy="24" r="2.5" fill="#1a1010"/><circle cx="26" cy="24" r="2.5" fill="#1a1010"/><ellipse cx="22" cy="30" rx="3.5" ry="2" fill="#c87880"/></svg>
       <div class="story-portrait-lbl">MILA</div>
     </div>
@@ -1915,43 +1911,45 @@ const VARIANTEN = {
    Passe die Dateinamen an deine tatsächlichen Fotos an.
    Fehlende Einträge fallen auf _default zurück.
    ---------------------------------------------------- */
+const CL = 'https://res.cloudinary.com/dw6amyijc/image/upload/fotos/';
+
 const PRODUCT_IMAGES = {
   'Party': {
-    '_default':          'fotos/party-krone.jpg',
-    'Rosa mit Punkten':  'fotos/party-rosa-punkte.jpg',
-    'Grau mit Punkten':  'fotos/party-grau-punkte.jpg',
-    'Mint mit Punkten':  'fotos/party-mint-punkte.jpg',
-    'Lila mit Punkten':  'fotos/party-lila-punkte.jpg',
-    'Petrol mit Punkten':'fotos/party-petrol-punkte.jpg',
-    'Konfetti':          'fotos/party-konfetti.jpg',
-    'Weiss/Blau/Grün':   'fotos/party-weiss-blau-gruen.jpg',
+    '_default':          CL + 'party-krone.jpg',
+    'Rosa mit Punkten':  CL + 'party-rosa.jpg',
+    'Grau mit Punkten':  CL + 'party-grau.jpg',
+    'Mint mit Punkten':  CL + 'party-mint.jpg',
+    'Lila mit Punkten':  CL + 'party-lilia.jpg',
+    'Petrol mit Punkten':CL + 'party-petrol.jpg',
+    'Konfetti':          CL + 'party-konfetti.jpg',
+    'Weiss/Blau/Grün':   CL + 'party-weiss-blau-gr%C3%BCn.jpg',
   },
   'Einfarbig': {
-    '_default': 'fotos/geburtstagskrone.jpg',
-    'Berry':    'fotos/einfarbig-berry.jpg',
-    'Blau':     'fotos/einfarbig-blau.jpg',
-    'Petrol':   'fotos/einfarbig-petrol.jpg',
-    'Grün':     'fotos/einfarbig-gruen.jpg',
-    'Mint':     'fotos/einfarbig-mint.jpg',
-    'Orange':   'fotos/einfarbig-orange.jpg',
+    '_default': CL + 'royal-krone.jpg',
+    'Berry':    CL + 'uni-berry.jpg',
+    'Blau':     CL + 'uni-blau.jpg',
+    'Petrol':   CL + 'uni-petrol.jpg',
+    'Grün':     CL + 'uni-gr%C3%BCn.jpg',
+    'Mint':     CL + 'uni-mint.jpg',
+    'Orange':   CL + 'uni-orange.jpg',
   },
   'Glitzer': {
-    '_default': 'fotos/glitzer-krone.jpg',
-    'Blau':     'fotos/glitzer-blau.jpg',
-    'Türkis':   'fotos/glitzer-tuerkis.jpg',
-    'Rosa':     'fotos/glitzer-rosa.jpg',
-    'Pink':     'fotos/glitzer-pink.jpg',
-    'Silber':   'fotos/glitzer-silber.jpg',
-    'Weiss':    'fotos/glitzer-weiss.jpg',
-    'Gold':     'fotos/glitzer-gold.jpg',
+    '_default': CL + 'glitzer-krone.jpg',
+    'Blau':     CL + 'glitzer-blau.jpg',
+    'Türkis':   CL + 'glitzer-krone.jpg',
+    'Rosa':     CL + 'glitzer-pink.jpg',
+    'Pink':     CL + 'glitzer-pink.jpg',
+    'Silber':   CL + 'glitzer-silber.jpg',
+    'Weiss':    CL + 'glitzer-wei%C3%9F.jpg',
+    'Gold':     CL + 'glitzer-gold.jpg',
   },
   'Edel & Wild': {
-    '_default':   'fotos/royal-krone.jpg',
-    'Gold':       'fotos/edel-gold.jpg',
-    'Schwarz':    'fotos/edel-schwarz.jpg',
-    'Leo Braun':  'fotos/edel-leo-braun.jpg',
-    'Leo Weiss':  'fotos/edel-leo-weiss.jpg',
-    'Leopard':    'fotos/edel-leopard.jpg',
+    '_default':   CL + 'royal-krone.jpg',
+    'Gold':       CL + 'edel-gold.jpg',
+    'Schwarz':    CL + 'edel-schwarz.jpg',
+    'Leo Braun':  CL + 'wild-leo.jpg',
+    'Leo Weiss':  CL + 'wild-leo-weiss.jpg',
+    'Leopard':    CL + 'wild-leopard.jpg',
   }
 };
 
