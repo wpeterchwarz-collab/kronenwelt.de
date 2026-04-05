@@ -1,0 +1,1798 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<!-- Version: 20260328-212024 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Mila's Kronenwelt – Personalisierte handgemachte Hundekronen für Geburtstage und besondere Momente. Jetzt bestellen auf kronenwelt.de">
+<title>Mila's Kronenwelt v2120 – Personalisierte Hundekronen</title>
+<!-- Fonts werden LOKAL geladen – kein Google-Cookie -->
+<style>
+/* Playfair Display – lokal via Google Fonts CDN mit data-URI Alternative */
+/* HINWEIS: Lade die Fonts einmalig herunter von:
+   https://fonts.google.com/specimen/Playfair+Display
+   https://fonts.google.com/specimen/Lato
+   Speichere sie im Ordner /fonts/ neben der HTML-Datei
+   und ersetze die @font-face src unten mit den lokalen Pfaden.
+   Solange die Fonts noch nicht lokal sind, nutzen wir Georgia & system-sans als Fallback. */
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Georgia'), local('Times New Roman');
+  /* Später ersetzen: src: url('fonts/PlayfairDisplay-Italic.woff2') format('woff2'); */
+}
+@font-face {
+  font-family: 'Lato';
+  font-weight: 300 700;
+  font-display: swap;
+  src: local('system-ui'), local('Helvetica Neue');
+  /* Später ersetzen: src: url('fonts/Lato-Regular.woff2') format('woff2'); */
+}
+</style>
+
+<!-- ============================================================
+     ZAHLUNGS-KONFIGURATION
+     Ersetze die Platzhalter mit deinen echten Keys:
+     1. SUMUP_KEY   → Dein SumUp API Key aus dem SumUp Dashboard
+     2. PAYPAL_ID   → Deine PayPal Client ID aus developer.paypal.com
+     3. WA_NUMBER   → Deine WhatsApp Nummer (nur Zahlen, z.B. 4917612345678)
+     4. INSTA_HANDLE → Dein Instagram Handle (ohne @)
+     ============================================================ -->
+<script>
+  const CONFIG = {
+    SUMUP_KEY:    'DEIN_SUMUP_API_KEY',
+    SUMUP_MERCHANT: 'MCENKTPS',
+    PAYPAL_ID:    'DEINE_PAYPAL_CLIENT_ID',
+    WA_NUMBER:    '4917631242035',
+    INSTA_HANDLE: 'kronenwelt',
+    INSTA_URL:    'https://www.instagram.com/kronenwelt',
+    EMAIL_GALERIE:'m.kronenwelt@gmail.com',
+    SHOP_EMAIL:   'm.kronenwelt@gmail.com'
+  };
+</script>
+
+<style>
+/* ============================================================
+   CSS VARIABLEN & RESET
+   ============================================================ */
+:root {
+  --beige:    #f5ede4;
+  --beige2:   #e8ddd4;
+  --beige3:   #faf5f0;
+  --brown:    #3d2e22;
+  --brown2:   #6b5548;
+  --brown3:   #8a7060;
+  --teal:     #4a9090;
+  --teal2:    #3d7878;
+  --gold:     #d4b840;
+  --white:    #ffffff;
+  --border:   #e8ddd4;
+  --border2:  #e0d4c8;
+  --radius:   14px;
+  --shadow:   0 2px 16px rgba(61,46,34,0.08);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Lato', sans-serif;
+  background: var(--beige);
+  color: var(--brown);
+  font-size: 16px;
+  line-height: 1.6;
+}
+img { max-width: 100%; display: block; object-fit: cover; }
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; font-family: inherit; }
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+.nav {
+  background: var(--beige3);
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo-wrap { display: flex; align-items: center; gap: 12px; }
+.logo-mark { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.logo-bommels { display: flex; gap: 6px; align-items: flex-end; margin-bottom: 1px; }
+.bml { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+.bml-m { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); }
+.logo-shape { width: 32px; height: 20px; }
+.logo-div { width: 1px; height: 34px; background: var(--border2); }
+.logo-name { font-family: 'Playfair Display', serif; font-size: 19px; color: var(--brown); font-style: italic; line-height: 1.1; }
+.logo-sub { font-size: 9px; letter-spacing: 3px; color: var(--brown3); margin-top: 1px; }
+.nav-links { display: flex; gap: 24px; align-items: center; }
+.nav-links a { font-size: 12px; color: var(--brown2); letter-spacing: 1px; transition: color 0.2s; }
+.nav-links a:hover { color: var(--teal); }
+.nav-right { display: flex; align-items: center; gap: 10px; }
+.nav-insta {
+  display: flex; align-items: center; gap: 5px;
+  border-radius: 20px; padding: 5px 11px;
+  font-size: 11px; letter-spacing: 0.5px;
+  background: #fdf0f5; border: 1px solid #e8c8d8; color: #8a4060;
+  transition: opacity 0.2s;
+}
+.nav-insta:hover { opacity: 0.8; }
+.ig-ic {
+  width: 15px; height: 15px; border-radius: 4px; flex-shrink: 0;
+  background: linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);
+  display: flex; align-items: center; justify-content: center;
+}
+.ig-ic svg { width: 9px; height: 9px; }
+.nav-cta {
+  background: var(--brown); color: var(--beige3);
+  border: none; padding: 10px 20px; border-radius: 30px;
+  font-size: 12px; letter-spacing: 1px;
+  transition: opacity 0.2s;
+}
+.nav-cta:hover { opacity: 0.85; }
+.hamburger {
+  display: none; flex-direction: column; gap: 4px;
+  padding: 4px; background: none; border: none;
+}
+.hamburger span { width: 22px; height: 2px; background: var(--brown); border-radius: 2px; display: block; transition: all 0.3s; }
+.mobile-menu {
+  display: none; position: absolute; top: 68px; left: 0; right: 0;
+  background: var(--beige3); border-bottom: 1px solid var(--border);
+  padding: 16px 24px; flex-direction: column; gap: 14px; z-index: 99;
+}
+.mobile-menu a { font-size: 14px; color: var(--brown2); letter-spacing: 1px; padding: 4px 0; border-bottom: 0.5px solid var(--border); }
+.mobile-menu.open { display: flex; }
+.teal-bar { background: var(--teal); height: 3px; }
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero {
+  background: var(--beige2);
+  padding: 64px 40px;
+  display: flex; align-items: center; justify-content: space-between; gap: 48px;
+  position: relative; overflow: hidden;
+  min-height: 400px;
+}
+.hero-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.hero-left { flex: 1; z-index: 2; max-width: 520px; }
+.h-eyebrow { font-size: 10px; letter-spacing: 4px; color: var(--brown3); margin-bottom: 12px; }
+.h-title { font-family: 'Playfair Display', serif; font-size: 52px; color: var(--brown); font-style: italic; line-height: 1.1; margin-bottom: 6px; }
+.h-title em { color: var(--teal); font-style: italic; }
+.h-subtitle { font-size: 10px; letter-spacing: 5px; color: #a09080; margin-bottom: 20px; }
+.h-desc { font-size: 15px; color: var(--brown2); line-height: 1.85; margin-bottom: 30px; font-weight: 300; }
+.btn-dark {
+  background: var(--brown); color: var(--beige3);
+  border: none; padding: 14px 30px; border-radius: 30px;
+  font-size: 13px; letter-spacing: 1px; transition: opacity 0.2s;
+}
+.btn-dark:hover { opacity: 0.85; }
+.btn-outline {
+  background: transparent; color: var(--brown2);
+  border: 1.5px solid #c8b8a8; padding: 13px 22px; border-radius: 30px;
+  font-size: 13px; letter-spacing: 1px; margin-left: 10px; transition: border-color 0.2s;
+}
+.btn-outline:hover { border-color: var(--teal); color: var(--teal); }
+.hero-right { z-index: 2; flex-shrink: 0; }
+.hero-photo {
+  width: 280px; height: 280px; border-radius: 50%;
+  background: #d8cfc4;
+  display: flex; align-items: center; justify-content: center;
+  border: 3px solid #c8b8a8;
+  overflow: hidden;
+  flex-direction: column; gap: 8px;
+}
+/* Wenn Foto vorhanden: .hero-photo img { width:100%; height:100%; object-fit:cover; } */
+.hero-photo-placeholder { text-align: center; color: var(--brown3); font-size: 12px; letter-spacing: 1px; }
+
+/* ============================================================
+   TRUST STRIP
+   ============================================================ */
+.trust-strip {
+  background: var(--beige3);
+  padding: 14px 40px;
+  display: flex; align-items: center; justify-content: center; gap: 32px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.trust-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--brown2); }
+.trust-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); flex-shrink: 0; }
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+.section { padding: 56px 40px; }
+.section-white { background: var(--white); }
+.section-beige { background: var(--beige); }
+.section-beige3 { background: var(--beige3); }
+.section-brown2 { background: var(--beige2); }
+.sec-eyebrow { font-size: 10px; letter-spacing: 4px; color: var(--teal); text-align: center; margin-bottom: 6px; }
+.sec-title { font-family: 'Playfair Display', serif; font-size: 32px; color: var(--brown); font-style: italic; text-align: center; margin-bottom: 10px; }
+.sec-line { width: 44px; height: 2px; background: #c8b8a8; margin: 0 auto 36px; }
+
+/* ============================================================
+   PRODUKTE
+   ============================================================ */.prod-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 18px; }
+.prod-card {
+  border-radius: var(--radius); border: 1px solid #f0e8e0;
+  overflow: hidden; background: var(--beige3);
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.prod-card:hover { border-color: var(--teal); transform: translateY(-2px); box-shadow: var(--shadow); }
+.prod-img {
+  height: 200px; display: flex; align-items: center;
+  justify-content: center; flex-direction: column; gap: 8px;
+  position: relative; overflow: hidden;
+}
+/* Produktfotos: Ersetze den Hintergrund durch ein <img> Tag */
+.p-mint { background: #e4f2f0; }
+.p-pink { background: #f7eaed; }
+.p-royal { background: #22202c; }
+.p-glitter { background: #f0ebf7; }
+.prod-body { padding: 14px 16px; }
+.prod-name { font-family: 'Playfair Display', serif; font-size: 14px; color: var(--brown); font-style: italic; margin-bottom: 4px; }
+.prod-price { font-size: 16px; color: var(--teal); font-weight: 700; }
+.prod-badge {
+  font-size: 10px; background: #faf0d8; color: #8a6820;
+  padding: 2px 9px; border-radius: 20px; display: inline-block;
+  margin-top: 5px; border: 0.5px solid var(--gold); letter-spacing: 1px;
+}
+
+/* ============================================================
+   FEATURES
+   ============================================================ */
+.feat-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 24px; }
+.feat { text-align: center; padding: 8px; }
+.feat-circle {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--white); border: 1px solid var(--border2);
+  margin: 0 auto 10px; display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+.feat:hover .feat-circle { background: #e4f2f0; border-color: var(--teal); }
+.feat-circle svg { width: 20px; height: 20px; }
+.feat-title { font-family: 'Playfair Display', serif; font-size: 14px; color: var(--brown); font-style: italic; margin-bottom: 4px; }
+.feat-text { font-size: 12px; color: var(--brown3); line-height: 1.6; font-weight: 300; }
+
+/* ============================================================
+   BESTELLFORMULAR / KONFIGURATOR
+   ============================================================ */
+.order-card {
+  max-width: 1100px; margin: 0 auto;
+  background: var(--white); border-radius: 22px;
+  border: 1px solid var(--border); overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.order-head {
+  background: var(--brown); padding: 20px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.order-head-title { font-family: 'Playfair Display', serif; font-size: 20px; color: #f5ede4; font-style: italic; }
+.order-head-sub { font-size: 10px; color: #a09080; letter-spacing: 2px; }
+.order-body { padding: 28px; display: flex; gap: 32px; align-items: flex-start; }
+.preview-col { width: 220px; flex-shrink: 0; }
+.prev-box {
+  width: 220px; height: 220px; border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; border: 1px solid var(--border2);
+  transition: background 0.3s;
+}
+.prev-info {
+  margin-top: 10px; background: var(--beige3);
+  border-radius: 10px; padding: 10px 12px; border: 0.5px solid var(--border);
+}
+.prev-vname { font-family: 'Playfair Display', serif; font-size: 13px; color: var(--brown); font-style: italic; margin-bottom: 3px; }
+.prev-crow { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.prev-cdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; transition: background 0.3s; }
+.prev-clbl { font-size: 11px; color: var(--brown3); }
+.prev-nametag { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--brown); letter-spacing: 4px; font-weight: 500; min-height: 22px; }
+.steps-col { flex: 1; }
+.srow { display: flex; gap: 12px; margin-bottom: 18px; align-items: flex-start; }
+.snum {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--beige2); color: var(--brown);
+  font-size: 12px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 2px; font-weight: 700;
+}
+.slbl { font-size: 12px; color: var(--brown2); margin-bottom: 7px; font-weight: 700; letter-spacing: 0.5px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 5px 12px; border-radius: 20px;
+  border: 1px solid var(--border2); font-size: 11px;
+  color: var(--brown2); cursor: pointer; background: var(--beige3);
+  transition: all 0.15s; letter-spacing: 0.3px;
+}
+.chip:hover { border-color: var(--teal); color: var(--teal2); }
+.chip.on { background: var(--brown); color: #f5ede4; border-color: var(--brown); }
+.chip-royal.on { background: #22202c; color: #d4b840; border-color: #d4b840; }
+.chip-mint { background: #e4f2f0; color: #2d6060; border-color: #b0d4d0; }
+.chip-pink { background: #f7eaed; color: #7a3048; border-color: #e0b8c4; }
+.chip-lilac { background: #ede8f5; color: #4a3068; border-color: #c8b8d8; }
+.chip-blau { background: #e8f0f8; color: #204060; border-color: #b0c8d8; }
+.chip-royal { background: #faf0d8; color: #7a5800; border-color: #d4b840; }
+.chip-weiss { background: #f5f5f2; color: #5a5a68; border-color: #d0d0cc; }
+.szgrid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+.szcard {
+  border: 1px solid var(--border2); border-radius: 8px;
+  padding: 9px 10px; cursor: pointer; background: var(--beige3);
+  transition: all 0.15s;
+}
+.szcard:hover { border-color: var(--teal); }
+.szcard.on { border-color: var(--teal); background: #e4f2f0; }
+.sznm { font-size: 12px; font-weight: 700; color: var(--brown); margin-bottom: 2px; }
+.szdm { font-size: 10px; color: var(--brown3); line-height: 1.5; }
+.szbrd { font-size: 10px; color: #b0a090; margin-top: 2px; font-style: italic; }
+.ninput-wrap { position: relative; }
+.ninput {
+  width: 100%; padding: 11px 48px 11px 14px;
+  border: 1px solid var(--border2); border-radius: 8px;
+  font-size: 16px; color: var(--brown); background: var(--beige3);
+  font-family: 'Playfair Display', serif; letter-spacing: 5px; font-weight: 500;
+  transition: border-color 0.2s;
+}
+.ninput:focus { outline: none; border-color: var(--teal); }
+.ninput::placeholder { letter-spacing: 2px; color: #c0b0a0; font-style: italic; }
+.ncnt { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #b0a090; }
+
+/* ============================================================
+   BEZAHLUNG
+   ============================================================ */
+.order-foot {
+  background: var(--beige); padding: 20px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--border); flex-wrap: wrap; gap: 14px;
+}
+.pay-lbl { font-size: 10px; color: #a09080; letter-spacing: 2px; margin-bottom: 8px; }
+.pbts { display: flex; gap: 8px; flex-wrap: wrap; }
+.pbt {
+  padding: 11px 20px; border-radius: 10px;
+  font-size: 13px; font-weight: 700; border: none;
+  transition: opacity 0.2s, transform 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.pbt:hover { opacity: 0.9; transform: scale(1.02); }
+.pbt:active { transform: scale(0.98); }
+.pbt-sumup { background: #00b4d8; color: #fff; }
+.pbt-pp { background: #ffc439; color: #003087; min-width: 220px; font-size: 15px; padding: 13px 28px; }
+.pbt-gp { background: var(--white); color: #3c4043; border: 1px solid #d8d8d8; }
+.pbt-ap { background: #000; color: #fff; }
+.ptotal-lbl { font-size: 11px; color: var(--brown3); margin-bottom: 2px; text-align: right; }
+.ptotal { font-family: 'Playfair Display', serif; font-size: 26px; color: var(--brown); font-style: italic; text-align: right; }
+
+/* ============================================================
+   KRONENGALERIE
+   ============================================================ */
+.kg-insta-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 10px; font-size: 12px; color: #8a4060;
+  background: #fdf0f5; border: 1px solid #e8c8d8;
+  border-radius: 20px; padding: 5px 14px; transition: opacity 0.2s;
+}
+.kg-insta-link:hover { opacity: 0.8; }
+.kg-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-bottom: 16px; }
+.kg-grid-bot { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; }
+.kg-card {
+  background: var(--white); border-radius: var(--radius);
+  border: 1px solid var(--border); overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.kg-card:hover { border-color: #c8b8a8; transform: translateY(-2px); box-shadow: var(--shadow); }
+.kg-card-feat { border: 2px solid var(--gold); }
+.kg-card-feat:hover { border-color: var(--gold); }
+.kg-img { width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; position: relative; overflow: hidden; }
+.kg-img-lg { height: 210px; }
+.kg-img-sm { height: 160px; }
+/* Kundenfotos: Ersetze Hintergrund durch <img src="fotos/kunde1.jpg"> */
+.kg-badge { position: absolute; top: 10px; left: 10px; font-size: 10px; padding: 3px 9px; border-radius: 20px; letter-spacing: 1px; z-index: 2; }
+.kg-badge-gold { background: #faf0d8; color: #8a6820; border: 0.5px solid var(--gold); }
+.kg-badge-new { background: #e4f2f0; color: #2d6060; border: 0.5px solid var(--teal); }
+.kg-body { padding: 12px 14px 14px; }
+.kg-dog-name { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--brown); font-style: italic; margin-bottom: 2px; }
+.kg-meta { font-size: 11px; color: var(--brown3); margin-bottom: 7px; font-weight: 300; }
+.kg-crown-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--beige); border-radius: 20px;
+  padding: 2px 9px; font-size: 10px; color: var(--brown2);
+  border: 0.5px solid var(--border2); letter-spacing: 0.3px;
+}
+.kg-cdot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.kg-like-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding-top: 9px; border-top: 0.5px solid #f0e8e0;
+}
+.kg-like-btn {
+  display: flex; align-items: center; gap: 5px;
+  background: none; border: 1.5px solid var(--border);
+  border-radius: 30px; padding: 5px 12px;
+  font-size: 11px; color: var(--brown3);
+  transition: all 0.18s; letter-spacing: 0.3px;
+}
+.kg-like-btn:hover { border-color: #e07080; color: #c05060; }
+.kg-like-btn.liked { background: #fdf0f2; border-color: #e07080; color: #c05060; }
+.kg-like-btn svg { width: 13px; height: 13px; flex-shrink: 0; transition: transform 0.15s; }
+.kg-like-count { font-size: 11px; color: #b0a090; }
+.kg-add-card {
+  background: var(--white); border-radius: var(--radius);
+  border: 1.5px dashed #c8b8a8;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px; cursor: pointer;
+  transition: border-color 0.2s; min-height: 160px; padding: 16px;
+}
+.kg-add-card:hover { border-color: var(--teal); }
+.kg-add-icon { width: 38px; height: 38px; border-radius: 50%; background: var(--beige); display: flex; align-items: center; justify-content: center; }
+.kg-add-text { font-size: 12px; color: var(--brown3); text-align: center; line-height: 1.6; font-weight: 300; }
+.kg-add-lbl { font-size: 10px; color: var(--teal); letter-spacing: 1px; }
+.kg-cta {
+  margin-top: 24px; background: var(--beige2); border-radius: var(--radius);
+  padding: 22px 26px; display: flex; align-items: center;
+  justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.kg-cta-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--brown); font-style: italic; margin-bottom: 3px; }
+.kg-cta-text { font-size: 13px; color: var(--brown3); line-height: 1.6; font-weight: 300; }
+.kg-cta-email { color: var(--teal); }
+.kg-cta-btn {
+  background: var(--brown); color: #f5ede4;
+  border: none; padding: 12px 24px; border-radius: 30px;
+  font-size: 12px; letter-spacing: 1px; flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+.kg-cta-btn:hover { opacity: 0.85; }
+
+/* ============================================================
+   STORY / ABOUT
+   ============================================================ */
+.story-wrap { display: flex; align-items: center; gap: 52px; }
+.story-portrait {
+  width: 180px; height: 180px; border-radius: 50%;
+  background: #d8cfc4; flex-shrink: 0;
+  border: 3px solid #c8b8a8;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 4px; overflow: hidden;
+}
+/* Foto: <img src="fotos/mila-portrait.jpg"> */
+.story-portrait-lbl { font-size: 10px; color: var(--brown2); letter-spacing: 2px; }
+.s-eyebrow { font-size: 10px; letter-spacing: 4px; color: var(--brown3); margin-bottom: 3px; }
+.s-name { font-family: 'Playfair Display', serif; font-size: 36px; color: var(--brown); font-style: italic; margin-bottom: 14px; }
+.s-name span { color: var(--teal); }
+.s-text { font-size: 14px; color: #5a4838; line-height: 2; font-weight: 300; }
+.s-sig { margin-top: 14px; font-family: 'Playfair Display', serif; font-size: 15px; color: var(--brown3); font-style: italic; }
+.s-insta {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 16px; font-size: 12px; color: #8a4060;
+  background: #fdf0f5; border: 1px solid #e8c8d8;
+  border-radius: 20px; padding: 7px 14px; transition: opacity 0.2s;
+}
+.s-insta:hover { opacity: 0.8; }
+
+/* ============================================================
+   GRÖSSENGUIDE
+   ============================================================ */
+.szinfo-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; max-width: 680px; margin: 28px auto 0; }
+.szinfo-card {
+  background: var(--beige3); border-radius: var(--radius);
+  padding: 22px; text-align: center; border: 1px solid var(--border);
+  transition: border-color 0.2s, transform 0.2s;
+}
+.szinfo-card:hover { border-color: var(--teal); transform: translateY(-2px); }
+.szinfo-crown { width: 40px; height: 28px; margin: 0 auto 12px; }
+.szinfo-name { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--brown); font-style: italic; margin-bottom: 6px; }
+.szinfo-dim { font-size: 12px; color: var(--brown3); line-height: 1.9; font-weight: 300; }
+.szinfo-breeds { font-size: 11px; color: #b0a090; margin-top: 8px; line-height: 1.8; font-style: italic; }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.footer { background: var(--brown); padding: 28px 40px; }
+.footer-top {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px; padding-bottom: 16px;
+  border-bottom: 0.5px solid rgba(255,255,255,0.1);
+  flex-wrap: wrap; gap: 14px;
+}
+.ft-logo-name { font-family: 'Playfair Display', serif; color: #f5ede4; font-size: 17px; font-style: italic; }
+.ft-logo-sub { font-size: 9px; display: block; color: #6b7878; letter-spacing: 3px; font-style: normal; font-family: 'Lato', sans-serif; margin-top: 1px; }
+.ft-insta {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: #a8d8d0; letter-spacing: 0.5px;
+  background: rgba(74,144,144,0.15); border: 1px solid rgba(74,144,144,0.3);
+  border-radius: 20px; padding: 6px 14px; transition: opacity 0.2s;
+}
+.ft-insta:hover { opacity: 0.8; }
+.footer-bot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.ft-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.ft-links a { font-size: 11px; color: #6b5548; letter-spacing: 1px; transition: color 0.2s; }
+.ft-links a:hover { color: #a8d8d0; }
+.ft-copy { font-size: 10px; color: #5a4838; }
+
+/* ============================================================
+   WHATSAPP BUTTON
+   ============================================================ */
+.wa-btn {
+  position: fixed; bottom: 24px; right: 24px;
+  width: 54px; height: 54px; border-radius: 50%;
+  background: #25d366; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 999; border: none;
+  box-shadow: 0 4px 16px rgba(37,211,102,0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.wa-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(37,211,102,0.5); }
+.wa-tooltip {
+  position: absolute; bottom: 62px; right: 0;
+  background: var(--brown); color: #f5ede4;
+  font-size: 11px; font-family: 'Lato', sans-serif;
+  padding: 7px 12px; border-radius: 8px;
+  white-space: nowrap; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+}
+.wa-btn:hover .wa-tooltip { opacity: 1; }
+
+/* ============================================================
+   COOKIE BANNER
+   ============================================================ */
+.cookie-overlay {
+  position: fixed; inset: 0;
+  background: rgba(61,46,34,0.55);
+  z-index: 9998; display: flex;
+  align-items: flex-end; justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+  pointer-events: none;
+}
+.cookie-box {
+  pointer-events: all;
+}
+.cookie-overlay.hidden { display: none; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.cookie-box {
+  background: #fff;
+  border-radius: 18px 18px 18px 18px;
+  border: 1px solid var(--border);
+  max-width: 740px; width: 100%;
+  padding: 28px 32px;
+  box-shadow: 0 8px 40px rgba(61,46,34,0.18);
+  animation: slideUp 0.35s ease;
+}
+@keyframes slideUp { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+.cookie-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+.cookie-icon {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #e4f2f0; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0;
+}
+.cookie-title { font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: var(--brown); font-style: italic; margin-bottom: 4px; }
+.cookie-text { font-size: 13px; color: var(--brown3); line-height: 1.7; font-weight: 300; }
+.cookie-text a { color: var(--teal); text-decoration: underline; }
+.cookie-details { margin: 14px 0; display: flex; flex-direction: column; gap: 8px; }
+.cookie-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px; border-radius: 10px;
+  background: var(--beige3); border: 0.5px solid var(--border);
+}
+.cookie-item-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cookie-item-body { flex: 1; }
+.cookie-item-title { font-size: 12px; font-weight: 700; color: var(--brown); margin-bottom: 1px; }
+.cookie-item-desc { font-size: 11px; color: var(--brown3); line-height: 1.5; }
+.cookie-item-required { font-size: 10px; color: #4a9090; letter-spacing: 1px; margin-left: auto; flex-shrink: 0; padding-top: 2px; }
+.cookie-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.cookie-btn-accept {
+  flex: 1; background: var(--brown); color: #f5ede4;
+  border: none; padding: 13px 20px; border-radius: 30px;
+  font-size: 13px; letter-spacing: 1px; cursor: pointer;
+  transition: opacity 0.2s; min-width: 160px;
+}
+.cookie-btn-accept:hover { opacity: 0.85; }
+.cookie-btn-reject {
+  background: transparent; color: var(--brown2);
+  border: 1.5px solid var(--border2); padding: 12px 20px; border-radius: 30px;
+  font-size: 13px; letter-spacing: 0.5px; cursor: pointer;
+  transition: border-color 0.2s; min-width: 140px;
+}
+.cookie-btn-reject:hover { border-color: var(--teal); color: var(--teal2); }
+.cookie-btn-settings {
+  background: transparent; color: var(--brown3);
+  border: none; padding: 12px 14px; border-radius: 30px;
+  font-size: 12px; cursor: pointer; text-decoration: underline;
+}
+.cookie-settings-panel { display: none; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px; }
+.cookie-settings-panel.open { display: block; }
+.cookie-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+.cookie-toggle-row:last-child { border-bottom: none; }
+.cookie-toggle-label { font-size: 12px; color: var(--brown); font-weight: 700; }
+.cookie-toggle-desc { font-size: 11px; color: var(--brown3); margin-top: 1px; }
+.toggle-switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; inset: 0;
+  background: #ccc; border-radius: 24px; transition: 0.3s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: white; left: 3px; top: 3px; transition: 0.3s;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--teal); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+.toggle-switch input:disabled + .toggle-slider { background: var(--teal); cursor: not-allowed; opacity: 0.7; }
+.cookie-mini-btn {
+  position: fixed; bottom: 86px; right: 24px;
+  background: var(--brown); color: #f5ede4;
+  border: none; border-radius: 30px; padding: 8px 16px;
+  font-size: 11px; cursor: pointer; z-index: 990;
+  letter-spacing: 1px; display: none; transition: opacity 0.2s;
+  box-shadow: 0 2px 12px rgba(61,46,34,0.2);
+}
+.cookie-mini-btn:hover { opacity: 0.85; }
+@media(max-width:600px){
+  .cookie-box { padding: 20px 18px; border-radius: 18px 18px 0 0; }
+  .cookie-btns { flex-direction: column; }
+  .cookie-btn-accept, .cookie-btn-reject { min-width: unset; }
+  .cookie-mini-btn { bottom: 76px; right: 16px; }
+}
+
+@media(max-width:900px){
+  .nav { padding: 0 24px; }
+  .nav-links { display: none; }
+  .nav-insta { display: none; }
+  .hamburger { display: flex; }
+  .hero { padding: 44px 28px; gap: 28px; }
+  .h-title { font-size: 40px; }
+  .hero-photo { width: 200px; height: 200px; }
+  .section { padding: 44px 24px; }
+  .prod-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .feat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .order-body { flex-direction: column; align-items: center; }
+  .preview-col { width: 100%; display: flex; gap: 16px; }
+  .prev-box { width: 150px; height: 150px; flex-shrink: 0; }
+  .prev-info { flex: 1; }
+  .kg-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .kg-grid-bot { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .story-wrap { gap: 32px; }
+  .story-portrait { width: 140px; height: 140px; }
+  .szinfo-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .footer { padding: 22px 24px; }
+  .trust-strip { gap: 16px; padding: 14px 24px; }
+}
+
+/* ============================================================
+   RESPONSIVE – MOBIL (max 600px)
+   ============================================================ */
+@media(max-width:600px){
+  .nav { padding: 0 16px; height: 58px; }
+  .logo-name { font-size: 16px; }
+  .logo-tag { display: none; }
+  .logo-div { display: none; }
+  .logo-mark { display: none; }
+  .nav-cta { font-size: 11px; padding: 8px 14px; }
+  .teal-bar { height: 2px; }
+  .hero { padding: 36px 16px; flex-direction: column; text-align: center; gap: 24px; min-height: auto; }
+  .hero-left { order: 2; }
+  .hero-right { order: 1; }
+  .h-title { font-size: 34px; }
+  .h-desc { font-size: 14px; }
+  .hero-photo { width: 160px; height: 160px; }
+  .btn-outline { display: none; }
+  .trust-strip { gap: 10px; padding: 12px 16px; }
+  .trust-item { font-size: 11px; }
+  .section { padding: 36px 16px; }
+  .sec-title { font-size: 26px; }
+  .prod-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+  .prod-img { height: 120px; }
+  .feat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+  .order-head { padding: 14px 18px; }
+  .order-head-sub { display: none; }
+  .order-body { padding: 18px; flex-direction: column; }
+  .preview-col { width: 100%; flex-direction: row; gap: 12px; }
+  .prev-box { width: 120px; height: 120px; flex-shrink: 0; }
+  .prev-info { flex: 1; margin-top: 0; }
+  .order-foot { padding: 16px 18px; flex-direction: column; align-items: flex-start; }
+  .ptotal { font-size: 22px; }
+  .ptotal-lbl { text-align: left; }
+  .pbts { flex-wrap: wrap; }
+  .kg-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kg-grid-bot { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kg-img-lg { height: 150px; }
+  .kg-img-sm { height: 130px; }
+  .kg-cta { flex-direction: column; align-items: flex-start; }
+  .story-wrap { flex-direction: column; text-align: center; gap: 22px; }
+  .story-portrait { margin: 0 auto; width: 120px; height: 120px; }
+  .s-name { font-size: 28px; }
+  .s-text { font-size: 13px; }
+  .s-insta { margin: 14px auto 0; }
+  .szinfo-grid { grid-template-columns: 1fr; max-width: 280px; }
+  .footer { padding: 20px 16px; }
+  .footer-top { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .footer-bot { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .ft-links { gap: 14px; }
+  .wa-btn { width: 48px; height: 48px; bottom: 18px; right: 18px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ============================================================
+     NAVIGATION
+     ============================================================ -->
+<nav class="nav" id="nav">
+  <div class="logo-wrap">
+    <div class="logo-mark">
+      <div class="logo-bommels">
+        <span class="bml"></span><span class="bml-m"></span><span class="bml"></span>
+      </div>
+      <svg class="logo-shape" viewBox="0 0 44 24">
+        <polygon points="22,1 32,13 42,5 38,22 6,22 2,5 12,13" fill="none" stroke="#4a9090" stroke-width="2.5" stroke-linejoin="round"/>
+        <polygon points="22,1 32,13 42,5 38,22 6,22 2,5 12,13" fill="rgba(74,144,144,0.08)"/>
+      </svg>
+    </div>
+    <div class="logo-div"></div>
+    <div>
+      <div class="logo-name">Mila's Kronenwelt</div>
+      <div class="logo-sub">HANDMADE · PERSONALISIERT</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="#kronen">Kronen</a>
+    <a href="#bestellen">Bestellen</a>
+    <a href="#galerie">Galerie</a>
+    <a href="#groessen">Grössen</a>
+    <a href="#about">Über Mila</a>
+  </div>
+  <div class="nav-right">
+    <a class="nav-insta" href="#" id="nav-insta-link">
+      <div class="ig-ic">
+        <svg viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" stroke="white" stroke-width="2.5" fill="none"/><circle cx="12" cy="12" r="5" stroke="white" stroke-width="2" fill="none"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg>
+      </div>
+      <span id="nav-insta-text">@milas.kronenwelt</span>
+    </a>
+    <button class="nav-cta" onclick="document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">Jetzt bestellen</button>
+    <button class="hamburger" id="hamburger" aria-label="Menü öffnen">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#kronen" onclick="closeMobileMenu()">Kronen</a>
+  <a href="#bestellen" onclick="closeMobileMenu()">Bestellen</a>
+  <a href="#galerie" onclick="closeMobileMenu()">Galerie</a>
+  <a href="#groessen" onclick="closeMobileMenu()">Grössen</a>
+  <a href="#about" onclick="closeMobileMenu()">Über Mila</a>
+  <a href="#" id="mobile-insta-link" style="display:flex;align-items:center;gap:6px;color:#8a4060">
+    <div class="ig-ic"><svg viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" stroke="white" stroke-width="2.5" fill="none"/><circle cx="12" cy="12" r="5" stroke="white" stroke-width="2" fill="none"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg></div>
+    <span id="mobile-insta-text">@milas.kronenwelt</span>
+  </a>
+</div>
+<div class="teal-bar"></div>
+
+<!-- ============================================================
+     HERO
+     ============================================================ -->
+<section class="hero">
+  <svg class="hero-bg" viewBox="0 0 900 400" preserveAspectRatio="xMidYMid slice">
+    <circle cx="60" cy="50" r="18" fill="#c8b8a8" opacity="0.4"/>
+    <circle cx="150" cy="130" r="10" fill="#d4b840" opacity="0.28"/>
+    <circle cx="240" cy="30" r="22" fill="#c8b8a8" opacity="0.28"/>
+    <circle cx="90" cy="240" r="14" fill="#d4b840" opacity="0.22"/>
+    <circle cx="180" cy="320" r="9" fill="#c8b8a8" opacity="0.32"/>
+    <circle cx="780" cy="55" r="14" fill="#c8b8a8" opacity="0.32"/>
+    <circle cx="845" cy="150" r="9" fill="#d4b840" opacity="0.26"/>
+    <circle cx="720" cy="300" r="17" fill="#c8b8a8" opacity="0.26"/>
+    <circle cx="820" cy="290" r="10" fill="#d4b840" opacity="0.22"/>
+    <rect x="120" y="80" width="8" height="4" rx="2" fill="#d4b840" opacity="0.4" transform="rotate(30 124 82)"/>
+    <rect x="300" y="50" width="7" height="3" rx="1" fill="#d4b840" opacity="0.35" transform="rotate(-20 303 51)"/>
+    <rect x="700" y="100" width="8" height="4" rx="2" fill="#d4b840" opacity="0.4" transform="rotate(45 704 102)"/>
+  </svg>
+  <div class="hero-left">
+    <div class="h-eyebrow">H A N D M A D E &nbsp;·&nbsp; G E B U R T S T A G S K R O N E N</div>
+    <h1 class="h-title">Mila's<br><em>Kronenwelt</em></h1>
+    <div class="h-subtitle">F Ü R &nbsp; B E S O N D E R E &nbsp; H U N D E</div>
+    <p class="h-desc">Personalisierte Hundekronen für Geburtstage und unvergessliche Fotoshootings – handgefertigt mit Liebe, einzigartig wie dein Hund.</p>
+    <button class="btn-dark" onclick="document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">Jetzt bestellen</button>
+    <button class="btn-outline" onclick="document.getElementById('groessen').scrollIntoView({behavior:'smooth'})">Grössen ansehen</button>
+  </div>
+  <div class="hero-right">
+    <div class="hero-photo">
+      <img src="fotos/mila-hero.jpg" alt="Mila mit Krone" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
+    </div>
+  </div>
+</section>
+
+<!-- Trust Strip -->
+<div class="trust-strip">
+  <div class="trust-item"><span class="trust-dot"></span>Handgemacht in Deutschland</div>
+  <div class="trust-item"><span class="trust-dot"></span>Mit Namen personalisierbar</div>
+  <div class="trust-item"><span class="trust-dot"></span>4 Grössen · 6 Farben</div>
+  <div class="trust-item"><span class="trust-dot"></span>Sicher bezahlen</div>
+  <div class="trust-item"><span class="trust-dot"></span>Fragen? Wir sind per WhatsApp da!</div>
+</div>
+
+<!-- ============================================================
+     PRODUKTE
+     ============================================================ -->
+<section class="section section-white" id="kronen">
+  <div class="sec-eyebrow">KOLLEKTION</div>
+  <h2 class="sec-title">Unsere Kronen</h2>
+  <div class="sec-line"></div>
+  <div class="prod-grid">
+
+    <div class="prod-card" onclick="selectVariant('Geburtstagskrone');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+      <div class="prod-img p-mint">
+        <img src="fotos/geburtstagskrone.jpg" alt="Geburtstagskrone" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
+      </div>
+      <div class="prod-body">
+        <div class="prod-name">Geburtstagskrone</div>
+        <div class="prod-price">ab 13,00 €</div>
+        <div class="prod-badge">★ Bestseller</div>
+      </div>
+    </div>
+
+    <div class="prod-card" onclick="selectVariant('Party-Krone');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+      <div class="prod-img p-pink">
+        <img src="fotos/party-krone.jpg" alt="Party-Krone" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
+      </div>
+      <div class="prod-body">
+        <div class="prod-name">Party-Krone</div>
+        <div class="prod-price">ab 13,00 €</div>
+      </div>
+    </div>
+
+    <div class="prod-card" onclick="selectVariant('Royal-Krone');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+      <div class="prod-img p-royal">
+        <img src="fotos/royal-krone.jpg" alt="Royal-Krone" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
+      </div>
+      <div class="prod-body">
+        <div class="prod-name">Royal-Krone</div>
+        <div class="prod-price">ab 15,29 €</div>
+      </div>
+    </div>
+
+    <div class="prod-card" onclick="selectVariant('Glitzer-Krone');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+      <div class="prod-img p-glitter">
+        <img src="fotos/glitzer-krone.jpg" alt="Glitzer-Krone" style="width:100%;height:100%;object-fit:cover;object-position:50% 50%">
+      </div>
+      <div class="prod-body">
+        <div class="prod-name">Glitzer-Krone</div>
+        <div class="prod-price">ab 24,90 €</div>
+        <div class="prod-badge" style="background:#22202c;color:#d4b840;border-color:#d4b840">Premium</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================================================
+     FEATURES
+     ============================================================ -->
+<section class="section section-beige">
+  <div class="feat-grid">
+    <div class="feat">
+      <div class="feat-circle"><svg viewBox="0 0 20 20" fill="none"><path d="M10 3l1.8 3.6L16 7.3l-3 2.9.7 4.1L10 12.5l-3.7 1.8.7-4.1-3-2.9 4.2-.7z" stroke="#4a9090" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
+      <div class="feat-title">Personalisierbar</div>
+      <div class="feat-text">Mit dem Namen deines Hundes – für einen einzigartigen Look</div>
+    </div>
+    <div class="feat">
+      <div class="feat-circle"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="5.5" stroke="#4a9090" stroke-width="1.3"/><circle cx="7.5" cy="9" r="1.3" fill="#4a9090"/><circle cx="12.5" cy="9" r="1.3" fill="#4a9090"/><circle cx="10" cy="13" r="1.3" fill="#4a9090"/></svg></div>
+      <div class="feat-title">Süsse Bommel</div>
+      <div class="feat-text">Weiche Bommel an den Spitzen als dekorative Verzierung</div>
+    </div>
+    <div class="feat">
+      <div class="feat-circle"><svg viewBox="0 0 20 20" fill="none"><path d="M5 10c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5z" stroke="#4a9090" stroke-width="1.3"/><path d="M8 10h4M10 8v4" stroke="#4a9090" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+      <div class="feat-title">Bequem & leicht</div>
+      <div class="feat-text">Weiches Material mit Gewebebändern – einfach zu befestigen</div>
+    </div>
+    <div class="feat">
+      <div class="feat-circle"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="6" width="14" height="11" rx="1.5" stroke="#4a9090" stroke-width="1.3"/><path d="M7 6V5a3 3 0 016 0v1" stroke="#4a9090" stroke-width="1.3"/></svg></div>
+      <div class="feat-title">Ideal für Fotos</div>
+      <div class="feat-text">Perfekt für Geburtstage, Feiertage und Fotoshootings</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     BESTELLFORMULAR
+     ============================================================ -->
+<section class="section section-beige3" id="bestellen">
+  <div class="sec-eyebrow">BESTELLEN</div>
+  <h2 class="sec-title">Krone personalisieren</h2>
+  <div class="sec-line"></div>
+  <div class="order-card">
+    <div class="order-head">
+      <div>
+        <div class="order-head-title">Deine Wunschkrone</div>
+        <div class="order-head-sub">4 SCHRITTE · SCHNELL & EINFACH</div>
+      </div>
+    </div>
+    <div class="order-body">
+      <!-- VORSCHAU -->
+      <div class="preview-col">
+        <div class="prev-box" id="pBox" style="background:#e4f2f0">
+          <svg id="pSvg" width="106" height="88" viewBox="0 0 44 36">
+            <polygon points="22,2 32,14 42,6 38,28 6,28 2,6 12,14" fill="none" stroke="#3d7878" stroke-width="2" stroke-linejoin="round" id="pp"/>
+            <polygon points="22,2 32,14 42,6 38,28 6,28 2,6 12,14" fill="rgba(74,144,144,0.12)" id="pf"/>
+            <circle cx="12" cy="12" r="3" id="pb1" fill="#d4d4d4" stroke="#3d7878" stroke-width="0.8"/>
+            <circle cx="22" cy="4" r="3" id="pb2" fill="#b8e0d8" stroke="#3d7878" stroke-width="0.8"/>
+            <circle cx="32" cy="12" r="3" id="pb3" fill="#d4d4d4" stroke="#3d7878" stroke-width="0.8"/>
+            <text id="pt" x="22" y="34" text-anchor="middle" font-size="5.5" fill="#3d7878" font-family="Georgia" letter-spacing="0.5">MILA</text>
+          </svg>
+        </div>
+        <div class="prev-info">
+          <div class="prev-vname" id="pvn">Geburtstagskrone</div>
+          <div class="prev-crow">
+            <div class="prev-cdot" id="pcd" style="background:#4a9090"></div>
+            <div class="prev-clbl" id="pcl">Mint</div>
+          </div>
+          <div class="prev-nametag" id="pnt"></div>
+        </div>
+      </div>
+      <!-- SCHRITTE -->
+      <div class="steps-col">
+        <div class="srow">
+          <div class="snum">1</div>
+          <div style="flex:1">
+            <div class="slbl">Variante wählen</div>
+            <div class="chips">
+              <span class="chip on" data-v="Geburtstagskrone" onclick="selectV(this)">Geburtstagskrone</span>
+              <span class="chip" data-v="Party-Krone" onclick="selectV(this)">Party-Krone</span>
+              <span class="chip" data-v="Royal-Krone" onclick="selectV(this)">Royal-Krone</span>
+              <span class="chip" data-v="Glitzer-Krone" onclick="selectV(this)">Glitzer-Krone</span>
+            </div>
+          </div>
+        </div>
+        <div class="srow">
+          <div class="snum">2</div>
+          <div style="flex:1">
+            <div class="slbl">Farbe wählen</div>
+            <div class="chips" id="colorChips">
+              <span class="chip chip-mint on" data-c="Mint" data-bg="#e4f2f0" data-sc="#3d7878" data-dot="#4a9090" onclick="selectC(this)">Mint</span>
+              <span class="chip chip-pink" data-c="Rosa" data-bg="#f7eaed" data-sc="#a05070" data-dot="#c07090" onclick="selectC(this)">Rosa</span>
+              <span class="chip chip-lilac" data-c="Flieder" data-bg="#ede8f5" data-sc="#7868a0" data-dot="#9080b8" onclick="selectC(this)">Flieder</span>
+              <span class="chip chip-blau" data-c="Hellblau" data-bg="#e8f0f8" data-sc="#507090" data-dot="#6090b0" onclick="selectC(this)">Hellblau</span>
+              <span class="chip chip-royal" data-c="Schwarz/Gold" data-bg="#22202c" data-sc="#d4b840" data-dot="#b89828" onclick="selectC(this)"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#d4b840;margin-right:4px;vertical-align:middle"></span>Schwarz/Gold</span>
+              <span class="chip chip-weiss" data-c="Weiss/Silber" onclick="selectC(this)" data-bg="#f5f5f2" data-sc="#909098" data-dot="#b0b0b8">Weiss/Silber</span>
+            </div>
+          </div>
+        </div>
+        <div class="srow">
+          <div class="snum">3</div>
+          <div style="flex:1">
+            <div class="slbl">Grösse wählen</div>
+            <div class="szgrid">
+              <div class="szcard on" data-s="Gross" onclick="selectS(this)">
+                <div class="sznm">Gross</div>
+                <div class="szdm">Ø 12 cm · 37 cm</div>
+                <div class="szbrd">Golden Retriever, Border Collie</div>
+              </div>
+              <div class="szcard" data-s="Klein" onclick="selectS(this)">
+                <div class="sznm">Klein</div>
+                <div class="szdm">Ø 8 cm · 26 cm</div>
+                <div class="szbrd">Malteser, Frz. Bulldogge</div>
+              </div>
+              <div class="szcard" data-s="Mini" onclick="selectS(this)">
+                <div class="sznm">Mini</div>
+                <div class="szdm">Ø 6 cm · 22 cm</div>
+                <div class="szbrd">Zwergdackel, Zwergpudel</div>
+              </div>
+              <div class="szcard" data-s="Extra Mini" onclick="selectS(this)">
+                <div class="sznm">Extra Mini</div>
+                <div class="szdm">Ø 5 cm · 18 cm</div>
+                <div class="szbrd">Chihuahua, Katzen</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="srow">
+          <div class="snum">4</div>
+          <div style="flex:1">
+            <div class="slbl">Name eingeben (max. 11 Buchstaben)</div>
+            <div class="ninput-wrap">
+              <input class="ninput" id="nIn" type="text" placeholder="MILA" maxlength="11" autocomplete="off"/>
+              <span class="ncnt" id="nCnt">0 / 11</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- BEZAHLUNG -->
+    <div class="order-foot">
+      <div>
+        <div class="pay-lbl">SICHER BEZAHLEN MIT</div>
+        <div class="pbts">
+          <button class="pbt pbt-pp" onclick="startPayPalPayment()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19.5 6.5C19.5 9.8 17 12.5 13.5 13H9L8 18H5L7 7h7c3 0 5.5 1.2 5.5 3.5z" fill="white" opacity="0.9"/><path d="M17 3C17 6.3 14.5 9 11 9.5H6.5L5.5 14.5H3L5 3h7c3 0 5 1.2 5 3.5z" fill="white"/></svg>
+            Mit PayPal bezahlen
+          </button>
+        </div>
+      </div>
+      <div>
+        <div class="ptotal-lbl">Gesamtpreis</div>
+        <div class="ptotal" id="totP">24,90 €</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     KRONENGALERIE
+     ============================================================ -->
+<section class="section section-beige3" id="galerie">
+  <div class="sec-eyebrow">KUNDENFOTOS</div>
+  <h2 class="sec-title">Kronengalerie</h2>
+  <p style="font-size:14px;color:#8a7060;line-height:1.8;max-width:480px;margin:0 auto;text-align:center;font-weight:300">Unsere schönsten Kronenträger – eingereicht von euch mit so viel Liebe.</p>
+  <div style="text-align:center">
+    <a class="kg-insta-link" href="#" id="galerie-insta-link">
+      <div class="ig-ic"><svg viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" stroke="white" stroke-width="2.5" fill="none"/><circle cx="12" cy="12" r="5" stroke="white" stroke-width="2" fill="none"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg></div>
+      Mehr auf @milas.kronenwelt
+    </a>
+  </div>
+  <div class="sec-line" style="margin-top:16px"></div>
+
+  <div class="kg-grid">
+    <div class="kg-card kg-card-feat">
+      <div class="kg-img kg-img-lg" style="background:#e4f2f0">
+        <div class="kg-badge kg-badge-gold">★ Foto des Monats</div>
+        <img src="fotos/galerie/mila-geburtstag.jpg" alt="Mila Geburtstagskrone" style="width:100%;height:100%;object-fit:cover">
+        <svg width="58" height="48" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="16" ry="11" fill="#a0c8b8"/><ellipse cx="15" cy="14" rx="6" ry="8" fill="#3d2e22"/><ellipse cx="29" cy="14" rx="6" ry="8" fill="#3d2e22"/><ellipse cx="22" cy="28" rx="9" ry="7" fill="#f5ede4"/><circle cx="18" cy="24" r="2.5" fill="#1a1010"/><circle cx="26" cy="24" r="2.5" fill="#1a1010"/><polygon points="22,6 26,12 30,9 28,18 16,18 14,9 18,12" fill="none" stroke="#3d7878" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span style="font-size:10px;color:#6b9090;letter-spacing:1px">Foto hier</span>
+      </div>
+      <div class="kg-body">
+        <div class="kg-dog-name">Mila – die Königin</div>
+        <div class="kg-meta">Border Collie · 6 Jahre</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#4a9090"></span>Geburtstagskrone · Mint</div>
+        <div class="kg-like-row">
+          <button class="kg-like-btn" onclick="toggleLike(this)">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
+            Gefällt mir
+          </button>
+          <span class="kg-like-count"><span class="ln">142</span> Likes</span>
+        </div>
+      </div>
+    </div>
+    <div class="kg-card">
+      <div class="kg-img kg-img-lg" style="background:#f7eaed">
+        <img src="fotos/galerie/luna.jpg" alt="Princess Luna">
+        <svg width="52" height="44" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="15" ry="10" fill="#d0a0a8"/><ellipse cx="15" cy="14" rx="5.5" ry="7.5" fill="#b07880"/><ellipse cx="29" cy="14" rx="5.5" ry="7.5" fill="#b07880"/><ellipse cx="22" cy="28" rx="8" ry="6" fill="#fff0f0"/><circle cx="18" cy="24" r="2.2" fill="#1a1010"/><circle cx="26" cy="24" r="2.2" fill="#1a1010"/><polygon points="22,7 26,13 30,10 28,19 16,19 14,10 18,13" fill="none" stroke="#a05070" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span style="font-size:10px;color:#a07080;letter-spacing:1px">Foto hier</span>
+      </div>
+      <div class="kg-body">
+        <div class="kg-dog-name">Princess Luna</div>
+        <div class="kg-meta">Malteser · 3 Jahre</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#c07090"></span>Party-Krone · Rosa</div>
+        <div class="kg-like-row">
+          <button class="kg-like-btn" onclick="toggleLike(this)">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
+            Gefällt mir
+          </button>
+          <span class="kg-like-count"><span class="ln">98</span> Likes</span>
+        </div>
+      </div>
+    </div>
+    <div class="kg-card">
+      <div class="kg-img kg-img-lg" style="background:#f0ebf7">
+        <div class="kg-badge kg-badge-new">Neu</div>
+        <img src="fotos/galerie/charly.jpg" alt="Charly">
+        <svg width="52" height="44" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="15" ry="10" fill="#b898c8"/><ellipse cx="15" cy="14" rx="5.5" ry="7.5" fill="#806090"/><ellipse cx="29" cy="14" rx="5.5" ry="7.5" fill="#806090"/><ellipse cx="22" cy="28" rx="8" ry="6" fill="#f8f0ff"/><circle cx="18" cy="24" r="2.2" fill="#1a1010"/><circle cx="26" cy="24" r="2.2" fill="#1a1010"/><polygon points="22,7 26,13 30,10 28,19 16,19 14,10 18,13" fill="none" stroke="#7868a0" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span style="font-size:10px;color:#7060a0;letter-spacing:1px">Foto hier</span>
+      </div>
+      <div class="kg-body">
+        <div class="kg-dog-name">Charly</div>
+        <div class="kg-meta">Zwergpudel · 2 Jahre</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#9080b8"></span>Glitzer-Krone · Flieder</div>
+        <div class="kg-like-row">
+          <button class="kg-like-btn" onclick="toggleLike(this)">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
+            Gefällt mir
+          </button>
+          <span class="kg-like-count"><span class="ln">61</span> Likes</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kg-grid-bot">
+    <div class="kg-card">
+      <div class="kg-img kg-img-sm" style="background:#e8f0f8">
+        <img src="fotos/galerie/rocky.jpg" alt="Rocky">
+        <svg width="44" height="36" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="14" ry="10" fill="#a0b8d0"/><ellipse cx="15" cy="15" rx="5" ry="7" fill="#506880"/><ellipse cx="29" cy="15" rx="5" ry="7" fill="#506880"/><ellipse cx="22" cy="28" rx="8" ry="6" fill="#f0f5ff"/><circle cx="18" cy="24" r="2" fill="#1a1010"/><circle cx="26" cy="24" r="2" fill="#1a1010"/></svg>
+      </div>
+      <div class="kg-body">
+        <div class="kg-dog-name">Rocky</div>
+        <div class="kg-meta">Golden Retriever</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#6090b0"></span>Party · Hellblau</div>
+        <div class="kg-like-row">
+          <button class="kg-like-btn" onclick="toggleLike(this)">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
+            Gefällt mir
+          </button>
+          <span class="kg-like-count"><span class="ln">37</span> Likes</span>
+        </div>
+      </div>
+    </div>
+    <div class="kg-card">
+      <div class="kg-img kg-img-sm" style="background:#22202c">
+        <img src="fotos/galerie/bruno.jpg" alt="Royal Bruno">
+        <svg width="44" height="36" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="14" ry="10" fill="#281e2c"/><ellipse cx="15" cy="15" rx="5" ry="7" fill="#180e18"/><ellipse cx="29" cy="15" rx="5" ry="7" fill="#180e18"/><ellipse cx="22" cy="28" rx="8" ry="6" fill="#e8d8c8"/><circle cx="18" cy="24" r="2" fill="#1a1010"/><circle cx="26" cy="24" r="2" fill="#1a1010"/></svg>
+      </div>
+      <div class="kg-body">
+        <div class="kg-dog-name">Royal Bruno</div>
+        <div class="kg-meta">Shar Pei</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#d4b840"></span>Royal · Schwarz/Gold</div>
+        <div class="kg-like-row">
+          <button class="kg-like-btn" onclick="toggleLike(this)">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
+            Gefällt mir
+          </button>
+          <span class="kg-like-count"><span class="ln">54</span> Likes</span>
+        </div>
+      </div>
+    </div>
+    <div class="kg-card">
+      <div class="kg-img kg-img-sm" style="background:#f5ede4">
+        <img src="fotos/galerie/mausi.jpg" alt="Mausi">
+        <svg width="44" height="36" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="14" ry="10" fill="#c8a888"/><ellipse cx="15" cy="15" rx="5" ry="7" fill="#906848"/><ellipse cx="29" cy="15" rx="5" ry="7" fill="#906848"/><ellipse cx="22" cy="28" rx="8" ry="6" fill="#fff8f0"/><circle cx="18" cy="24" r="2" fill="#1a1010"/><circle cx="26" cy="24" r="2" fill="#1a1010"/></svg>
+      </div>
+      <div class="kg-body">
+        <div class="kg-dog-name">Mausi</div>
+        <div class="kg-meta">Dackel</div>
+        <div class="kg-crown-tag"><span class="kg-cdot" style="background:#4a9090"></span>Geburtstag · Mint</div>
+        <div class="kg-like-row">
+          <button class="kg-like-btn" onclick="toggleLike(this)">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>
+            Gefällt mir
+          </button>
+          <span class="kg-like-count"><span class="ln">29</span> Likes</span>
+        </div>
+      </div>
+    </div>
+    <div class="kg-add-card" onclick="window.location='mailto:' + CONFIG.EMAIL_GALERIE">
+      <div class="kg-add-icon">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3v12M3 9h12" stroke="#4a9090" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="kg-add-text">Dein Hund<br>könnte hier sein!</div>
+      <div class="kg-add-lbl">FOTO EINSCHICKEN</div>
+    </div>
+  </div>
+
+  <div class="kg-cta">
+    <div>
+      <div class="kg-cta-title">Auch in der Galerie dabei sein?</div>
+      <div class="kg-cta-text">Schick uns dein schönstes Kronenfoto an <span class="kg-cta-email" id="galerie-email"></span> – wir freuen uns über jeden Kronenträger!</div>
+    </div>
+    <button class="kg-cta-btn" onclick="window.location='mailto:' + CONFIG.EMAIL_GALERIE">Foto einschicken</button>
+  </div>
+</section>
+
+<!-- ============================================================
+     ÜBER MILA
+     ============================================================ -->
+<section class="section section-brown2" id="about">
+  <div class="story-wrap">
+    <div class="story-portrait">
+      <img src="fotos/mila-portrait.jpg" alt="Mila" style="width:100%;height:100%;object-fit:cover">
+      <svg width="80" height="68" viewBox="0 0 44 38"><ellipse cx="22" cy="26" rx="16" ry="12" fill="#c8b8a8"/><ellipse cx="15" cy="14" rx="6" ry="8" fill="#3d2e22"/><ellipse cx="29" cy="14" rx="6" ry="8" fill="#3d2e22"/><ellipse cx="22" cy="28" rx="9" ry="7" fill="#f5ede4"/><circle cx="18" cy="24" r="2.5" fill="#1a1010"/><circle cx="26" cy="24" r="2.5" fill="#1a1010"/><ellipse cx="22" cy="30" rx="3.5" ry="2" fill="#c87880"/></svg>
+      <div class="story-portrait-lbl">MILA</div>
+    </div>
+    <div>
+      <div class="s-eyebrow">ABOUT</div>
+      <div class="s-name">Mila's <span>Geschichte</span></div>
+      <p class="s-text">
+        Ich bin die Border Collie Hündin Mila. Meine Mama sagt immer Knalltüte zu mir...<br><br>
+        Als ich sechs wurde, hat sie mir spontan eine Krone genäht – und so begann alles. Viele liebe Hundemenschen haben uns begleitet, neue Ideen kamen dazu und so entstand unser kleiner Shop.<br><br>
+        Heute schmücken viele Prinzessinnen, Prinzen und sogar ein König unsere Seiten. Wenn auch dein Fellprinz ein Krönchen braucht, lass dich inspirieren.
+      </p>
+      <div class="s-sig">— Sara mit Mila</div>
+      <a class="s-insta" href="#" id="about-insta-link">
+        <div class="ig-ic"><svg viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" stroke="white" stroke-width="2.5" fill="none"/><circle cx="12" cy="12" r="5" stroke="white" stroke-width="2" fill="none"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg></div>
+        Folg Mila auf Instagram
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     GRÖSSENGUIDE
+     ============================================================ -->
+<section class="section section-white" id="groessen">
+  <div class="sec-eyebrow">GRÖSSENGUIDE</div>
+  <h2 class="sec-title">Welche Grösse passt?</h2>
+  <div class="sec-line"></div>
+  <div class="szinfo-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));max-width:920px">
+    <div class="szinfo-card">
+      <svg class="szinfo-crown" viewBox="0 0 44 28"><polygon points="22,2 32,12 42,5 38,22 6,22 2,5 12,12" fill="none" stroke="#4a9090" stroke-width="2" stroke-linejoin="round"/></svg>
+      <div class="szinfo-name">Gross</div>
+      <div class="szinfo-dim">Ø 12 cm<br>Umfang ca. 37 cm<br>Höhe ca. 8 cm</div>
+      <div class="szinfo-breeds">Golden Retriever · Border Collie<br>Doodle · Berner Sennenhund</div>
+    </div>
+    <div class="szinfo-card">
+      <svg class="szinfo-crown" viewBox="0 0 44 28"><polygon points="22,2 32,12 42,5 38,22 6,22 2,5 12,12" fill="none" stroke="#4a9090" stroke-width="2" stroke-linejoin="round"/></svg>
+      <div class="szinfo-name">Klein</div>
+      <div class="szinfo-dim">Ø 8 cm<br>Umfang ca. 26 cm<br>Höhe ca. 7 cm</div>
+      <div class="szinfo-breeds">Malteser · Frz. Bulldogge<br>Maltipoo · Cairn Terrier</div>
+    </div>
+    <div class="szinfo-card">
+      <svg class="szinfo-crown" viewBox="0 0 44 28"><polygon points="22,2 32,12 42,5 38,22 6,22 2,5 12,12" fill="none" stroke="#4a9090" stroke-width="2" stroke-linejoin="round"/></svg>
+      <div class="szinfo-name">Mini</div>
+      <div class="szinfo-dim">Ø 6 cm<br>Umfang ca. 22 cm<br>Höhe ca. 7 cm</div>
+      <div class="szinfo-breeds">Zwergdackel · Zwergpudel<br>Bichon Frisé</div>
+    </div>
+    <div class="szinfo-card">
+      <svg class="szinfo-crown" viewBox="0 0 44 28"><polygon points="22,2 32,12 42,5 38,22 6,22 2,5 12,12" fill="none" stroke="#4a9090" stroke-width="2" stroke-linejoin="round"/></svg>
+      <div class="szinfo-name">Extra Mini</div>
+      <div class="szinfo-dim">Ø 5 cm<br>Umfang ca. 18 cm<br>Höhe ca. 6 cm</div>
+      <div class="szinfo-breeds">Chihuahua · Katzen</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer class="footer">
+  <div class="footer-top">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="logo-mark">
+        <div class="logo-bommels"><span class="bml"></span><span class="bml-m"></span><span class="bml"></span></div>
+        <svg class="logo-shape" viewBox="0 0 44 24"><polygon points="22,1 32,13 42,5 38,22 6,22 2,5 12,13" fill="none" stroke="#4a9090" stroke-width="2.5" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ft-logo-name">Mila's Kronenwelt</div>
+        <span class="ft-logo-sub">HANDMADE SEIT 2024</span>
+      </div>
+    </div>
+    <a class="ft-insta" href="#" id="footer-insta-link">
+      <div class="ig-ic"><svg viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" stroke="white" stroke-width="2.5" fill="none"/><circle cx="12" cy="12" r="5" stroke="white" stroke-width="2" fill="none"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg></div>
+      @milas.kronenwelt
+    </a>
+  </div>
+  <div class="footer-bot">
+    <div class="ft-links">
+      <a href="impressum.html">Impressum</a>
+      <a href="datenschutz.html">Datenschutz</a>
+      <a href="agb.html">AGB</a>
+      <a href="/cdn-cgi/l/email-protection#036a6d656c4368716c6d666d74666f772d6766">Kontakt</a>
+    </div>
+    <div class="ft-copy">© 2024 Mila's Kronenwelt · kronenwelt.de · Alle Rechte vorbehalten</div>
+  </div>
+</footer>
+
+<!-- ============================================================
+     COOKIE BANNER
+     ============================================================ -->
+<div class="cookie-overlay" id="cookieOverlay" style="display:none">
+  <div class="cookie-box" role="dialog" aria-labelledby="cookieTitle" aria-describedby="cookieDesc">
+    <div class="cookie-top">
+      <div class="cookie-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="#4a9090" stroke-width="1.5"/>
+          <circle cx="8.5" cy="10" r="1.5" fill="#4a9090"/>
+          <circle cx="15" cy="8" r="1" fill="#4a9090"/>
+          <circle cx="15.5" cy="14" r="1.5" fill="#4a9090"/>
+          <circle cx="9" cy="15" r="1" fill="#4a9090"/>
+          <circle cx="12" cy="12" r="1" fill="#4a9090"/>
+        </svg>
+      </div>
+      <div>
+        <div class="cookie-title" id="cookieTitle">Wir verwenden Cookies 🍪</div>
+        <p class="cookie-text" id="cookieDesc">
+          Für den Betrieb dieser Website verwenden wir technisch notwendige Cookies. Mit deiner Zustimmung laden wir auch Zahlungsdienste (SumUp, PayPal) die eigene Cookies setzen. Weitere Informationen findest du in unserer <a href="datenschutz.html">Datenschutzerklärung</a>.
+        </p>
+      </div>
+    </div>
+
+    <div class="cookie-details">
+      <div class="cookie-item">
+        <div class="cookie-item-icon" style="background:#e4f2f0">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 2l1.5 4.5H16l-3.5 2.5 1.5 4.5L10 11l-4 2.5 1.5-4.5L4 6.5h4.5z" stroke="#4a9090" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="cookie-item-body">
+          <div class="cookie-item-title">Technisch notwendige Cookies</div>
+          <div class="cookie-item-desc">Grundfunktionen der Website – immer aktiv, keine Zustimmung nötig</div>
+        </div>
+        <div class="cookie-item-required">IMMER AKTIV</div>
+      </div>
+      <div class="cookie-item">
+        <div class="cookie-item-icon" style="background:#fff8e8">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="11" rx="2" stroke="#d4b840" stroke-width="1.5" fill="none"/><path d="M2 9h16" stroke="#d4b840" stroke-width="1.5"/></svg>
+        </div>
+        <div class="cookie-item-body">
+          <div class="cookie-item-title">Zahlungsdienste (SumUp & PayPal)</div>
+          <div class="cookie-item-desc">Werden nur geladen wenn du auf "Bezahlen" klickst – nach deiner Zustimmung</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="paymentCookieToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Einstellungen aufklappen -->
+    <div id="cookieSettingsPanel" class="cookie-settings-panel">
+      <div class="cookie-toggle-row">
+        <div>
+          <div class="cookie-toggle-label">Technisch notwendige Cookies</div>
+          <div class="cookie-toggle-desc">Warenkorb, Sitzung, Sicherheit – können nicht deaktiviert werden</div>
+        </div>
+        <label class="toggle-switch"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+      </div>
+      <div class="cookie-toggle-row">
+        <div>
+          <div class="cookie-toggle-label">SumUp (Kartenzahlung)</div>
+          <div class="cookie-toggle-desc">Verarbeitet Kreditkarte, Google Pay & Apple Pay sicher</div>
+        </div>
+        <label class="toggle-switch"><input type="checkbox" id="sumupToggle" checked><span class="toggle-slider"></span></label>
+      </div>
+      <div class="cookie-toggle-row">
+        <div>
+          <div class="cookie-toggle-label">PayPal</div>
+          <div class="cookie-toggle-desc">Ermöglicht Bezahlung per PayPal-Konto</div>
+        </div>
+        <label class="toggle-switch"><input type="checkbox" id="paypalToggle" checked><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+
+    <div class="cookie-btns">
+      <button class="cookie-btn-accept" onclick="acceptAllCookies()">Alle akzeptieren</button>
+      <button class="cookie-btn-reject" onclick="rejectOptionalCookies()">Nur notwendige</button>
+      <button class="cookie-btn-settings" onclick="toggleCookieSettings()">Einstellungen ▾</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mini-Button zum Wiederöffnen der Cookie-Einstellungen -->
+<button class="cookie-mini-btn" id="cookieMiniBtn" onclick="reopenCookieBanner()" aria-label="Cookie-Einstellungen">
+  🍪 Cookies
+</button>
+
+
+<!-- ============================================================
+     SUMUP CARD WIDGET MODAL
+     ============================================================ -->
+<div id="sumupModal" style="display:none;position:fixed;inset:0;background:rgba(61,46,34,0.6);z-index:9997;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:18px;padding:28px;max-width:460px;width:100%;position:relative">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:Georgia,serif;font-size:18px;color:#3d2e22;font-style:italic">Sicher bezahlen</div>
+      <button onclick="closeSumUpModal()" style="background:none;border:none;font-size:22px;color:#8a7060;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;font-family:sans-serif;color:#444">Visa</span>
+      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;font-family:sans-serif;color:#444">Mastercard</span>
+      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;font-family:sans-serif;color:#444">Google Pay</span>
+      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;font-family:sans-serif;color:#444">Apple Pay</span>
+    </div>
+    <p style="font-size:11px;color:#8a7060;font-family:sans-serif;margin-bottom:12px">Google Pay & Apple Pay erscheinen automatisch wenn auf deinem Gerät verfügbar.</p>
+    <div id="sumup-order-summary" style="background:#f5ede4;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-family:sans-serif;font-size:13px;color:#3d2e22"></div>
+    <div id="sumup-card"></div>
+  </div>
+</div>
+
+<!-- PayPal Button Container -->
+<div id="paypalModal" style="display:none;position:fixed;inset:0;background:rgba(61,46,34,0.6);z-index:9997;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:18px;padding:28px;max-width:400px;width:100%;position:relative">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:Georgia,serif;font-size:18px;color:#3d2e22;font-style:italic">Mit PayPal bezahlen</div>
+      <button onclick="closePayPalModal()" style="background:none;border:none;font-size:22px;color:#8a7060;cursor:pointer">✕</button>
+    </div>
+    <div id="paypal-order-summary" style="background:#f5ede4;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-family:sans-serif;font-size:13px;color:#3d2e22"></div>
+    <div id="paypal-button-container"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     WHATSAPP BUTTON
+     ============================================================ -->
+<button class="wa-btn" id="wa-btn" aria-label="WhatsApp Kontakt">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.562 4.14 1.535 5.874L.057 23.882l6.19-1.624A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.891 0-3.667-.5-5.207-1.371l-.373-.221-3.876 1.017 1.034-3.774-.243-.386A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+  <div class="wa-tooltip">Schreib uns auf WhatsApp!</div>
+</button>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+
+<script>
+/* ============================================================
+   MILA'S KRONENWELT – Hauptscript
+   Dieses Script steht am Ende von <body> – der DOM ist
+   garantiert geladen wenn dieser Code ausgeführt wird.
+   ============================================================ */
+
+
+/* ---- GLOBAL ONCLICK HANDLERS (inline onclick fallback) ---- */
+function selectV(el) {
+  document.querySelectorAll('[data-v]').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  state.variant = el.dataset.v;
+  updatePreview();
+}
+function selectC(el) {
+  document.querySelectorAll('[data-c]').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  state.color = el.dataset.c;
+  state.bg    = el.dataset.bg;
+  state.sc    = el.dataset.sc;
+  state.dot   = el.dataset.dot;
+  updatePreview();
+}
+function selectS(el) {
+  document.querySelectorAll('[data-s]').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  state.size = el.dataset.s;
+}
+
+/* ---- 1. KONFIGURATION ---- */
+const PRICES = {
+  'Geburtstagskrone': 13.00,
+  'Party-Krone':      13.00,
+  'Royal-Krone':      15.29,
+  'Glitzer-Krone':    24.90
+};
+
+const BOMMELS = {
+  'Geburtstagskrone': ['#d4d4d4', '#b8e0d8', '#d4d4d4'],
+  'Party-Krone':      ['#f8d0a0', '#f0b0c8', '#f8d0a0'],
+  'Royal-Krone':      ['#d4b840', '#d4b840', '#d4b840'],
+  'Glitzer-Krone':    ['#e8d8a0', '#e0c8f0', '#e8d8a0']
+};
+
+/* ---- 2. ZUSTAND ---- */
+const state = {
+  variant: 'Geburtstagskrone',
+  color:   'Mint',
+  size:    'Gross',
+  bg:      '#e4f2f0',
+  sc:      '#3d7878',
+  dot:     '#4a9090',
+  name:    ''
+};
+
+/* ---- 3. KONFIGURATOR ---- */
+function updatePreview() {
+  const el = (id) => document.getElementById(id);
+  const pb = el('pBox'); if (!pb) return;
+
+  pb.style.background = state.bg;
+
+  const pp = el('pp'); if (pp) pp.setAttribute('stroke', state.sc);
+  const pf = el('pf'); if (pf) pf.setAttribute('fill',
+    state.color === 'Schwarz/Gold' ? 'rgba(212,184,64,0.4)' : 'rgba(74,144,144,0.1)');
+
+  const colors = BOMMELS[state.variant] || BOMMELS['Geburtstagskrone'];
+  ['pb1','pb2','pb3'].forEach((id, i) => {
+    const b = el(id);
+    if (b) { b.setAttribute('fill', colors[i]); b.setAttribute('stroke', state.sc); }
+  });
+
+  const pt = el('pt');
+  if (pt) { pt.setAttribute('fill', state.sc); pt.textContent = state.name || 'MILA'; }
+
+  const pvn = el('pvn'); if (pvn) pvn.textContent = state.variant;
+  const pcd = el('pcd'); if (pcd) pcd.style.background = state.dot;
+  const pcl = el('pcl'); if (pcl) pcl.textContent = state.color;
+  const pnt = el('pnt'); if (pnt) pnt.textContent = state.name;
+  const tp  = el('totP');
+  if (tp) tp.textContent = (PRICES[state.variant] || 24.90).toFixed(2).replace('.', ',') + ' €';
+}
+
+function initConfigurator() {
+  // Variante
+  document.querySelectorAll('[data-v]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-v]').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      state.variant = btn.dataset.v;
+      updatePreview();
+    });
+  });
+
+  // Farbe
+  document.querySelectorAll('[data-c]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-c]').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      state.color = btn.dataset.c;
+      state.bg    = btn.dataset.bg;
+      state.sc    = btn.dataset.sc;
+      state.dot   = btn.dataset.dot;
+      updatePreview();
+    });
+  });
+
+  // Grösse
+  document.querySelectorAll('[data-s]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-s]').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      state.size = btn.dataset.s;
+    });
+  });
+
+  // Name
+  const nameInput = document.getElementById('nIn');
+  const nameCount = document.getElementById('nCnt');
+  if (nameInput) {
+    nameInput.addEventListener('input', () => {
+      state.name = nameInput.value.toUpperCase();
+      nameInput.value = state.name;
+      if (nameCount) nameCount.textContent = state.name.length + ' / 11';
+      updatePreview();
+    });
+  }
+
+  updatePreview();
+}
+
+/* ---- 4. BEZAHLUNG ---- */
+function getOrder() {
+  return {
+    variant: state.variant,
+    color:   state.color,
+    size:    state.size,
+    name:    state.name,
+    price:   PRICES[state.variant] || 24.90
+  };
+}
+
+function validateOrder() {
+  if (!state.name.trim()) {
+    alert('Bitte gib den Namen für deine Krone ein (Schritt 4).');
+    const ni = document.getElementById('nIn');
+    if (ni) ni.focus();
+    return false;
+  }
+  return true;
+}
+
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id, clearId) {
+  document.getElementById(id).style.display = 'none';
+  if (clearId) document.getElementById(clearId).innerHTML = '';
+}
+
+function closeSumUpModal()  { closeModal('sumupModal',  'sumup-card'); }
+function closePayPalModal() { closeModal('paypalModal', 'paypal-button-container'); }
+
+function buildOrderSummary(order) {
+  return '<strong>' + order.variant + '</strong> · ' + order.color +
+    ' · Grösse: ' + order.size +
+    '<br>Name: <strong>' + order.name + '</strong>' +
+    '<br><span style="font-size:16px;font-weight:700;color:#4a9090">' +
+    order.price.toFixed(2).replace('.', ',') + ' €</span>';
+}
+
+function startSumUpPayment() {
+  if (!validateOrder()) return;
+  const order = getOrder();
+  document.getElementById('sumup-order-summary').innerHTML = buildOrderSummary(order);
+  document.getElementById('sumup-card').innerHTML = '';
+  openModal('sumupModal');
+
+  if (CONFIG.SUMUP_KEY === 'DEIN_SUMUP_API_KEY') {
+    document.getElementById('sumup-card').innerHTML =
+      '<p style="font-family:sans-serif;font-size:13px;color:#8a7060;text-align:center;padding:20px">⚙️ SumUp API Key noch nicht eingetragen.</p>';
+    return;
+  }
+
+  // SumUp SDK lazy laden falls noch nicht vorhanden
+  if (typeof SumUpCard === 'undefined') {
+    const sdk = document.createElement('script');
+    sdk.src = 'https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js';
+    sdk.onload = () => mountSumUp(order);
+    sdk.onerror = () => {
+      document.getElementById('sumup-card').innerHTML =
+        '<p style="font-family:sans-serif;font-size:13px;color:#e05050;text-align:center;padding:20px">❌ SumUp konnte nicht geladen werden. Bitte versuche es erneut.</p>';
+    };
+    document.head.appendChild(sdk);
+    return;
+  }
+  mountSumUp(order);
+}
+
+function mountSumUp(order) {
+  SumUpCard.mount({
+    id:          'sumup-card',
+    key:         CONFIG.SUMUP_KEY,
+    amount:      order.price,
+    currency:    'EUR',
+    description: order.variant + ' - ' + order.name,
+    locale:      'de-DE',
+    onResponse:  (type) => {
+      if (type === 'success') {
+        closeSumUpModal();
+        alert('✅ Zahlung erfolgreich! Mila freut sich schon die Krone zu nähen! 🎉');
+      } else if (type === 'error') {
+        alert('❌ Zahlung fehlgeschlagen. Bitte versuche es nochmal.');
+        closeSumUpModal();
+      }
+    }
+  });
+}
+
+function startPayPalPayment() {
+  if (!validateOrder()) return;
+  const order = getOrder();
+  document.getElementById('paypal-order-summary').innerHTML = buildOrderSummary(order);
+  document.getElementById('paypal-button-container').innerHTML = '';
+  openModal('paypalModal');
+
+  if (CONFIG.PAYPAL_ID === 'DEINE_PAYPAL_CLIENT_ID') {
+    document.getElementById('paypal-button-container').innerHTML =
+      '<p style="font-family:sans-serif;font-size:13px;color:#8a7060;text-align:center;padding:20px">⚙️ PayPal Client ID noch nicht eingetragen.</p>';
+    return;
+  }
+
+  if (!window.paypal) {
+    const script = document.createElement('script');
+    script.src = 'https://www.paypal.com/sdk/js?client-id=' + CONFIG.PAYPAL_ID + '&currency=EUR';
+    script.onload = () => renderPayPalButton(order);
+    document.head.appendChild(script);
+  } else {
+    renderPayPalButton(order);
+  }
+}
+
+function renderPayPalButton(order) {
+  paypal.Buttons({
+    style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'paypal' },
+    createOrder: (data, actions) => actions.order.create({
+      purchase_units: [{
+        description: order.variant + ' - ' + order.name + ' - ' + order.color + ' - Gr. ' + order.size,
+        amount: { value: order.price.toFixed(2), currency_code: 'EUR' }
+      }]
+    }),
+    onApprove: (data, actions) => actions.order.capture().then(details => {
+      closePayPalModal();
+      alert('✅ Zahlung erfolgreich! Danke, ' + details.payer.name.given_name + '! 🎉');
+    }),
+    onError:  () => { alert('❌ PayPal Fehler. Bitte nochmal versuchen.'); closePayPalModal(); },
+    onCancel: () => closePayPalModal()
+  }).render('#paypal-button-container');
+}
+
+function initPayment() {
+  const btnSumup = document.querySelector('.pbt-sumup');
+  const btnPP    = document.querySelector('.pbt-pp');
+  if (btnSumup) btnSumup.onclick = () => {
+    if (!getCookieConsent()?.payment) { showCookieBanner(); return; }
+    startSumUpPayment();
+  };
+  if (btnPP) btnPP.onclick = () => {
+    if (!getCookieConsent()?.payment) { showCookieBanner(); return; }
+    startPayPalPayment();
+  };
+}
+
+/* ---- 5. GALERIE LIKES ---- */
+function toggleLike(btn) {
+  const liked   = btn.classList.contains('liked');
+  const numEl   = btn.closest('.kg-like-row').querySelector('.ln');
+  const ho      = btn.querySelector('.ho');
+  const hf      = btn.querySelector('.hf');
+  const n       = parseInt(numEl.textContent);
+  btn.classList.toggle('liked');
+  ho.style.display = liked ? ''     : 'none';
+  hf.style.display = liked ? 'none' : '';
+  numEl.textContent = liked ? n - 1 : n + 1;
+  if (!liked) {
+    const svg = btn.querySelector('svg');
+    svg.style.transform = 'scale(1.3)';
+    setTimeout(() => svg.style.transform = '', 200);
+  }
+}
+
+/* ---- 6. COOKIE MANAGEMENT ---- */
+const COOKIE_KEY = 'mk_cookie_consent';
+
+function setCookieConsent(data) {
+  const exp = new Date();
+  exp.setFullYear(exp.getFullYear() + 1);
+  document.cookie = COOKIE_KEY + '=' + JSON.stringify(data) +
+    '; expires=' + exp.toUTCString() + '; path=/; SameSite=Lax';
+}
+
+function getCookieConsent() {
+  const m = document.cookie.match(new RegExp('(?:^|; )' + COOKIE_KEY + '=([^;]*)'));
+  try { return m ? JSON.parse(decodeURIComponent(m[1])) : null; } catch { return null; }
+}
+
+function showCookieBanner() {
+  document.getElementById('cookieOverlay').style.display = 'flex';
+  document.getElementById('cookieMiniBtn').style.display = 'none';
+}
+
+function hideCookieBanner() {
+  document.getElementById('cookieOverlay').style.display = 'none';
+  document.getElementById('cookieMiniBtn').style.display = 'block';
+}
+
+function toggleCookieSettings() {
+  const panel = document.getElementById('cookieSettingsPanel');
+  const btn   = document.querySelector('.cookie-btn-settings');
+  panel.classList.toggle('open');
+  btn.textContent = panel.classList.contains('open') ? 'Einstellungen ▴' : 'Einstellungen ▾';
+}
+
+function acceptAllCookies() {
+  setCookieConsent({ necessary: true, payment: true, timestamp: new Date().toISOString() });
+  hideCookieBanner();
+  enablePaymentButtons();
+}
+
+function rejectOptionalCookies() {
+  const sumup  = document.getElementById('sumupToggle')?.checked  ?? false;
+  const paypal = document.getElementById('paypalToggle')?.checked ?? false;
+  setCookieConsent({ necessary: true, payment: sumup || paypal,
+    sumup, paypal, timestamp: new Date().toISOString() });
+  hideCookieBanner();
+  (sumup || paypal) ? enablePaymentButtons() : disablePaymentButtons();
+}
+
+function reopenCookieBanner() { showCookieBanner(); }
+
+function enablePaymentButtons() {
+  document.querySelectorAll('.pbt-sumup, .pbt-pp').forEach(b => {
+    b.disabled = false; b.style.opacity = '1'; b.title = '';
+  });
+}
+
+function disablePaymentButtons() {
+  document.querySelectorAll('.pbt-sumup, .pbt-pp').forEach(b => {
+    b.disabled = true; b.style.opacity = '0.5';
+    b.title = 'Bitte akzeptiere Cookies um bezahlen zu können';
+  });
+}
+
+function initCookies() {
+  const consent = getCookieConsent();
+  if (!consent) {
+    showCookieBanner();
+    disablePaymentButtons();
+  } else {
+    hideCookieBanner();
+    consent.payment ? enablePaymentButtons() : disablePaymentButtons();
+  }
+}
+
+/* ---- 7. NAVIGATION ---- */
+function closeMobileMenu() {
+  document.getElementById('mobileMenu').classList.remove('open');
+}
+
+function initNav() {
+  const hamburger  = document.getElementById('hamburger');
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (hamburger) hamburger.onclick = () => mobileMenu.classList.toggle('open');
+
+  const waBtn = document.getElementById('wa-btn');
+  if (waBtn) waBtn.onclick = () =>
+    window.open('https://wa.me/' + CONFIG.WA_NUMBER +
+      '?text=Hallo%20Milas%20Kronenwelt!%20Ich%20habe%20eine%20Frage%20zu%20euren%20Hundekronen.', '_blank');
+}
+
+/* ---- 8. INSTAGRAM LINKS ---- */
+function initInstagram() {
+  const url    = CONFIG.INSTA_URL;
+  const handle = '@' + CONFIG.INSTA_HANDLE;
+  ['nav-insta-link','galerie-insta-link','about-insta-link','footer-insta-link']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.href = url; });
+  ['nav-insta-text','mobile-insta-text']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = handle; });
+  const mi = document.getElementById('mobile-insta-link'); if (mi) mi.href = url;
+  const ge = document.getElementById('galerie-email');     if (ge) ge.textContent = CONFIG.EMAIL_GALERIE;
+}
+
+/* ---- 9. START ---- */
+initNav();
+initInstagram();
+initConfigurator();
+initPayment();
+initCookies();
+
+</script>
+</body>
+</html>
