@@ -1,6 +1,26 @@
 {
-  "Party":       { "Gross": 15, "Klein": 14, "Mini": 13, "Extra Mini": 12 },
-  "Einfarbig":   { "Gross": 15, "Klein": 14, "Mini": 13, "Extra Mini": 12 },
-  "Glitzer":     { "Gross": 17, "Klein": 16, "Mini": 15, "Extra Mini": 14 },
-  "Edel & Wild": { "Gross": 17, "Klein": 16, "Mini": 15, "Extra Mini": 14 }
+  "Party": {
+    "Gross": 15,
+    "Klein": 14,
+    "Mini": 13,
+    "Extra Mini": 12
+  },
+  "Einfarbig": {
+    "Gross": 15,
+    "Klein": 14,
+    "Mini": 13,
+    "Extra Mini": 12
+  },
+  "Glitzer": {
+    "Gross": 17,
+    "Klein": 16,
+    "Mini": 15,
+    "Extra Mini": 14
+  },
+  "Edel & Wild": {
+    "Gross": 17,
+    "Klein": 16,
+    "Mini": 15,
+    "Extra Mini": 14
+  }
 }
