@@ -2148,31 +2148,11 @@ function updatePreviewImage() {
 }
 
 /* ---- 1. KONFIGURATION ---- */
-const PRICES = {
-  "Party": {
-    "Gross": 1,
-    "Klein": 14,
-    "Mini": 13,
-    "Extra Mini": 12
-  },
-  "Einfarbig": {
-    "Gross": 15,
-    "Klein": 14,
-    "Mini": 13,
-    "Extra Mini": 12
-  },
-  "Glitzer": {
-    "Gross": 17,
-    "Klein": 16,
-    "Mini": 15,
-    "Extra Mini": 14
-  },
-  "Edel & Wild": {
-    "Gross": 17,
-    "Klein": 16,
-    "Mini": 15,
-    "Extra Mini": 14
-  }
+let PRICES = {
+  'Party':       { 'Gross': 15, 'Klein': 14, 'Mini': 13, 'Extra Mini': 12 },
+  'Einfarbig':   { 'Gross': 15, 'Klein': 14, 'Mini': 13, 'Extra Mini': 12 },
+  'Glitzer':     { 'Gross': 17, 'Klein': 16, 'Mini': 15, 'Extra Mini': 14 },
+  'Edel & Wild': { 'Gross': 17, 'Klein': 16, 'Mini': 15, 'Extra Mini': 14 }
 };
 
 const BOMMELS = {
@@ -2567,10 +2547,21 @@ function initInstagram() {
 /* ---- 9. START ---- */
 initNav();
 initInstagram();
-initConfigurator();
-initPayment();
 initCookies();
 updateCartBadge();
+
+// Preise und Galerie dynamisch laden
+Promise.all([
+  fetch('preise.json').then(r => r.json()).catch(() => null),
+  fetch('galerie.json').then(r => r.json()).catch(() => null)
+]).then(([preise, galerie]) => {
+  if (preise) PRICES = preise;
+  initConfigurator();
+  initPayment();
+}).catch(() => {
+  initConfigurator();
+  initPayment();
+});
 
 </script>
 </body>
