@@ -9,7 +9,7 @@
 const CONFIG = {
 
   // PayPal Client ID (aus developer.paypal.com)
-  PAYPAL_ID: 'EEcshGtA9HDYSENEDbhBvqLasvzb56bZSqqT1jHYqzC4tBS6UubsSicpW-GSWo_uhDb2lCWAT7QdfmH3',
+  PAYPAL_ID: 'BAA0M7NjLoaJgDw-PcmiLDNoXN-5OcMuDLZ4HLp5rDmkrRDM8M3zqtpv4HrEtsPmiPdXUXNYz5xWDjYYAc',
 
   // SumUp (falls genutzt, sonst leer lassen)
   SUMUP_KEY:      'sup_sk_zsEveP78KVWMVsFC00p2Qc2qy2Ag4SjQU',
