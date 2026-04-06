@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<!-- Version: 20260328-212024 -->
+<!-- Version: 20260406 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Mila's Kronenwelt – Personalisierte handgemachte Hundekronen für Geburtstage und besondere Momente. Jetzt bestellen auf kronenwelt.de">
 <title>Mila's Kronenwelt v2120 – Personalisierte Hundekronen</title>
@@ -665,13 +665,6 @@ button { cursor: pointer; font-family: inherit; }
   box-shadow: 0 2px 12px rgba(61,46,34,0.2);
 }
 .cookie-mini-btn:hover { opacity: 0.85; }
-@media(max-width:600px){
-  .cookie-box { padding: 20px 18px; border-radius: 18px 18px 0 0; }
-  .cookie-btns { flex-direction: column; }
-  .cookie-btn-accept, .cookie-btn-reject { min-width: unset; }
-  .cookie-mini-btn { bottom: 76px; right: 16px; }
-}
-
 @media(max-width:900px){
   .nav { padding: 0 24px; }
   .nav-links { display: none; }
@@ -779,6 +772,11 @@ button { cursor: pointer; font-family: inherit; }
   .footer-bot { flex-direction: column; align-items: flex-start; gap: 8px; }
   .ft-links { gap: 14px; }
   .wa-btn { width: 48px; height: 48px; bottom: 18px; right: 18px; }
+  .cart-panel { width: 100vw; }
+  .cookie-box { padding: 20px 18px; border-radius: 18px 18px 0 0; }
+  .cookie-btns { flex-direction: column; }
+  .cookie-btn-accept, .cookie-btn-reject { min-width: unset; }
+  .cookie-mini-btn { bottom: 76px; right: 16px; }
 }
 
 /* ============================================================
@@ -925,10 +923,6 @@ button { cursor: pointer; font-family: inherit; }
   padding: 6px 10px; background: var(--beige);
   border-radius: 6px; border-left: 2px solid var(--border2);
   line-height: 1.5; font-style: italic;
-}
-
-@media(max-width:600px){
-  .cart-panel { width: 100vw; }
 }
 </style>
 </head>
@@ -1893,46 +1887,12 @@ function addToCart() {
   }, 800);
 }
 
-function loadPayPalButton(total, desc) {
-  document.getElementById('paypal-button-container').innerHTML = '';
-
-  const doRender = () => {
-    paypal.Buttons({
-      style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'paypal' },
-      createOrder: (data, actions) => actions.order.create({
-        purchase_units: [{
-          description: desc.substring(0, 127),
-          amount: { value: total.toFixed(2), currency_code: 'EUR' }
-        }]
-      }),
-      onApprove: (data, actions) => actions.order.capture().then(details => {
-        closePayPalModal();
-        cart = [];
-        saveCart();
-        updateCartBadge();
-        alert('✅ Zahlung erfolgreich! Danke, ' + details.payer.name.given_name + '! Mila freut sich schon die Krone zu nähen! 🎉');
-      }),
-      onError:  () => { alert('❌ PayPal Fehler. Bitte nochmal versuchen.'); },
-      onCancel: () => closePayPalModal()
-    }).render('#paypal-button-container');
-  };
-
-  if (!window.paypal) {
-    const script = document.createElement('script');
-    script.src = 'https://www.paypal.com/sdk/js?client-id=' + CONFIG.PAYPAL_ID + '&currency=EUR';
-    script.onload = doRender;
-    document.head.appendChild(script);
-  } else {
-    doRender();
-  }
-}
-
 function startCartCheckout() {
   if (cart.length === 0) return;
   const total = cart.reduce((s, i) => s + i.price, 0);
   const desc  = cart.map(i => `${i.variant} ${i.color} ${i.size} "${i.name}"`).join(' | ');
 
-  // Bestellzusammenfassung für PayPal Modal aufbauen
+  // Bestellzusammenfassung aufbauen
   const summaryEl = document.getElementById('paypal-order-summary');
   if (summaryEl) {
     summaryEl.innerHTML = cart.map(i =>
@@ -1950,14 +1910,38 @@ function startCartCheckout() {
 
   closeCart();
   document.getElementById('paypalModal').style.display = 'flex';
+  document.getElementById('paypal-button-container').innerHTML = '';
 
-  // PayPal laden
-  if (!CONFIG.PAYPAL_ID || CONFIG.PAYPAL_ID === 'DEINE_PAYPAL_CLIENT_ID' || CONFIG.PAYPAL_ID === 'DEINEN_ECHTEN_PAYPAL_KEY_HIER_EINTRAGEN') {
+  if (!CONFIG.PAYPAL_ID || CONFIG.PAYPAL_ID.length < 10 || CONFIG.PAYPAL_ID === 'DEINEN_ECHTEN_PAYPAL_KEY_HIER_EINTRAGEN') {
     document.getElementById('paypal-button-container').innerHTML =
       '<p style="font-family:sans-serif;font-size:13px;color:#8a7060;text-align:center;padding:20px">⚙️ PayPal Client ID noch nicht eingetragen.</p>';
     return;
   }
-  loadPayPalButton(total, desc);
+
+  const renderPayPal = () => {
+    paypal.Buttons({
+      style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'paypal' },
+      createOrder: (data, actions) => actions.order.create({
+        purchase_units: [{ description: desc.substring(0, 127), amount: { value: total.toFixed(2), currency_code: 'EUR' } }]
+      }),
+      onApprove: (data, actions) => actions.order.capture().then(details => {
+        closePayPalModal();
+        cart = []; saveCart(); updateCartBadge();
+        alert('✅ Zahlung erfolgreich! Danke, ' + details.payer.name.given_name + '! Mila freut sich schon! 🎉');
+      }),
+      onError:  () => alert('❌ PayPal Fehler. Bitte nochmal versuchen.'),
+      onCancel: () => closePayPalModal()
+    }).render('#paypal-button-container');
+  };
+
+  if (!window.paypal) {
+    const s = document.createElement('script');
+    s.src = 'https://www.paypal.com/sdk/js?client-id=' + CONFIG.PAYPAL_ID + '&currency=EUR';
+    s.onload = renderPayPal;
+    document.head.appendChild(s);
+  } else {
+    renderPayPal();
+  }
 }
 
 /* ---- GLOBAL ONCLICK HANDLERS (inline onclick fallback) ---- */
@@ -2361,7 +2345,7 @@ function startPayPalPayment() {
   document.getElementById('paypal-button-container').innerHTML = '';
   openModal('paypalModal');
 
-  if (CONFIG.PAYPAL_ID === 'DEINE_PAYPAL_CLIENT_ID') {
+  if (!CONFIG.PAYPAL_ID || CONFIG.PAYPAL_ID.length < 10 || CONFIG.PAYPAL_ID === 'DEINEN_ECHTEN_PAYPAL_KEY_HIER_EINTRAGEN') {
     document.getElementById('paypal-button-container').innerHTML =
       '<p style="font-family:sans-serif;font-size:13px;color:#8a7060;text-align:center;padding:20px">⚙️ PayPal Client ID noch nicht eingetragen.</p>';
     return;
