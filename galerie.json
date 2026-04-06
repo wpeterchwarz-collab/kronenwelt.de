@@ -1,0 +1,122 @@
+[
+  {
+    "datei": "mila-geburtstag",
+    "name": "Mila – die Königin",
+    "rasse": "Border Collie",
+    "krone": "Einfarbig · Mint",
+    "farbe": "#4a9090",
+    "featured": true,
+    "badge": "★ Foto des Monats",
+    "likes": 142
+  },
+  {
+    "datei": "luna",
+    "name": "Luna",
+    "rasse": "Golden Retriever",
+    "krone": "Einfarbig · Mint",
+    "farbe": "#4a9090",
+    "featured": false,
+    "badge": "",
+    "likes": 98
+  },
+  {
+    "datei": "cara",
+    "name": "Cara",
+    "rasse": "Zwergspitz",
+    "krone": "Party · Rosa mit Punkten",
+    "farbe": "#c07090",
+    "featured": false,
+    "badge": "Neu",
+    "likes": 61
+  },
+  {
+    "datei": "eddy",
+    "name": "Eddy",
+    "rasse": "Dackel",
+    "krone": "Einfarbig · Mint",
+    "farbe": "#4a9090",
+    "featured": false,
+    "badge": "",
+    "likes": 37
+  },
+  {
+    "datei": "bruno",
+    "name": "Bruno",
+    "rasse": "Golden Retriever",
+    "krone": "Einfarbig · Mint",
+    "farbe": "#4a9090",
+    "featured": false,
+    "badge": "",
+    "likes": 54
+  },
+  {
+    "datei": "bonnie",
+    "name": "Bonnie",
+    "rasse": "Dackel",
+    "krone": "Party · Rosa mit Punkten",
+    "farbe": "#c07090",
+    "featured": false,
+    "badge": "",
+    "likes": 29
+  },
+  {
+    "datei": "emma-hoheit",
+    "name": "Emma-Hoheit",
+    "rasse": "Hund",
+    "krone": "Einfarbig · Mint",
+    "farbe": "#4a9090",
+    "featured": false,
+    "badge": "",
+    "likes": 18
+  },
+  {
+    "datei": "frieda",
+    "name": "Frieda",
+    "rasse": "Hund",
+    "krone": "Einfarbig · Mint",
+    "farbe": "#4a9090",
+    "featured": false,
+    "badge": "",
+    "likes": 22
+  },
+  {
+    "datei": "kiwi",
+    "name": "Kiwi",
+    "rasse": "Hund",
+    "krone": "Party · Rosa mit Punkten",
+    "farbe": "#c07090",
+    "featured": false,
+    "badge": "",
+    "likes": 31
+  },
+  {
+    "datei": "royal-boy",
+    "name": "Royal Boy",
+    "rasse": "Hund",
+    "krone": "Edel & Wild · Gold",
+    "farbe": "#c09820",
+    "featured": false,
+    "badge": "",
+    "likes": 44
+  },
+  {
+    "datei": "schokopfote-honigschnute",
+    "name": "Schokopfote",
+    "rasse": "Hund",
+    "krone": "Einfarbig · Petrol",
+    "farbe": "#3d8080",
+    "featured": false,
+    "badge": "",
+    "likes": 27
+  },
+  {
+    "datei": "uno",
+    "name": "Uno",
+    "rasse": "Hund",
+    "krone": "Einfarbig · Mint",
+    "farbe": "#4a9090",
+    "featured": false,
+    "badge": "",
+    "likes": 19
+  }
+]
