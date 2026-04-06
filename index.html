@@ -1893,6 +1893,40 @@ function addToCart() {
   }, 800);
 }
 
+function loadPayPalButton(total, desc) {
+  document.getElementById('paypal-button-container').innerHTML = '';
+
+  const doRender = () => {
+    paypal.Buttons({
+      style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'paypal' },
+      createOrder: (data, actions) => actions.order.create({
+        purchase_units: [{
+          description: desc.substring(0, 127),
+          amount: { value: total.toFixed(2), currency_code: 'EUR' }
+        }]
+      }),
+      onApprove: (data, actions) => actions.order.capture().then(details => {
+        closePayPalModal();
+        cart = [];
+        saveCart();
+        updateCartBadge();
+        alert('✅ Zahlung erfolgreich! Danke, ' + details.payer.name.given_name + '! Mila freut sich schon die Krone zu nähen! 🎉');
+      }),
+      onError:  () => { alert('❌ PayPal Fehler. Bitte nochmal versuchen.'); },
+      onCancel: () => closePayPalModal()
+    }).render('#paypal-button-container');
+  };
+
+  if (!window.paypal) {
+    const script = document.createElement('script');
+    script.src = 'https://www.paypal.com/sdk/js?client-id=' + CONFIG.PAYPAL_ID + '&currency=EUR';
+    script.onload = doRender;
+    document.head.appendChild(script);
+  } else {
+    doRender();
+  }
+}
+
 function startCartCheckout() {
   if (cart.length === 0) return;
   const total = cart.reduce((s, i) => s + i.price, 0);
@@ -1918,7 +1952,7 @@ function startCartCheckout() {
   document.getElementById('paypalModal').style.display = 'flex';
 
   // PayPal laden
-  if (CONFIG.PAYPAL_ID === 'DEINE_PAYPAL_CLIENT_ID') {
+  if (!CONFIG.PAYPAL_ID || CONFIG.PAYPAL_ID === 'DEINE_PAYPAL_CLIENT_ID' || CONFIG.PAYPAL_ID === 'DEINEN_ECHTEN_PAYPAL_KEY_HIER_EINTRAGEN') {
     document.getElementById('paypal-button-container').innerHTML =
       '<p style="font-family:sans-serif;font-size:13px;color:#8a7060;text-align:center;padding:20px">⚙️ PayPal Client ID noch nicht eingetragen.</p>';
     return;
@@ -2319,39 +2353,6 @@ function mountSumUp(order) {
   });
 }
 
-function loadPayPalButton(total, desc) {
-  document.getElementById('paypal-button-container').innerHTML = '';
-
-  const doRender = () => {
-    paypal.Buttons({
-      style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'paypal' },
-      createOrder: (data, actions) => actions.order.create({
-        purchase_units: [{
-          description: desc.substring(0, 127),
-          amount: { value: total.toFixed(2), currency_code: 'EUR' }
-        }]
-      }),
-      onApprove: (data, actions) => actions.order.capture().then(details => {
-        closePayPalModal();
-        cart = [];
-        saveCart();
-        updateCartBadge();
-        alert('✅ Zahlung erfolgreich! Danke, ' + details.payer.name.given_name + '! Mila freut sich schon die Krone zu nähen! 🎉');
-      }),
-      onError:  () => { alert('❌ PayPal Fehler. Bitte nochmal versuchen.'); },
-      onCancel: () => closePayPalModal()
-    }).render('#paypal-button-container');
-  };
-
-  if (!window.paypal) {
-    const script = document.createElement('script');
-    script.src = 'https://www.paypal.com/sdk/js?client-id=' + CONFIG.PAYPAL_ID + '&currency=EUR';
-    script.onload = doRender;
-    document.head.appendChild(script);
-  } else {
-    doRender();
-  }
-}
 
 function startPayPalPayment() {
   if (!validateOrder()) return;
