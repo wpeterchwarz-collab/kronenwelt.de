@@ -12,7 +12,7 @@
   {
     "datei": "luna",
     "name": "Luna",
-    "rasse": "Golden Retriever",
+    "rasse": "Zwergdackel",
     "krone": "Einfarbig · Mint",
     "farbe": "#4a9090",
     "featured": false,
@@ -22,7 +22,7 @@
   {
     "datei": "cara",
     "name": "Cara",
-    "rasse": "Zwergspitz",
+    "rasse": "",
     "krone": "Party · Rosa mit Punkten",
     "farbe": "#c07090",
     "featured": false,
