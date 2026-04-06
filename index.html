@@ -1744,13 +1744,13 @@ button { cursor: pointer; font-family: inherit; }
 </div>
 
 <!-- PayPal Button Container -->
-<div id="paypalModal" style="display:none;position:fixed;inset:0;background:rgba(61,46,34,0.6);z-index:9997;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:18px;padding:28px;max-width:400px;width:100%;position:relative">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-family:Georgia,serif;font-size:18px;color:#3d2e22;font-style:italic">Mit PayPal bezahlen</div>
-      <button onclick="closePayPalModal()" style="background:none;border:none;font-size:22px;color:#8a7060;cursor:pointer">✕</button>
+<div id="paypalModal" style="display:none;position:fixed;inset:0;background:rgba(61,46,34,0.6);z-index:9997;align-items:center;justify-content:center;padding:16px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:18px;padding:22px;max-width:400px;width:100%;position:relative;margin:auto;max-height:calc(100vh - 32px);overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;position:sticky;top:0;background:#fff;padding-bottom:10px;border-bottom:1px solid #f0e8e0;z-index:1">
+      <div style="font-family:Georgia,serif;font-size:17px;color:#3d2e22;font-style:italic">Mit PayPal bezahlen</div>
+      <button onclick="closePayPalModal()" style="background:none;border:none;font-size:22px;color:#8a7060;cursor:pointer;line-height:1;padding:0 0 0 12px">✕</button>
     </div>
-    <div id="paypal-order-summary" style="background:#f5ede4;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-family:sans-serif;font-size:13px;color:#3d2e22"></div>
+    <div id="paypal-order-summary" style="background:#f5ede4;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-family:sans-serif;font-size:13px;color:#3d2e22"></div>
     <div id="paypal-button-container"></div>
   </div>
 </div>
@@ -1932,14 +1932,21 @@ function startCartCheckout() {
         closePayPalModal();
 
         // E-Mails senden via EmailJS
+        const shipping = details.purchase_units?.[0]?.shipping?.address;
+        const lieferadresse = shipping
+          ? [shipping.address_line_1, shipping.address_line_2, shipping.postal_code + ' ' + shipping.admin_area_2, shipping.country_code]
+              .filter(Boolean).join(', ')
+          : 'Nicht angegeben';
+
         const emailParams = {
-          variante:    cart.map(i => i.variant).join(', '),
-          farbe:       cart.map(i => i.color).join(', '),
-          groesse:     cart.map(i => i.size).join(', '),
-          hundename:   cart.map(i => i.name).join(', '),
-          preis:       total.toFixed(2).replace('.', ','),
-          kunde_name:  details.payer.name.given_name + ' ' + details.payer.name.surname,
-          kunde_email: details.payer.email_address
+          variante:       cart.map(i => i.variant).join(', '),
+          farbe:          cart.map(i => i.color).join(', '),
+          groesse:        cart.map(i => i.size).join(', '),
+          hundename:      cart.map(i => i.name).join(', '),
+          preis:          total.toFixed(2).replace('.', ','),
+          kunde_name:     details.payer.name.given_name + ' ' + details.payer.name.surname,
+          kunde_email:    details.payer.email_address,
+          lieferadresse:  lieferadresse
         };
 
         // E-Mail an Sara (Bestellbenachrichtigung)
@@ -1947,7 +1954,7 @@ function startCartCheckout() {
           .catch(err => console.warn('EmailJS Benachrichtigung fehlgeschlagen:', err));
 
         // E-Mail an Kunden (Bestellbestätigung)
-        emailjs.send('service_vwuvctq', 'template_kqeh9ue', emailParams)
+        emailjs.send('service_vwuvctq', 'template_kodm23r', emailParams)
           .catch(err => console.warn('EmailJS Bestätigung fehlgeschlagen:', err));
 
         cart = []; saveCart(); updateCartBadge();
