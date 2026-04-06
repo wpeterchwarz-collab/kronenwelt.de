@@ -61,6 +61,10 @@
   }
 </script>
 
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init('VVvZEcTTvWomh7kAW');</script>
+
 <style>
 /* ============================================================
    CSS VARIABLEN & RESET
@@ -1926,8 +1930,28 @@ function startCartCheckout() {
       }),
       onApprove: (data, actions) => actions.order.capture().then(details => {
         closePayPalModal();
+
+        // E-Mails senden via EmailJS
+        const emailParams = {
+          variante:    cart.map(i => i.variant).join(', '),
+          farbe:       cart.map(i => i.color).join(', '),
+          groesse:     cart.map(i => i.size).join(', '),
+          hundename:   cart.map(i => i.name).join(', '),
+          preis:       total.toFixed(2).replace('.', ','),
+          kunde_name:  details.payer.name.given_name + ' ' + details.payer.name.surname,
+          kunde_email: details.payer.email_address
+        };
+
+        // E-Mail an Sara (Bestellbenachrichtigung)
+        emailjs.send('service_vwuvctq', 'template_wihnwzo', emailParams)
+          .catch(err => console.warn('EmailJS Benachrichtigung fehlgeschlagen:', err));
+
+        // E-Mail an Kunden (Bestellbestätigung)
+        emailjs.send('service_vwuvctq', 'template_kqeh9ue', emailParams)
+          .catch(err => console.warn('EmailJS Bestätigung fehlgeschlagen:', err));
+
         cart = []; saveCart(); updateCartBadge();
-        alert('✅ Zahlung erfolgreich! Danke, ' + details.payer.name.given_name + '! Mila freut sich schon! 🎉');
+        alert('✅ Zahlung erfolgreich! Danke, ' + details.payer.name.given_name + '! Du bekommst gleich eine Bestätigung per E-Mail. Mila freut sich schon! 🎉');
       }),
       onError:  () => alert('❌ PayPal Fehler. Bitte nochmal versuchen.'),
       onCancel: () => closePayPalModal()
