@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<!-- Version: 20260406 -->
+<!-- Version: 20260407 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Mila's Kronenwelt – Personalisierte handgemachte Hundekronen für Geburtstage und besondere Momente. Jetzt bestellen auf kronenwelt.de">
 <title>Mila's Kronenwelt v2120 – Personalisierte Hundekronen</title>
@@ -73,7 +73,7 @@
   --beige:    #f5f3f0;
   --beige2:   #eeeae6;
   --beige3:   #fafaf8;
-  --brown:    #2c1f14;
+  --brown:    #5a4538;
   --brown2:   #5a4538;
   --brown3:   #7a6858;
   --teal:     #4a9090;
@@ -200,7 +200,6 @@ button { cursor: pointer; font-family: inherit; }
   flex-direction: column; gap: 8px;
 }
 /* Wenn Foto vorhanden: .hero-photo img { width:100%; height:100%; object-fit:cover; } */
-.hero-photo-placeholder { text-align: center; color: var(--brown3); font-size: 12px; letter-spacing: 1px; }
 
 /* ============================================================
    TRUST STRIP
@@ -259,18 +258,29 @@ button { cursor: pointer; font-family: inherit; }
 /* ============================================================
    FEATURES
    ============================================================ */
-.feat-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 24px; }
-.feat { text-align: center; padding: 8px; }
-.feat-circle {
-  width: 48px; height: 48px; border-radius: 50%;
-  background: var(--white); border: 1px solid var(--border2);
-  margin: 0 auto 10px; display: flex; align-items: center; justify-content: center;
-  transition: background 0.2s, border-color 0.2s;
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 16px;
+  max-width: 860px;
+  margin: 0 auto;
 }
-.feat:hover .feat-circle { background: #e4f2f0; border-color: var(--teal); }
-.feat-circle svg { width: 20px; height: 20px; }
-.feat-title { font-family: 'Playfair Display', Georgia, serif; font-size: 16px; color: var(--brown); font-style: italic; margin-bottom: 4px; }
-.feat-text { font-size: 14px; color: var(--brown3); line-height: 1.6; font-weight: 400; }
+.feat {
+  display: flex; align-items: flex-start; gap: 18px;
+  background: var(--white); border-radius: 14px;
+  padding: 22px 24px; border: 1px solid var(--border);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.feat:hover { box-shadow: 0 4px 20px rgba(74,144,144,0.1); transform: translateY(-2px); }
+.feat-icon {
+  width: 46px; height: 46px; border-radius: 12px;
+  background: #e4f2f0; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.feat-icon svg { width: 22px; height: 22px; }
+.feat-body { flex: 1; }
+.feat-title { font-size: 15px; font-weight: 700; color: var(--brown); margin-bottom: 5px; letter-spacing: 0.2px; }
+.feat-text { font-size: 13px; color: var(--brown3); line-height: 1.65; }
 
 /* ============================================================
    BESTELLFORMULAR / KONFIGURATOR
@@ -282,11 +292,11 @@ button { cursor: pointer; font-family: inherit; }
   box-shadow: var(--shadow);
 }
 .order-head {
-  background: var(--brown); padding: 20px 28px;
+  background: #5a4538; padding: 20px 28px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .order-head-title { font-family: 'Playfair Display', serif; font-size: 20px; color: #f5ede4; font-style: italic; }
-.order-head-sub { font-size: 10px; color: #a09080; letter-spacing: 2px; }
+.order-head-sub { font-size: 10px; color: #c8b8a8; letter-spacing: 2px; }
 .order-body { padding: 28px; display: flex; gap: 24px; align-items: flex-start; }
 .preview-col { width: 190px; flex-shrink: 0; }
 .prev-box {
@@ -370,10 +380,7 @@ button { cursor: pointer; font-family: inherit; }
 }
 .pbt:hover { opacity: 0.9; transform: scale(1.02); }
 .pbt:active { transform: scale(0.98); }
-.pbt-sumup { background: #00b4d8; color: #fff; }
 .pbt-pp { background: #ffc439; color: #003087; min-width: 220px; font-size: 15px; padding: 13px 28px; }
-.pbt-gp { background: var(--white); color: #3c4043; border: 1px solid #d8d8d8; }
-.pbt-ap { background: #000; color: #fff; }
 .ptotal-lbl { font-size: 11px; color: var(--brown3); margin-bottom: 2px; text-align: right; }
 .ptotal { font-family: 'Playfair Display', serif; font-size: 26px; color: var(--brown); font-style: italic; text-align: right; }
 
@@ -707,7 +714,6 @@ button { cursor: pointer; font-family: inherit; }
 @media(max-width:600px){
   .nav { padding: 0 16px; height: 58px; }
   .logo-name { font-size: 16px; }
-  .logo-tag { display: none; }
   .logo-div { display: none; }
   .logo-mark { display: none; }
   .nav-cta { font-size: 12px; padding: 8px 14px; }
@@ -730,8 +736,9 @@ button { cursor: pointer; font-family: inherit; }
   .prod-img { height: 150px; }
   .prod-name { font-size: 15px; }
   .prod-price { font-size: 16px; }
-  .feat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
-  .feat-title { font-size: 15px; }
+  .feat-grid { grid-template-columns: 1fr; gap: 12px; }
+  .feat { padding: 16px 18px; gap: 14px; }
+  .feat-title { font-size: 14px; }
   .feat-text { font-size: 13px; }
   .order-head { padding: 14px 18px; }
   .order-head-title { font-size: 17px; }
@@ -1097,24 +1104,40 @@ button { cursor: pointer; font-family: inherit; }
 <section class="section section-beige">
   <div class="feat-grid">
     <div class="feat">
-      <div class="feat-circle"><svg viewBox="0 0 20 20" fill="none"><path d="M10 3l1.8 3.6L16 7.3l-3 2.9.7 4.1L10 12.5l-3.7 1.8.7-4.1-3-2.9 4.2-.7z" stroke="#4a9090" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
-      <div class="feat-title">Personalisierbar</div>
-      <div class="feat-text">Mit dem Namen deines Hundes – für einen einzigartigen Look</div>
+      <div class="feat-icon">
+        <svg viewBox="0 0 22 22" fill="none"><path d="M11 3l2 4.5 4.5.7-3.3 3.2.8 4.6L11 13.5l-4 2 .8-4.6L4.5 8.2l4.5-.7z" stroke="#4a9090" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="feat-body">
+        <div class="feat-title">Personalisierbar</div>
+        <div class="feat-text">Mit dem Namen deines Hundes – für einen einzigartigen Look der garantiert auffällt.</div>
+      </div>
     </div>
     <div class="feat">
-      <div class="feat-circle"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="5.5" stroke="#4a9090" stroke-width="1.3"/><circle cx="7.5" cy="9" r="1.3" fill="#4a9090"/><circle cx="12.5" cy="9" r="1.3" fill="#4a9090"/><circle cx="10" cy="13" r="1.3" fill="#4a9090"/></svg></div>
-      <div class="feat-title">Süsse Bommel</div>
-      <div class="feat-text">Weiche Bommel an den Spitzen als dekorative Verzierung</div>
+      <div class="feat-icon">
+        <svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="6" stroke="#4a9090" stroke-width="1.5"/><circle cx="8.5" cy="10" r="1.5" fill="#4a9090"/><circle cx="13.5" cy="10" r="1.5" fill="#4a9090"/><circle cx="11" cy="14" r="1.5" fill="#4a9090"/></svg>
+      </div>
+      <div class="feat-body">
+        <div class="feat-title">Süsse Bommel</div>
+        <div class="feat-text">Weiche, handgefertigte Bommel an den Spitzen – verspielt und dekorativ zugleich.</div>
+      </div>
     </div>
     <div class="feat">
-      <div class="feat-circle"><svg viewBox="0 0 20 20" fill="none"><path d="M5 10c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5z" stroke="#4a9090" stroke-width="1.3"/><path d="M8 10h4M10 8v4" stroke="#4a9090" stroke-width="1.3" stroke-linecap="round"/></svg></div>
-      <div class="feat-title">Bequem & leicht</div>
-      <div class="feat-text">Weiches Material mit Gewebebändern – einfach zu befestigen</div>
+      <div class="feat-icon">
+        <svg viewBox="0 0 22 22" fill="none"><path d="M6 11a5 5 0 1010 0 5 5 0 00-10 0z" stroke="#4a9090" stroke-width="1.5"/><path d="M9 11h4M11 9v4" stroke="#4a9090" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="feat-body">
+        <div class="feat-title">Bequem &amp; leicht</div>
+        <div class="feat-text">Weiches Filzmaterial mit sanften Gewebebändern – sitzt perfekt ohne zu stören.</div>
+      </div>
     </div>
     <div class="feat">
-      <div class="feat-circle"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="6" width="14" height="11" rx="1.5" stroke="#4a9090" stroke-width="1.3"/><path d="M7 6V5a3 3 0 016 0v1" stroke="#4a9090" stroke-width="1.3"/></svg></div>
-      <div class="feat-title">Ideal für Fotos</div>
-      <div class="feat-text">Perfekt für Geburtstage, Feiertage und Fotoshootings</div>
+      <div class="feat-icon">
+        <svg viewBox="0 0 22 22" fill="none"><rect x="3" y="7" width="16" height="12" rx="2" stroke="#4a9090" stroke-width="1.5"/><path d="M8 7V6a3 3 0 016 0v1" stroke="#4a9090" stroke-width="1.5"/><circle cx="11" cy="13" r="2" stroke="#4a9090" stroke-width="1.5"/></svg>
+      </div>
+      <div class="feat-body">
+        <div class="feat-title">Ideal für Fotos</div>
+        <div class="feat-text">Perfekt für Geburtstage, Feiertage und unvergessliche Fotoshootings.</div>
+      </div>
     </div>
   </div>
 </section>
@@ -1725,39 +1748,6 @@ button { cursor: pointer; font-family: inherit; }
 
 
 <!-- ============================================================
-     SUMUP CARD WIDGET MODAL
-     ============================================================ -->
-<div id="sumupModal" style="display:none;position:fixed;inset:0;background:rgba(61,46,34,0.6);z-index:9997;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:18px;padding:28px;max-width:460px;width:100%;position:relative">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-family:Georgia,serif;font-size:18px;color:#3d2e22;font-style:italic">Sicher bezahlen</div>
-      <button onclick="closeSumUpModal()" style="background:none;border:none;font-size:22px;color:#8a7060;cursor:pointer">✕</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;font-family:sans-serif;color:#444">Visa</span>
-      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;font-family:sans-serif;color:#444">Mastercard</span>
-      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;font-family:sans-serif;color:#444">Google Pay</span>
-      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;font-family:sans-serif;color:#444">Apple Pay</span>
-    </div>
-    <p style="font-size:11px;color:#8a7060;font-family:sans-serif;margin-bottom:12px">Google Pay & Apple Pay erscheinen automatisch wenn auf deinem Gerät verfügbar.</p>
-    <div id="sumup-order-summary" style="background:#f5ede4;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-family:sans-serif;font-size:13px;color:#3d2e22"></div>
-    <div id="sumup-card"></div>
-  </div>
-</div>
-
-<!-- PayPal Button Container -->
-<div id="paypalModal" style="display:none;position:fixed;inset:0;background:rgba(61,46,34,0.6);z-index:9997;align-items:center;justify-content:center;padding:16px;overflow-y:auto;">
-  <div style="background:#fff;border-radius:18px;padding:22px;max-width:400px;width:100%;position:relative;margin:auto;max-height:calc(100vh - 32px);overflow-y:auto;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;position:sticky;top:0;background:#fff;padding-bottom:10px;border-bottom:1px solid #f0e8e0;z-index:1">
-      <div style="font-family:Georgia,serif;font-size:17px;color:#3d2e22;font-style:italic">Mit PayPal bezahlen</div>
-      <button onclick="closePayPalModal()" style="background:none;border:none;font-size:22px;color:#8a7060;cursor:pointer;line-height:1;padding:0 0 0 12px">✕</button>
-    </div>
-    <div id="paypal-order-summary" style="background:#f5ede4;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-family:sans-serif;font-size:13px;color:#3d2e22"></div>
-    <div id="paypal-button-container"></div>
-  </div>
-</div>
-
-<!-- ============================================================
      WHATSAPP BUTTON
      ============================================================ -->
 <button class="wa-btn" id="wa-btn" aria-label="WhatsApp Kontakt">
@@ -1977,11 +1967,12 @@ function startCartCheckout() {
   }
 }
 
-/* ---- GLOBAL ONCLICK HANDLERS (inline onclick fallback) ---- */
+/* ---- KONFIGURATOR HELPERS (für dynamisch generierte Chips) ---- */
 function selectV(el) {
   document.querySelectorAll('[data-v]').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   state.variant = el.dataset.v;
+  renderColorChips(state.variant);
   updatePreview();
 }
 function selectC(el) {
@@ -2015,10 +2006,9 @@ function closeLightbox(e) {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.getElementById('lightboxOverlay').classList.remove('open'); document.body.style.overflow = ''; }});
 
-/* ---- 0. STRUKTURBAUM (Variante → Stile/Farben mit Metadaten) ---- */
+/* ---- 0. STRUKTURBAUM ---- */
 const VARIANTEN = {
   'Party': {
-    preis: 24.90,
     farben: [
       { label: 'Rosa mit Punkten',    bg: '#f7eaed', sc: '#a05070', dot: '#c07090', css: 'chip-pink'  },
       { label: 'Grau mit Punkten',    bg: '#eeece8', sc: '#5a5650', dot: '#807870', css: ''           },
@@ -2030,7 +2020,6 @@ const VARIANTEN = {
     ]
   },
   'Einfarbig': {
-    preis: 24.90,
     farben: [
       { label: 'Berry',   bg: '#f0e4ec', sc: '#804060', dot: '#a06080', css: ''           },
       { label: 'Blau',    bg: '#e8f0f8', sc: '#507090', dot: '#6090b0', css: 'chip-blau'  },
@@ -2041,7 +2030,6 @@ const VARIANTEN = {
     ]
   },
   'Glitzer': {
-    preis: 26.90,
     farben: [
       { label: 'Blau',    bg: '#e8f0f8', sc: '#507090', dot: '#6090b0', css: 'chip-blau'  },
       { label: 'Türkis',  bg: '#ddf4f0', sc: '#2d7878', dot: '#3d9090', css: ''           },
@@ -2053,7 +2041,6 @@ const VARIANTEN = {
     ]
   },
   'Edel & Wild': {
-    preis: 27.90,
     farben: [
       { label: 'Gold',       bg: '#faf0d8', sc: '#9a7010', dot: '#c09820', css: 'chip-royal' },
       { label: 'Schwarz',    bg: '#22202c', sc: '#d4b840', dot: '#b89828', css: 'chip-royal' },
@@ -2064,10 +2051,7 @@ const VARIANTEN = {
   }
 };
 
-/* ---- PRODUKTFOTOS (Variante → Farbe → Bildpfad) ----
-   Passe die Dateinamen an deine tatsächlichen Fotos an.
-   Fehlende Einträge fallen auf _default zurück.
-   ---------------------------------------------------- */
+/* ---- PRODUKTFOTOS ---- */
 const CL = 'https://res.cloudinary.com/dw6amyijc/image/upload/';
 
 const PRODUCT_IMAGES = {
@@ -2243,7 +2227,7 @@ function initConfigurator() {
     });
   });
 
-  // Farbe (delegiert – Chips werden dynamisch erzeugt)
+  // Farbe (event delegation – Chips sind dynamisch)
   document.getElementById('colorChips').addEventListener('click', e => {
     const chip = e.target.closest('[data-c]');
     if (!chip) return;
@@ -2262,10 +2246,11 @@ function initConfigurator() {
       document.querySelectorAll('[data-s]').forEach(b => b.classList.remove('on'));
       btn.classList.add('on');
       state.size = btn.dataset.s;
+      updatePreview(); // Preis aktualisieren
     });
   });
 
-  // Name
+  // Personalisierung
   const nameInput = document.getElementById('nIn');
   const nameCount = document.getElementById('nCnt');
   if (nameInput) {
@@ -2277,152 +2262,23 @@ function initConfigurator() {
     });
   }
 
-  // Initial: Chips für erste Variante rendern, dann Vorschau
   renderColorChips(state.variant);
   updatePreview();
 }
 
 /* ---- 4. BEZAHLUNG ---- */
-function getOrder() {
-  const varPrices = PRICES[state.variant] || {};
-  const price = varPrices[state.size] || 15;
-  return {
-    variant: state.variant,
-    color:   state.color,
-    size:    state.size,
-    name:    state.name,
-    price:   price
-  };
-}
-
-function validateOrder() {
-  if (!state.name.trim()) {
-    alert('Bitte gib den Namen für deine Krone ein (Schritt 4).');
-    const ni = document.getElementById('nIn');
-    if (ni) ni.focus();
-    return false;
-  }
-  return true;
-}
-
-function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-function closeModal(id, clearId) {
-  document.getElementById(id).style.display = 'none';
-  if (clearId) document.getElementById(clearId).innerHTML = '';
-}
-
-function closeSumUpModal()  { closeModal('sumupModal',  'sumup-card'); }
-function closePayPalModal() { closeModal('paypalModal', 'paypal-button-container'); }
-
-function buildOrderSummary(order) {
-  return '<strong>' + order.variant + '</strong> · ' + order.color +
-    ' · Grösse: ' + order.size +
-    '<br>Name: <strong>' + order.name + '</strong>' +
-    '<br><span style="font-size:16px;font-weight:700;color:#4a9090">' +
-    order.price.toFixed(2).replace('.', ',') + ' €</span>';
-}
-
-function startSumUpPayment() {
-  if (!validateOrder()) return;
-  const order = getOrder();
-  document.getElementById('sumup-order-summary').innerHTML = buildOrderSummary(order);
-  document.getElementById('sumup-card').innerHTML = '';
-  openModal('sumupModal');
-
-  if (CONFIG.SUMUP_KEY === 'DEIN_SUMUP_API_KEY') {
-    document.getElementById('sumup-card').innerHTML =
-      '<p style="font-family:sans-serif;font-size:13px;color:#8a7060;text-align:center;padding:20px">⚙️ SumUp API Key noch nicht eingetragen.</p>';
-    return;
-  }
-
-  // SumUp SDK lazy laden falls noch nicht vorhanden
-  if (typeof SumUpCard === 'undefined') {
-    const sdk = document.createElement('script');
-    sdk.src = 'https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js';
-    sdk.onload = () => mountSumUp(order);
-    sdk.onerror = () => {
-      document.getElementById('sumup-card').innerHTML =
-        '<p style="font-family:sans-serif;font-size:13px;color:#e05050;text-align:center;padding:20px">❌ SumUp konnte nicht geladen werden. Bitte versuche es erneut.</p>';
-    };
-    document.head.appendChild(sdk);
-    return;
-  }
-  mountSumUp(order);
-}
-
-function mountSumUp(order) {
-  SumUpCard.mount({
-    id:          'sumup-card',
-    key:         CONFIG.SUMUP_KEY,
-    amount:      order.price,
-    currency:    'EUR',
-    description: order.variant + ' - ' + order.name,
-    locale:      'de-DE',
-    onResponse:  (type) => {
-      if (type === 'success') {
-        closeSumUpModal();
-        alert('✅ Zahlung erfolgreich! Mila freut sich schon die Krone zu nähen! 🎉');
-      } else if (type === 'error') {
-        alert('❌ Zahlung fehlgeschlagen. Bitte versuche es nochmal.');
-        closeSumUpModal();
-      }
-    }
-  });
-}
-
-
-function startPayPalPayment() {
-  if (!validateOrder()) return;
-  const order = getOrder();
-  document.getElementById('paypal-order-summary').innerHTML = buildOrderSummary(order);
+function closePayPalModal() {
+  document.getElementById('paypalModal').style.display = 'none';
   document.getElementById('paypal-button-container').innerHTML = '';
-  openModal('paypalModal');
-
-  if (!CONFIG.PAYPAL_ID || CONFIG.PAYPAL_ID.length < 10 || CONFIG.PAYPAL_ID === 'DEINEN_ECHTEN_PAYPAL_KEY_HIER_EINTRAGEN') {
-    document.getElementById('paypal-button-container').innerHTML =
-      '<p style="font-family:sans-serif;font-size:13px;color:#8a7060;text-align:center;padding:20px">⚙️ PayPal Client ID noch nicht eingetragen.</p>';
-    return;
-  }
-
-  if (!window.paypal) {
-    const script = document.createElement('script');
-    script.src = 'https://www.paypal.com/sdk/js?client-id=' + CONFIG.PAYPAL_ID + '&currency=EUR';
-    script.onload = () => renderPayPalButton(order);
-    document.head.appendChild(script);
-  } else {
-    renderPayPalButton(order);
-  }
-}
-
-function renderPayPalButton(order) {
-  paypal.Buttons({
-    style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'paypal' },
-    createOrder: (data, actions) => actions.order.create({
-      purchase_units: [{
-        description: order.variant + ' - ' + order.name + ' - ' + order.color + ' - Gr. ' + order.size,
-        amount: { value: order.price.toFixed(2), currency_code: 'EUR' }
-      }]
-    }),
-    onApprove: (data, actions) => actions.order.capture().then(details => {
-      closePayPalModal();
-      alert('✅ Zahlung erfolgreich! Danke, ' + details.payer.name.given_name + '! 🎉');
-    }),
-    onError:  () => { alert('❌ PayPal Fehler. Bitte nochmal versuchen.'); closePayPalModal(); },
-    onCancel: () => closePayPalModal()
-  }).render('#paypal-button-container');
 }
 
 function initPayment() {
-  const btnSumup = document.querySelector('.pbt-sumup');
-  const btnPP    = document.querySelector('.pbt-pp');
-  if (btnSumup) btnSumup.onclick = () => {
-    if (!getCookieConsent()?.payment) { showCookieBanner(); return; }
-    startSumUpPayment();
-  };
-  if (btnPP) btnPP.onclick = () => {
-    if (!getCookieConsent()?.payment) { showCookieBanner(); return; }
-    startPayPalPayment();
-  };
+  // Zahlung nur nach Cookie-Zustimmung
+  document.querySelectorAll('.pbt-pp').forEach(b => {
+    b.onclick = () => {
+      if (!getCookieConsent()?.payment) { showCookieBanner(); return; }
+    };
+  });
 }
 
 /* ---- 5. GALERIE LIKES ---- */
