@@ -26,4 +26,6 @@ const CONFIG = {
   EMAIL_GALERIE: 'm.kronenwelt@gmail.com',
   SHOP_EMAIL:    'm.kronenwelt@gmail.com'
 
+SHEETS_URL:     'https://script.google.com/macros/s/AKfycbxBOiDRyRPrbVlW3Pw92bU5TUcSo9ZRuUYk1qIkGodrVYUR71TIjZfNlW-7edFOL4el/exec'
+
 };
