@@ -56,7 +56,8 @@
       INSTA_HANDLE:   'kronenwelt',
       INSTA_URL:      'https://www.instagram.com/kronenwelt',
       EMAIL_GALERIE:  'm.kronenwelt@gmail.com',
-      SHOP_EMAIL:     'm.kronenwelt@gmail.com'
+      SHOP_EMAIL:     'm.kronenwelt@gmail.com',
+      SHEETS_URL:     'https://script.google.com/macros/s/AKfycbxBOiDRyRPrbVlW3Pw92bU5TUcSo9ZRuUYk1qIkGodrVYUR71TIjZfNlW-7edFOL4el/exec'
     };
   }
 </script>
@@ -380,7 +381,8 @@ button { cursor: pointer; font-family: inherit; }
 }
 .pbt:hover { opacity: 0.9; transform: scale(1.02); }
 .pbt:active { transform: scale(0.98); }
-.pbt-pp { background: #ffc439; color: #003087; min-width: 220px; font-size: 15px; padding: 13px 28px; }
+.pbt-pp { background: #ffc439; color: #003087; font-size: 15px; padding: 13px 28px; }
+.pbt-sumup { background: #00b4d8; color: #fff; font-size: 15px; padding: 13px 28px; }
 .ptotal-lbl { font-size: 11px; color: var(--brown3); margin-bottom: 2px; text-align: right; }
 .ptotal { font-family: 'Playfair Display', serif; font-size: 26px; color: var(--brown); font-style: italic; text-align: right; }
 
@@ -1636,9 +1638,13 @@ button { cursor: pointer; font-family: inherit; }
       <span>Gesamt</span>
       <span id="cartTotal">0,00 €</span>
     </div>
-    <button class="cart-checkout-btn" id="cartCheckoutBtn" onclick="startCartCheckout()">
+    <button class="cart-checkout-btn" id="cartCheckoutBtn" onclick="startCartCheckout('paypal')" style="margin-bottom:8px">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19.5 6.5C19.5 9.8 17 12.5 13.5 13H9L8 18H5L7 7h7c3 0 5.5 1.2 5.5 3.5z" fill="#003087" opacity="0.9"/><path d="M17 3C17 6.3 14.5 9 11 9.5H6.5L5.5 14.5H3L5 3h7c3 0 5 1.2 5 3.5z" fill="#003087"/></svg>
       Zur Kasse mit PayPal
+    </button>
+    <button class="cart-checkout-btn" onclick="startCartCheckout('sumup')" style="background:#00b4d8;margin-bottom:8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="white" stroke-width="2" fill="none"/><path d="M2 10h20" stroke="white" stroke-width="2"/></svg>
+      Mit Kreditkarte bezahlen
     </button>
     <div class="cart-free-shipping">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -1746,6 +1752,36 @@ button { cursor: pointer; font-family: inherit; }
   🍪 Cookies
 </button>
 
+
+<!-- SumUp Modal -->
+<div id="sumupModal" style="display:none;position:fixed;inset:0;background:rgba(61,46,34,0.6);z-index:9997;align-items:center;justify-content:center;padding:16px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:18px;padding:22px;max-width:400px;width:100%;position:relative;margin:auto;max-height:calc(100vh - 32px);overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;position:sticky;top:0;background:#fff;padding-bottom:10px;border-bottom:1px solid #f0e8e0;z-index:1">
+      <div style="font-family:Georgia,serif;font-size:17px;color:#3d2e22;font-style:italic">Mit Kreditkarte bezahlen</div>
+      <button onclick="closeSumUpModal()" style="background:none;border:none;font-size:22px;color:#8a7060;cursor:pointer;line-height:1;padding:0 0 0 12px">✕</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;color:#444">Visa</span>
+      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;color:#444">Mastercard</span>
+      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;color:#444">Google Pay</span>
+      <span style="font-size:11px;background:#f0f0f0;padding:3px 10px;border-radius:20px;color:#444">Apple Pay</span>
+    </div>
+    <div id="sumup-order-summary" style="background:#f5ede4;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-family:sans-serif;font-size:13px;color:#3d2e22"></div>
+    <div id="sumup-card"></div>
+  </div>
+</div>
+
+<!-- PayPal Modal -->
+<div id="paypalModal" style="display:none;position:fixed;inset:0;background:rgba(61,46,34,0.6);z-index:9997;align-items:center;justify-content:center;padding:16px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:18px;padding:22px;max-width:400px;width:100%;position:relative;margin:auto;max-height:calc(100vh - 32px);overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;position:sticky;top:0;background:#fff;padding-bottom:10px;border-bottom:1px solid #f0e8e0;z-index:1">
+      <div style="font-family:Georgia,serif;font-size:17px;color:#3d2e22;font-style:italic">Mit PayPal bezahlen</div>
+      <button onclick="closePayPalModal()" style="background:none;border:none;font-size:22px;color:#8a7060;cursor:pointer;line-height:1;padding:0 0 0 12px">✕</button>
+    </div>
+    <div id="paypal-order-summary" style="background:#f5ede4;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-family:sans-serif;font-size:13px;color:#3d2e22"></div>
+    <div id="paypal-button-container"></div>
+  </div>
+</div>
 
 <!-- ============================================================
      WHATSAPP BUTTON
@@ -1883,32 +1919,128 @@ function addToCart() {
   }, 800);
 }
 
-function startCartCheckout() {
+function buildCartSummaryHTML(total) {
+  return cart.map(i =>
+    `<div style="padding:4px 0;border-bottom:0.5px solid #e8ddd4;font-size:12px">
+      <strong>${i.variant}</strong> · ${i.color} · ${i.size}
+      ${i.name ? `· <span style="color:#4a9090;letter-spacing:2px">${i.name}</span>` : ''}
+      <span style="float:right;font-weight:700">${i.price.toFixed(2).replace('.', ',')} €</span>
+    </div>`
+  ).join('') +
+  `<div style="padding:8px 0 2px;font-size:13px">
+    Versand: <strong style="color:#3a8060">Kostenlos</strong>
+    <span style="float:right;font-size:16px;font-weight:700;color:#4a9090">${total.toFixed(2).replace('.', ',')} €</span>
+  </div>`;
+}
+
+function sendOrderEmails(details, total) {
+  const shipping = details.purchase_units?.[0]?.shipping?.address;
+  const lieferadresse = shipping
+    ? [shipping.address_line_1, shipping.address_line_2, shipping.postal_code + ' ' + shipping.admin_area_2, shipping.country_code]
+        .filter(Boolean).join(', ')
+    : 'Nicht angegeben';
+  const emailParams = {
+    variante:      cart.map(i => i.variant).join(', '),
+    farbe:         cart.map(i => i.color).join(', '),
+    groesse:       cart.map(i => i.size).join(', '),
+    hundename:     cart.map(i => i.name).join(', '),
+    preis:         total.toFixed(2).replace('.', ','),
+    kunde_name:    details.payer.name.given_name + ' ' + details.payer.name.surname,
+    kunde_email:   details.payer.email_address,
+    lieferadresse: lieferadresse
+  };
+  emailjs.send('service_vwuvctq', 'template_wihnwzo', emailParams)
+    .catch(err => console.warn('EmailJS Sara fehlgeschlagen:', err));
+  emailjs.send('service_vwuvctq', 'template_kodm23r', emailParams)
+    .catch(err => console.warn('EmailJS Kunde fehlgeschlagen:', err));
+  return { ...emailParams, lieferadresse };
+}
+
+function saveToSheets(orderData, zahlung) {
+  if (!CONFIG.SHEETS_URL || CONFIG.SHEETS_URL.length < 10) return;
+  fetch(CONFIG.SHEETS_URL, {
+    method: 'POST',
+    mode:   'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...orderData, zahlung })
+  }).catch(err => console.warn('Google Sheets fehlgeschlagen:', err));
+}
+
+function clearCartAfterPayment(name) {
+  cart = []; saveCart(); updateCartBadge();
+  alert('✅ Zahlung erfolgreich! Danke, ' + name + '! Du bekommst gleich eine Bestätigung per E-Mail. Mila freut sich schon! 🎉');
+}
+
+function startCartCheckout(method) {
   if (cart.length === 0) return;
+  if (!getCookieConsent()?.payment) { showCookieBanner(); return; }
+
   const total = cart.reduce((s, i) => s + i.price, 0);
   const desc  = cart.map(i => `${i.variant} ${i.color} ${i.size} "${i.name}"`).join(' | ');
+  closeCart();
 
-  // Bestellzusammenfassung aufbauen
-  const summaryEl = document.getElementById('paypal-order-summary');
-  if (summaryEl) {
-    summaryEl.innerHTML = cart.map(i =>
-      `<div style="padding:4px 0;border-bottom:0.5px solid #e8ddd4;font-size:12px">
-        <strong>${i.variant}</strong> · ${i.color} · ${i.size}
-        ${i.name ? `· <span style="color:#4a9090;letter-spacing:2px">${i.name}</span>` : ''}
-        <span style="float:right;font-weight:700">${i.price.toFixed(2).replace('.', ',')} €</span>
-      </div>`
-    ).join('') +
-    `<div style="padding:8px 0 2px;font-size:13px">
-      Versand: <strong style="color:#3a8060">Kostenlos</strong>
-      <span style="float:right;font-size:16px;font-weight:700;color:#4a9090">${total.toFixed(2).replace('.', ',')} €</span>
-    </div>`;
+  if (method === 'sumup') {
+    // SumUp
+    document.getElementById('sumup-order-summary').innerHTML = buildCartSummaryHTML(total);
+    document.getElementById('sumup-card').innerHTML = '';
+    document.getElementById('sumupModal').style.display = 'flex';
+
+    if (!CONFIG.SUMUP_KEY || CONFIG.SUMUP_KEY.length < 5) {
+      document.getElementById('sumup-card').innerHTML =
+        '<p style="font-family:sans-serif;font-size:13px;color:#8a7060;text-align:center;padding:20px">⚙️ SumUp API Key noch nicht eingetragen.</p>';
+      return;
+    }
+    const mountSumUp = () => {
+      SumUpCard.mount({
+        id:          'sumup-card',
+        key:         CONFIG.SUMUP_KEY,
+        amount:      total,
+        currency:    'EUR',
+        description: desc.substring(0, 127),
+        locale:      'de-DE',
+        onResponse:  (type) => {
+          if (type === 'success') {
+            closeSumUpModal();
+            saveToSheets({
+              variante:  cart.map(i => i.variant).join(', '),
+              farbe:     cart.map(i => i.color).join(', '),
+              groesse:   cart.map(i => i.size).join(', '),
+              hundename: cart.map(i => i.name).join(', '),
+              preis:     total.toFixed(2).replace('.', ','),
+              kunde_name:    'SumUp Kunde',
+              kunde_email:   '',
+              lieferadresse: ''
+            }, 'SumUp');
+            cart = []; saveCart(); updateCartBadge();
+            alert('✅ Zahlung erfolgreich! Mila freut sich schon die Krone zu nähen! 🎉');
+          } else if (type === 'error') {
+            alert('❌ Zahlung fehlgeschlagen. Bitte nochmal versuchen.');
+            closeSumUpModal();
+          }
+        }
+      });
+    };
+    if (typeof SumUpCard === 'undefined') {
+      const sdk = document.createElement('script');
+      sdk.src = 'https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js';
+      sdk.onload = mountSumUp;
+      sdk.onerror = () => {
+        document.getElementById('sumup-card').innerHTML =
+          '<p style="font-family:sans-serif;font-size:13px;color:#e05050;text-align:center;padding:20px">❌ SumUp konnte nicht geladen werden.</p>';
+      };
+      document.head.appendChild(sdk);
+    } else {
+      mountSumUp();
+    }
+    return;
   }
 
-  closeCart();
-  document.getElementById('paypalModal').style.display = 'flex';
+  // PayPal (default)
+  document.getElementById('paypal-order-summary').innerHTML = buildCartSummaryHTML(total);
   document.getElementById('paypal-button-container').innerHTML = '';
+  document.getElementById('paypalModal').style.display = 'flex';
 
-  if (!CONFIG.PAYPAL_ID || CONFIG.PAYPAL_ID.length < 10 || CONFIG.PAYPAL_ID === 'DEINEN_ECHTEN_PAYPAL_KEY_HIER_EINTRAGEN') {
+  if (!CONFIG.PAYPAL_ID || CONFIG.PAYPAL_ID.length < 10) {
     document.getElementById('paypal-button-container').innerHTML =
       '<p style="font-family:sans-serif;font-size:13px;color:#8a7060;text-align:center;padding:20px">⚙️ PayPal Client ID noch nicht eingetragen.</p>';
     return;
@@ -1922,35 +2054,9 @@ function startCartCheckout() {
       }),
       onApprove: (data, actions) => actions.order.capture().then(details => {
         closePayPalModal();
-
-        // E-Mails senden via EmailJS
-        const shipping = details.purchase_units?.[0]?.shipping?.address;
-        const lieferadresse = shipping
-          ? [shipping.address_line_1, shipping.address_line_2, shipping.postal_code + ' ' + shipping.admin_area_2, shipping.country_code]
-              .filter(Boolean).join(', ')
-          : 'Nicht angegeben';
-
-        const emailParams = {
-          variante:       cart.map(i => i.variant).join(', '),
-          farbe:          cart.map(i => i.color).join(', '),
-          groesse:        cart.map(i => i.size).join(', '),
-          hundename:      cart.map(i => i.name).join(', '),
-          preis:          total.toFixed(2).replace('.', ','),
-          kunde_name:     details.payer.name.given_name + ' ' + details.payer.name.surname,
-          kunde_email:    details.payer.email_address,
-          lieferadresse:  lieferadresse
-        };
-
-        // E-Mail an Sara (Bestellbenachrichtigung)
-        emailjs.send('service_vwuvctq', 'template_wihnwzo', emailParams)
-          .catch(err => console.warn('EmailJS Benachrichtigung fehlgeschlagen:', err));
-
-        // E-Mail an Kunden (Bestellbestätigung)
-        emailjs.send('service_vwuvctq', 'template_kodm23r', emailParams)
-          .catch(err => console.warn('EmailJS Bestätigung fehlgeschlagen:', err));
-
-        cart = []; saveCart(); updateCartBadge();
-        alert('✅ Zahlung erfolgreich! Danke, ' + details.payer.name.given_name + '! Du bekommst gleich eine Bestätigung per E-Mail. Mila freut sich schon! 🎉');
+        const orderData = sendOrderEmails(details, total);
+        saveToSheets(orderData, 'PayPal');
+        clearCartAfterPayment(details.payer.name.given_name);
       }),
       onError:  () => alert('❌ PayPal Fehler. Bitte nochmal versuchen.'),
       onCancel: () => closePayPalModal()
@@ -2267,18 +2373,17 @@ function initConfigurator() {
 }
 
 /* ---- 4. BEZAHLUNG ---- */
+function closeSumUpModal() {
+  document.getElementById('sumupModal').style.display = 'none';
+  document.getElementById('sumup-card').innerHTML = '';
+}
 function closePayPalModal() {
   document.getElementById('paypalModal').style.display = 'none';
   document.getElementById('paypal-button-container').innerHTML = '';
 }
 
 function initPayment() {
-  // Zahlung nur nach Cookie-Zustimmung
-  document.querySelectorAll('.pbt-pp').forEach(b => {
-    b.onclick = () => {
-      if (!getCookieConsent()?.payment) { showCookieBanner(); return; }
-    };
-  });
+  // Cookie-Check bereits in startCartCheckout integriert
 }
 
 /* ---- 5. GALERIE LIKES ---- */
