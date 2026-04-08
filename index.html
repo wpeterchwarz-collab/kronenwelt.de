@@ -2159,8 +2159,8 @@ const VARIANTEN = {
 
 /* ---- PRODUKTFOTOS ---- */
 const CL = 'https://res.cloudinary.com/dw6amyijc/image/upload/';
-// Cache-Buster: tägliche Versionsnummer – neue Fotos erscheinen spätestens nach 24h
-const CLV = 'v' + Math.floor(Date.now() / 86400000) + '/';
+// Cache-Buster: stündliche Versionsnummer als Fallback
+const CLV = 'v' + Math.floor(Date.now() / 3600000) + '/';
 
 const PRODUCT_IMAGES = {
   'Party': {
