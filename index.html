@@ -877,6 +877,9 @@ button { cursor: pointer; font-family: inherit; }
   font-size: 15px; color: var(--brown); font-style: italic; margin-bottom: 3px;
 }
 .cart-item-meta { font-size: 12px; color: var(--brown3); line-height: 1.6; }
+.cart-legal { font-size: 11px; line-height: 1.5; color: var(--brown3); text-align: center; margin-top: 8px; }
+.cart-legal a { color: inherit; text-decoration: underline; }
+.cart-legal:empty { display: none; }
 .cart-item-personalisierung {
   font-size: 12px; color: var(--teal); font-weight: 700;
   letter-spacing: 2px; margin-top: 2px;
@@ -1274,7 +1277,7 @@ button { cursor: pointer; font-family: inherit; }
         </button>
         <div class="btn-add-cart-hint">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          Kostenloser Versand · PayPal, Kreditkarte, Lastschrift oder später bezahlen
+          Kostenloser Versand · Lieferzeit 5–6 Werktage · PayPal, Kreditkarte, Lastschrift oder später bezahlen
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0;margin-left:20px">
@@ -1619,8 +1622,9 @@ button { cursor: pointer; font-family: inherit; }
       <a href="impressum.html">Impressum</a>
       <a href="datenschutz.html">Datenschutz</a>
       <a href="agb.html">AGB</a>
+      <a href="widerruf.html">Widerrufsbelehrung</a>
       <a href="#" onclick="reopenCookieBanner();return false">Datenschutz-Einstellungen</a>
-      <a href="/cdn-cgi/l/email-protection#036a6d656c4368716c6d666d74666f772d6766">Kontakt</a>
+      <a href="mailto:m.kronenwelt@gmail.com">Kontakt</a>
     </div>
     <div class="ft-copy">© 2024 Mila's Kronenwelt · kronenwelt.de · Alle Rechte vorbehalten</div>
   </div>
@@ -1662,8 +1666,9 @@ button { cursor: pointer; font-family: inherit; }
     <div style="text-align:center;font-family:sans-serif;font-size:12px;color:#8a7060;margin:-2px 0 10px;line-height:1.5">PayPal · Kreditkarte · Lastschrift · Später bezahlen<br><span style="font-size:11px">Kartenzahlung auch ohne PayPal-Konto möglich</span></div>
     <div class="cart-free-shipping">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      Kostenloser Versand nach Deutschland
+      Kostenloser Versand nach Deutschland · 5–6 Werktage
     </div>
+    <div class="cart-legal" id="cartLegal"></div>
   </div>
 </div>
 
@@ -1884,6 +1889,11 @@ function renderCart() {
   const fmt = v => v.toFixed(2).replace('.', ',') + ' €';
   document.getElementById('cartSubtotal').textContent = fmt(total);
   document.getElementById('cartTotal').textContent    = fmt(total);
+  // Pflichtinfo vor der Bestellung: kein Widerruf bei personalisierten Kronen
+  const legal = document.getElementById('cartLegal');
+  if (legal) legal.innerHTML = cart.some(i => i.name)
+    ? 'Personalisierte Kronen werden für dich angefertigt und sind vom Widerrufsrecht ausgeschlossen. <a href="widerruf.html">Widerrufsbelehrung</a> · <a href="agb.html">AGB</a>'
+    : 'Es gelten unsere <a href="agb.html">AGB</a> und die <a href="widerruf.html">Widerrufsbelehrung</a>.';
 }
 
 function removeFromCart(idx) {
@@ -1954,7 +1964,9 @@ function sendOrderEmails(details, total) {
     preis:         total.toFixed(2).replace('.', ','),
     kunde_name:    details.payer.name.given_name + ' ' + details.payer.name.surname,
     kunde_email:   details.payer.email_address,
-    lieferadresse: lieferadresse
+    lieferadresse: lieferadresse,
+    agb_link:      'https://kronenwelt.de/agb.html',
+    widerruf_link: 'https://kronenwelt.de/widerruf.html'
   };
   emailjs.send('service_vwuvctq', 'template_wihnwzo', emailParams)
     .catch(err => console.warn('EmailJS Sara fehlgeschlagen:', err));
