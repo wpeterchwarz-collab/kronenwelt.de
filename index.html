@@ -2281,7 +2281,7 @@ function applyNameAvailability() {
     if (state.name) savedName = state.name;
     state.name = '';
     input.value = '';
-    input.placeholder = 'Bei diesem Muster ohne Namen';
+    input.placeholder = 'Bei diesem Muster ohne Personalisierung';
     lbl.textContent = 'Personalisierung';
     const alt = ((VARIANTEN[state.variant] || {}).farben || []).filter(f => !f.noName);
     hint.innerHTML = 'Auf dem Leo-Muster wäre ein Name kaum lesbar – deshalb fertigen wir diese Krone <strong>ohne Aufdruck</strong>. ' +
