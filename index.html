@@ -2949,11 +2949,32 @@ Promise.all([
   try { renderGalerie(galerie); } catch (e) { console.warn('Galerie:', e); }
   initConfigurator();
   initPayment();
+  applyLinkAuswahl();
 }).catch(() => {
   updateProduktSchema();
   initConfigurator();
   initPayment();
+  applyLinkAuswahl();
 });
+
+/* ---- 10. VORAUSWAHL PER LINK ----
+   z.B. https://kronenwelt.de/?krone=Party&groesse=Klein#bestellen
+   (wird von den Google-Shopping-Anzeigen genutzt, damit Krone + Größe + Preis
+   direkt richtig angezeigt werden) */
+function applyLinkAuswahl() {
+  try {
+    const q = new URLSearchParams(location.search);
+    const v = q.get('krone'), g = q.get('groesse');
+    if (!v || !VARIANTEN[v]) return;
+    selectVariant(v);
+    if (g) {
+      const card = [...document.querySelectorAll('.szcard[data-s]')].find(c => c.dataset.s === g && !c.hidden);
+      if (card) selectS(card);
+    }
+    const ziel = document.getElementById('bestellen');
+    if (ziel) setTimeout(() => ziel.scrollIntoView(), 50);
+  } catch (e) { console.warn('Link-Auswahl:', e); }
+}
 
 </script>
 </body>

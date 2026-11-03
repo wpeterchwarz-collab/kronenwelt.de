@@ -1,0 +1,35 @@
+name: Google-Produktdatei aktualisieren
+
+# Erzeugt merchant-feed.xml neu, sobald sich preise.json ändert
+# (z.B. wenn Sara im Admin Preise anpasst).
+on:
+  push:
+    branches: [main]
+    paths:
+      - preise.json
+      - scripts/merchant-feed.js
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  feed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/merchant-feed.js
+      - name: Änderungen committen
+        run: |
+          if git diff --quiet merchant-feed.xml; then
+            echo "Produktdatei unverändert."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add merchant-feed.xml
+          git commit -m "Produktdatei für Google aus preise.json aktualisiert"
+          git push
