@@ -678,6 +678,15 @@ button { cursor: pointer; font-family: inherit; }
 .ck-text { font-size: 13.5px; line-height: 1.65; color: var(--brown3); margin-bottom: 18px; }
 .ck-text a, .ck-legal a, .ck-alt a { color: var(--teal2); text-decoration: underline; text-underline-offset: 2px; }
 .ck-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ck-btns-1 { grid-template-columns: 1fr; }
+.pp-legal { font-family: sans-serif; font-size: 12px; color: #5f6d6e; line-height: 1.55; margin: 0 0 12px; }
+.pp-legal a { color: #4d6d71; }
+.safety-info { margin-top: 10px; font-size: 12px; color: var(--brown3); line-height: 1.55; }
+.safety-info summary { cursor: pointer; color: var(--teal2); font-weight: 500; }
+.safety-info p { margin-top: 6px; }
+.safety-info a { color: var(--teal2); }
+.ptotal-note { font-size: 11px; color: var(--brown3); margin-top: 2px; letter-spacing: 0.2px; }
+.pp-legal strong { display: block; margin-top: 8px; color: #263234; font-size: 12.5px; }
 .ck-btn {
   font: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.3px;
   padding: 12px 14px; border-radius: 10px; cursor: pointer;
@@ -1295,6 +1304,11 @@ button { cursor: pointer; font-family: inherit; }
           </div>
           <div class="prev-nametag" id="pnt"></div>
         </div>
+        <details class="safety-info">
+          <summary>Hersteller &amp; Sicherheitshinweise</summary>
+          <p><strong>Hersteller:</strong> Sternenstaubhandmade, Inhaberin Sara Schwarz, Vogesenweg 8, 75045 Walzbachtal, Deutschland · <a href="mailto:m.kronenwelt@gmail.com">m.kronenwelt@gmail.com</a></p>
+          <p><strong>Sicherheitshinweise:</strong> Dekorationsartikel für Fotos und Feiern – kein Spielzeug. Deinen Hund die Krone nur unter Aufsicht und kurzzeitig tragen lassen. Nicht zum Kauen oder Spielen überlassen: Bommel, Zahlenpads und Bänder können abgebissen und verschluckt werden. Band nicht zu eng anlegen. Bei Beschädigung nicht mehr verwenden.</p>
+        </details>
         <div class="bommel-hint">
           ⓘ Bommelfarben und -grössen können von den gezeigten Fotos leicht abweichen.
         </div>
@@ -1423,6 +1437,7 @@ button { cursor: pointer; font-family: inherit; }
       <div style="text-align:right;flex-shrink:0;margin-left:20px">
         <div class="ptotal-lbl">Preis</div>
         <div class="ptotal" id="totP">15,00 €</div>
+        <div class="ptotal-note">Endpreis · gem. § 19 UStG ohne MwSt.</div>
       </div>
     </div>
   </div>
@@ -1464,7 +1479,7 @@ button { cursor: pointer; font-family: inherit; }
   <div class="kg-cta">
     <div>
       <div class="kg-cta-title">Auch in der Galerie dabei sein?</div>
-      <div class="kg-cta-text">Schick uns dein schönstes Kronenfoto an <span class="kg-cta-email" id="galerie-email"></span> – wir freuen uns über jeden Kronenträger!</div>
+      <div class="kg-cta-text">Schick uns dein schönstes Kronenfoto an <span class="kg-cta-email" id="galerie-email"></span> – wir freuen uns über jeden Kronenträger! Mit dem Einsenden erlaubst du uns, das Foto mit dem Namen deines Hundes hier und auf Instagram zu zeigen. Das kannst du jederzeit per E-Mail widerrufen.</div>
     </div>
     <button class="kg-cta-btn" onclick="window.location='mailto:' + CONFIG.EMAIL_GALERIE">Foto einschicken</button>
   </div>
@@ -1630,18 +1645,17 @@ button { cursor: pointer; font-family: inherit; }
       </div>
       <div class="ck-title" id="ckTitle">Deine Privatsphäre</div>
     </div>
-    <p class="ck-text" id="ckText">Wir speichern nur, was der Shop braucht: deinen Warenkorb und diese Auswahl. Den Zahlungsdienst <strong>PayPal</strong> laden wir erst an der Kasse – und nur, wenn du zustimmst. Mehr in der <a href="datenschutz.html">Datenschutzerklärung</a>.</p>
-    <div class="ck-btns">
-      <button type="button" class="ck-btn ck-btn-secondary" onclick="ckSave(false)">Nur notwendige</button>
-      <button type="button" class="ck-btn ck-btn-primary" onclick="ckSave(true)">Alle akzeptieren</button>
+    <p class="ck-text" id="ckText">Wir verwenden nur, was der Shop zum Funktionieren braucht: deinen Warenkorb und einen Merker, dass du diesen Hinweis gesehen hast. Kein Tracking, keine Werbung. Den Zahlungsdienst <strong>PayPal</strong> laden wir erst, wenn du an der Kasse bezahlst. Mehr in der <a href="datenschutz.html">Datenschutzerklärung</a>.</p>
+    <div class="ck-btns ck-btns-1">
+      <button type="button" class="ck-btn ck-btn-primary" onclick="ckSave()">Verstanden</button>
     </div>
     <div class="ck-foot">
-      <button type="button" class="ck-link" onclick="ckShowView('settings')">Einstellungen anpassen</button>
+      <button type="button" class="ck-link" onclick="ckShowView('settings')">Details anzeigen</button>
       <span class="ck-legal"><a href="datenschutz.html">Datenschutz</a> · <a href="impressum.html">Impressum</a></span>
     </div>
   </div>
 
-  <!-- Ansicht 2: Einstellungen -->
+  <!-- Ansicht 2: Details -->
   <div id="ckViewSettings" style="display:none">
     <div class="ck-head">
       <div class="ck-icon" aria-hidden="true">
@@ -1655,57 +1669,25 @@ button { cursor: pointer; font-family: inherit; }
           <span class="ck-cat-title">Notwendig</span>
           <span class="ck-badge">Immer aktiv</span>
         </div>
-        <div class="ck-cat-desc">Damit der Warenkorb funktioniert und wir uns deine Auswahl merken.</div>
-        <details>
+        <div class="ck-cat-desc">Damit der Warenkorb funktioniert, du bezahlen kannst und dieser Hinweis nicht bei jedem Besuch erscheint. Andere Cookies verwenden wir nicht.</div>
+        <details open>
           <summary>Details</summary>
           <table class="ck-table">
             <tr><td>mkw_cart</td><td>Warenkorb · Session Storage · gelöscht beim Schließen des Tabs</td></tr>
-            <tr><td>mk_cookie_consent</td><td>Deine Auswahl · Cookie · 12 Monate</td></tr>
-          </table>
-        </details>
-      </div>
-      <div class="ck-cat">
-        <div class="ck-cat-row">
-          <label class="ck-cat-title" for="ckPayment">Zahlung (PayPal)</label>
-          <span class="ck-switch"><input type="checkbox" id="ckPayment" role="switch"><span class="ck-slider"></span></span>
-        </div>
-        <div class="ck-cat-desc">Lädt an der Kasse die Bezahlmöglichkeiten PayPal, Kreditkarte, Lastschrift und „Später bezahlen“. Ohne Zustimmung ist eine Bestellung über die Webseite nicht möglich.</div>
-        <details>
-          <summary>Details</summary>
-          <table class="ck-table">
-            <tr><td>Anbieter</td><td>PayPal (Europe) S.à r.l. et Cie, S.C.A., Luxemburg</td></tr>
-            <tr><td>Zweck</td><td>Zahlungsabwicklung, Betrugsprävention</td></tr>
-            <tr><td>Speicher</td><td>Cookies von paypal.com</td></tr>
-            <tr><td>Drittland</td><td>Übermittlung in die USA möglich (Data Privacy Framework)</td></tr>
+            <tr><td>mk_cookie_consent</td><td>Merkt sich, dass du diesen Hinweis gesehen hast · Cookie · 12 Monate</td></tr>
+            <tr><td>PayPal</td><td>Wird erst an der Kasse geladen, wenn du auf „Zur Kasse“ klickst. PayPal setzt dann eigene Cookies für Zahlung und Betrugsprävention. Anbieter: PayPal (Europe) S.à r.l. et Cie, S.C.A., Luxemburg; Übermittlung in die USA möglich (Data Privacy Framework).</td></tr>
           </table>
         </details>
       </div>
       <p class="ck-note">Ohne Cookies und nur zur Bereitstellung des Shops: Produktbilder kommen von Cloudinary, beim Bestellen nutzen wir EmailJS (Bestätigungs-Mails) und Google Sheets (Bestellverwaltung). Details in der <a href="datenschutz.html" style="color:inherit">Datenschutzerklärung</a>.</p>
     </div>
-    <div class="ck-btns">
-      <button type="button" class="ck-btn ck-btn-secondary" onclick="ckSave(document.getElementById('ckPayment').checked)">Auswahl speichern</button>
-      <button type="button" class="ck-btn ck-btn-primary" onclick="ckSave(true)">Alle akzeptieren</button>
+    <div class="ck-btns ck-btns-1">
+      <button type="button" class="ck-btn ck-btn-primary" onclick="ckSave()">Verstanden</button>
     </div>
     <div class="ck-foot">
       <button type="button" class="ck-link" onclick="ckShowView('main')">← Zurück</button>
       <span class="ck-legal"><a href="datenschutz.html">Datenschutz</a> · <a href="impressum.html">Impressum</a></span>
     </div>
-  </div>
-
-  <!-- Ansicht 3: Zustimmung an der Kasse -->
-  <div id="ckViewCheckout" style="display:none">
-    <div class="ck-head">
-      <div class="ck-icon" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4d6d71" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-      </div>
-      <div class="ck-title">Sicher bezahlen mit PayPal</div>
-    </div>
-    <p class="ck-text">Für die Bezahlung binden wir PayPal ein – damit kannst du per PayPal, Kreditkarte, Lastschrift oder später bezahlen. PayPal setzt dabei eigene Cookies und kann Daten auch in die USA übermitteln. Mehr in der <a href="datenschutz.html">Datenschutzerklärung</a>.</p>
-    <div class="ck-btns">
-      <button type="button" class="ck-btn ck-btn-secondary" onclick="ckHide()">Abbrechen</button>
-      <button type="button" class="ck-btn ck-btn-primary" onclick="ckSave(true)">Zustimmen &amp; weiter</button>
-    </div>
-    <div class="ck-alt">Lieber ohne PayPal? <a href="#" onclick="ckWhatsApp(event)">Bestell einfach per WhatsApp</a>.</div>
   </div>
 </div>
 
@@ -1723,6 +1705,7 @@ button { cursor: pointer; font-family: inherit; }
       <button onclick="closePayPalModal()" style="background:none;border:none;font-size:22px;color:#5f6d6e;cursor:pointer;line-height:1;padding:0 0 0 12px">✕</button>
     </div>
     <div id="paypal-order-summary" style="background:#f8f6f3;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-family:sans-serif;font-size:13px;color:#263234"></div>
+    <div class="pp-legal" id="ppLegal"></div>
     <div style="font-family:sans-serif;font-size:12px;color:#5f6d6e;margin:0 0 12px;line-height:1.5">Kein PayPal-Konto? Wähle unten <b>„Debit- oder Kreditkarte“</b>.</div>
     <div id="paypal-button-container"></div>
   </div>
@@ -1957,7 +1940,6 @@ function clearCartAfterPayment(name) {
 
 function startCartCheckout(method) {
   if (cart.length === 0) return;
-  if (!getCookieConsent()?.payment) { requestPaymentConsent(() => startCartCheckout(method)); return; }
   // Preise vor dem Bezahlen frisch aus der Preisliste berechnen
   if (repriceCart() > 0) { renderCart(); alert('Ein Artikel in deinem Warenkorb war nicht mehr verfügbar und wurde entfernt. Bitte prüfe deinen Warenkorb.'); return; }
   if (cart.length === 0) return;
@@ -1968,6 +1950,12 @@ function startCartCheckout(method) {
 
   // PayPal (default)
   document.getElementById('paypal-order-summary').innerHTML = buildCartSummaryHTML(total);
+  // Pflichtinformationen unmittelbar vor der Bestellung (§ 312j BGB)
+  document.getElementById('ppLegal').innerHTML =
+    'Lieferzeit 5–6 Werktage · Versand nur innerhalb Deutschlands · Endpreis, gemäß § 19 UStG ohne Umsatzsteuer. ' +
+    (cart.some(i => i.name) ? 'Personalisierte Kronen sind vom Widerrufsrecht ausgeschlossen. ' : '') +
+    'Es gelten unsere <a href="agb.html" target="_blank">AGB</a> und die <a href="widerruf.html" target="_blank">Widerrufsbelehrung</a>.' +
+    '<strong>Mit Klick auf einen Bezahl-Button gibst du deine Bestellung zahlungspflichtig auf.</strong>';
   document.getElementById('paypal-button-container').innerHTML = '';
   document.getElementById('paypalModal').style.display = 'flex';
 
@@ -1979,7 +1967,7 @@ function startCartCheckout(method) {
 
   const renderPayPal = () => {
     paypal.Buttons({
-      style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'paypal' },
+      style: { layout: 'vertical', color: 'gold', shape: 'pill', label: 'buynow' },
       createOrder: (data, actions) => actions.order.create({
         purchase_units: [{ description: desc.substring(0, 127), amount: { value: total.toFixed(2), currency_code: 'EUR' } }]
       }),
@@ -2690,40 +2678,38 @@ function renderGalerie(list) {
   b2.style.display = items.length > 6 ? '' : 'none';
 }
 
-/* ---- 6. COOKIE MANAGEMENT ---- */
-// Version erhöhen, wenn sich Dienste ändern -> alle Besucher werden neu gefragt
+/* ---- 6. COOKIE-HINWEIS ---- */
+// Es gibt nur notwendige Speicher (Warenkorb, dieser Hinweis, PayPal an der Kasse) –
+// der Banner informiert beim ersten Besuch, eine Auswahl ist nicht nötig.
+// Version erhöhen, wenn sich Dienste ändern -> alle Besucher sehen den Hinweis erneut
 const COOKIE_KEY = 'mk_cookie_consent';
-const CONSENT_VERSION = 2;
-let ckAfterConsent = null;   // Aktion, die nach Zustimmung an der Kasse weiterläuft
+const CONSENT_VERSION = 3;
 
-function setCookieConsent(payment) {
+function setCookieConsent() {
   const exp = new Date();
   exp.setFullYear(exp.getFullYear() + 1);
-  const data = { v: CONSENT_VERSION, payment: !!payment, ts: new Date().toISOString() };
+  const data = { v: CONSENT_VERSION, ts: new Date().toISOString() };
   document.cookie = COOKIE_KEY + '=' + encodeURIComponent(JSON.stringify(data)) +
-    '; expires=' + exp.toUTCString() + '; path=/; SameSite=Lax; Secure';
+    '; expires=' + exp.toUTCString() + '; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
 }
 
 function getCookieConsent() {
   const m = document.cookie.match(new RegExp('(?:^|; )' + COOKIE_KEY + '=([^;]*)'));
   try {
     const c = m ? JSON.parse(decodeURIComponent(m[1])) : null;
-    return c && c.v === CONSENT_VERSION ? c : null;   // alte Einwilligungen neu abfragen
+    return c && c.v === CONSENT_VERSION ? c : null;
   } catch { return null; }
 }
 
 function ckShowView(view) {
-  ['main', 'settings', 'checkout'].forEach(v => {
+  ['main', 'settings'].forEach(v => {
     document.getElementById('ckView' + v[0].toUpperCase() + v.slice(1)).style.display = v === view ? '' : 'none';
   });
-  if (view === 'settings') {
-    document.getElementById('ckPayment').checked = !!getCookieConsent()?.payment;
-  }
 }
 
 function ckOpen(view) {
   const banner = document.getElementById('ckBanner');
-  const modal  = view === 'checkout' || view === 'settings';
+  const modal  = view === 'settings';
   ckShowView(view);
   banner.classList.toggle('ck-center', modal);
   banner.setAttribute('aria-modal', modal ? 'true' : 'false');
@@ -2737,30 +2723,12 @@ function ckOpen(view) {
 function ckHide() {
   document.getElementById('ckBanner').classList.remove('show');
   document.getElementById('ckBackdrop').classList.remove('show');
-  ckAfterConsent = null;
   if (getCookieConsent()) document.getElementById('ckFab').classList.add('show');
 }
 
-function ckSave(payment) {
-  const hadPayment = !!getCookieConsent()?.payment;
-  setCookieConsent(payment);
-  const next = payment ? ckAfterConsent : null;
+function ckSave() {
+  setCookieConsent();
   ckHide();
-  // Widerruf: bereits geladenes PayPal-Script entfernen durch Neuladen
-  if (hadPayment && !payment && window.paypal) { location.reload(); return; }
-  if (next) next();
-}
-
-function ckWhatsApp(e) {
-  e.preventDefault();
-  ckHide();
-  window.open('https://wa.me/' + CONFIG.WA_NUMBER, '_blank', 'noopener');
-}
-
-// Wird von der Kasse aufgerufen, wenn noch keine Zustimmung vorliegt
-function requestPaymentConsent(then) {
-  ckOpen('checkout');
-  ckAfterConsent = then;
 }
 
 // Kompatibilität mit bestehenden Aufrufen

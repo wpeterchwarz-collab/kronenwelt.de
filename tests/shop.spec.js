@@ -224,6 +224,59 @@ test.describe('Warenkorb-Sicherheit', () => {
   });
 });
 
+test.describe('Rechtliches', () => {
+  test('Cookie-Hinweis beim ersten Besuch, danach nicht mehr – ohne PayPal-Schalter', async ({ page }) => {
+    await blockExternal(page);
+    await page.goto('/index.html');
+    await expect(page.locator('#ckBanner')).toHaveClass(/show/);
+    await expect(page.locator('#ckBanner input[type="checkbox"]')).toHaveCount(0);
+    await page.click('#ckViewMain .ck-btn-primary');
+    await expect(page.locator('#ckBanner')).not.toHaveClass(/show/);
+    await page.reload();
+    await expect(page.locator('#ckFab')).toHaveClass(/show/);
+    await expect(page.locator('#ckBanner')).not.toHaveClass(/show/);
+  });
+
+  test('Kasse öffnet direkt mit Pflichtangaben und Bestell-Hinweis', async ({ page }) => {
+    await openShop(page);
+    await page.fill('#nIn', 'MILA');
+    await page.click('.btn-add-cart');
+    await expect(page.locator('#cartPanel')).toHaveClass(/open/);
+    await page.click('#cartCheckoutBtn');
+    await expect(page.locator('#paypalModal')).toBeVisible();
+    await expect(page.locator('#ckBanner')).not.toHaveClass(/show/);       // keine Extra-Abfrage
+    const legal = page.locator('#ppLegal');
+    await expect(legal).toContainText('zahlungspflichtig');
+    await expect(legal).toContainText('Lieferzeit');
+    await expect(legal).toContainText('Widerrufsrecht ausgeschlossen');     // personalisierte Krone
+    await expect(legal.locator('a[href="agb.html"]')).toHaveCount(1);
+    await expect(legal.locator('a[href="widerruf.html"]')).toHaveCount(1);
+  });
+
+  test('Zahlenkrone: kein Hinweis auf Widerrufsausschluss', async ({ page }) => {
+    await openShop(page);
+    await page.click('.mode-tab[data-mode="zahl"]');
+    for (const n of ['1', '2', '3']) await page.click(`#petPad .pet-key >> text="${n}"`);
+    await page.click('.btn-add-cart');
+    await page.click('#cartCheckoutBtn');
+    await expect(page.locator('#ppLegal')).not.toContainText('ausgeschlossen');
+  });
+
+  test('Hersteller und Sicherheitshinweise beim Angebot', async ({ page }) => {
+    await openShop(page);
+    await page.click('.safety-info summary');
+    await expect(page.locator('.safety-info')).toContainText('Sternenstaubhandmade');
+    await expect(page.locator('.safety-info')).toContainText('verschluckt');
+  });
+
+  test('Impressum enthält Pflichtangaben', async ({ page }) => {
+    await blockExternal(page);
+    await page.goto('/impressum.html');
+    for (const t of ['Sara Schwarz', 'Vogesenweg 8', '75045 Walzbachtal', 'm.kronenwelt@gmail.com', '+49 176', '§ 19 UStG'])
+      await expect(page.locator('.content-wrap')).toContainText(t);
+  });
+});
+
 test.describe('Preisliste', () => {
   test('preise.json ist vollständig', async () => {
     for (const v of [...NAMENSKRONEN, ...ZAHLENKRONEN]) {
