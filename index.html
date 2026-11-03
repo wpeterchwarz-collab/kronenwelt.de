@@ -38,7 +38,7 @@
 <!-- ============================================================
      ZAHLUNGS-KONFIGURATION
      Ersetze die Platzhalter mit deinen echten Keys:
-     1. SUMUP_KEY   → Dein SumUp API Key aus dem SumUp Dashboard
+     (SumUp vorerst deaktiviert – Secret Keys gehören NIE ins Frontend)
      2. PAYPAL_ID   → Deine PayPal Client ID aus developer.paypal.com
      3. WA_NUMBER   → Deine WhatsApp Nummer (nur Zahlen, z.B. 4917612345678)
      4. INSTA_HANDLE → Dein Instagram Handle (ohne @)
@@ -49,8 +49,6 @@
   // Fallback falls config.js nicht geladen wurde
   if (typeof CONFIG === 'undefined') {
     window.CONFIG = {
-      SUMUP_KEY:      '',
-      SUMUP_MERCHANT: '',
       PAYPAL_ID:      '',
       WA_NUMBER:      '4917631242035',
       INSTA_HANDLE:   'kronenwelt',
@@ -575,9 +573,9 @@ button { cursor: pointer; font-family: inherit; }
 .ft-insta:hover { opacity: 0.8; }
 .footer-bot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
 .ft-links { display: flex; gap: 20px; flex-wrap: wrap; }
-.ft-links a { font-size: 11px; color: #6b5548; letter-spacing: 1px; transition: color 0.2s; }
+.ft-links a { font-size: 11px; color: #c8b8a8; letter-spacing: 1px; transition: color 0.2s; }
 .ft-links a:hover { color: #a8d8d0; }
-.ft-copy { font-size: 10px; color: #5a4838; }
+.ft-copy { font-size: 10px; color: #9a8878; }
 
 /* ============================================================
    WHATSAPP BUTTON
@@ -1680,7 +1678,8 @@ button { cursor: pointer; font-family: inherit; }
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19.5 6.5C19.5 9.8 17 12.5 13.5 13H9L8 18H5L7 7h7c3 0 5.5 1.2 5.5 3.5z" fill="#003087" opacity="0.9"/><path d="M17 3C17 6.3 14.5 9 11 9.5H6.5L5.5 14.5H3L5 3h7c3 0 5 1.2 5 3.5z" fill="#003087"/></svg>
       Zur Kasse mit PayPal
     </button>
-    <button class="cart-checkout-btn" onclick="startCartCheckout('sumup')" style="background:#00b4d8;margin-bottom:8px">
+    <!-- SumUp vorerst ausgeblendet (braucht Server-Komponente für Checkout) -->
+    <button class="cart-checkout-btn" onclick="startCartCheckout('sumup')" style="display:none;background:#00b4d8;margin-bottom:8px">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="white" stroke-width="2" fill="none"/><path d="M2 10h20" stroke="white" stroke-width="2"/></svg>
       Mit Kreditkarte bezahlen
     </button>

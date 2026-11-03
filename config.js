@@ -1,19 +1,16 @@
 // ============================================================
 //  MILA'S KRONENWELT – Konfiguration
 //  
-//  WICHTIG: Diese Datei enthält deine echten Keys.
-//  → Repository muss auf PRIVAT gestellt sein!
-//  → Niemals an Dritte weitergeben.
+//  WICHTIG: Diese Datei ist ÖFFENTLICH – jeder Besucher kann sie
+//  unter kronenwelt.de/config.js abrufen, egal ob Repo privat ist.
+//  → Hier NUR öffentliche Werte eintragen (Client-IDs, Kontaktdaten).
+//  → NIEMALS Secret Keys (sk_, secret, token) – die gehören auf einen Server.
 // ============================================================
 
 const CONFIG = {
 
   // PayPal Client ID (aus developer.paypal.com)
   PAYPAL_ID: 'BAA0M7NjLoaJgDw-PcmiLDNoXN-5OcMuDLZ4HLp5rDmkrRDM8M3zqtpv4HrEtsPmiPdXUXNYz5xWDjYYAc',
-
-  // SumUp (falls genutzt, sonst leer lassen)
-  // SUMUP_KEY:      '',
-  // SUMUP_MERCHANT: '',
 
   // WhatsApp Nummer (nur Zahlen, mit Ländervorwahl, kein +)
   WA_NUMBER: '4917631242035',
