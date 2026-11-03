@@ -13,7 +13,7 @@ async function openShop(page, { errors } = {}) {
   await blockExternal(page);
   await page.goto('/index.html');
   await page.evaluate(() => sessionStorage.clear());
-  await page.click('.ck-btn-secondary >> nth=0');          // "Nur notwendige"
+  await page.click('#ckViewMain .ck-btn-primary');         // Cookie-Hinweis: "Verstanden"
   await expect(page.locator('#colorChips [data-c]').first()).toBeVisible();
 }
 
