@@ -8,7 +8,12 @@
 <!-- Version: 20260407 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Mila's Kronenwelt – Personalisierte handgemachte Hundekronen für Geburtstage und besondere Momente. Jetzt bestellen auf kronenwelt.de">
-<title>Mila's Kronenwelt v2120 – Personalisierte Hundekronen</title>
+<title>Mila's Kronenwelt – Personalisierte Hundekronen</title>
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="favicon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#4d6d71">
 <!-- Fonts werden LOKAL geladen – kein Google-Cookie -->
 <style>
 </style>
@@ -409,6 +414,7 @@ button { cursor: pointer; font-family: inherit; }
 .pet-status { font-size: 12px; color: var(--brown3); margin-top: 8px; }
 .pet-status.ok { color: var(--teal2); font-weight: 700; }
 .pet-delta { font-size: 11px; opacity: 0.75; margin-left: 4px; }
+.swatch { display: inline-block; width: 16px; height: 16px; border-radius: 50%; margin-right: 7px; flex-shrink: 0; border: 1px solid rgba(38,50,52,0.18); }
 .mini-pad { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid; font-family: 'Gaegu', serif; font-weight: 700; letter-spacing: 0; line-height: 1; flex-shrink: 0; }
 #pnt .mini-pad { margin-right: 5px; }
 @media(max-width:600px){ .pet-pad { grid-template-columns: repeat(5, minmax(0,1fr)); }
@@ -984,7 +990,7 @@ button { cursor: pointer; font-family: inherit; }
   line-height: 1.5; font-style: italic;
 }
 </style>
-<link rel="stylesheet" href="css/pastell.css?v=2">
+<link rel="stylesheet" href="css/pastell.css?v=3">
 </head>
 
 <body>
@@ -1021,7 +1027,7 @@ button { cursor: pointer; font-family: inherit; }
       <div class="ig-ic">
         <svg viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" stroke="white" stroke-width="2.5" fill="none"/><circle cx="12" cy="12" r="5" stroke="white" stroke-width="2" fill="none"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg>
       </div>
-      <span id="nav-insta-text">@milas.kronenwelt</span>
+      <span id="nav-insta-text">@kronenwelt</span>
     </a>
     <button class="nav-cta" onclick="document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">Jetzt bestellen</button>
     <button class="cart-btn" id="cartBtn" onclick="openCart()" aria-label="Warenkorb">
@@ -1044,7 +1050,7 @@ button { cursor: pointer; font-family: inherit; }
   <a href="#about" onclick="closeMobileMenu()">Über Mila</a>
   <a href="#" id="mobile-insta-link" style="display:flex;align-items:center;gap:6px;color:#8a4060">
     <div class="ig-ic"><svg viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" stroke="white" stroke-width="2.5" fill="none"/><circle cx="12" cy="12" r="5" stroke="white" stroke-width="2" fill="none"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg></div>
-    <span id="mobile-insta-text">@milas.kronenwelt</span>
+    <span id="mobile-insta-text">@kronenwelt</span>
   </a>
 </div>
 <div class="teal-bar"></div>
@@ -1094,13 +1100,13 @@ button { cursor: pointer; font-family: inherit; }
 <!-- ============================================================
      PRODUKTE
      ============================================================ -->
-<section class="section section-white" id="kronen">
+<section class="section section-white section-kronen" id="kronen">
   <div class="sec-eyebrow">KOLLEKTION</div>
   <h2 class="sec-title">Unsere Kronen</h2>
   <div class="sec-line"></div>
   <div class="prod-grid">
 
-    <div class="prod-card" onclick="selectVariant('Einfarbig');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+    <div class="prod-card" data-variant="Einfarbig" onclick="selectVariant('Einfarbig');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
         <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/uni-mint.jpg" alt="Einfarbig">
         <div class="prod-overlay">
@@ -1113,7 +1119,7 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
 
-    <div class="prod-card" onclick="selectVariant('Party');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+    <div class="prod-card" data-variant="Party" onclick="selectVariant('Party');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
         <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/party-krone.jpg" alt="Party">
         <div class="prod-overlay">
@@ -1125,7 +1131,7 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
 
-    <div class="prod-card" onclick="selectVariant('Edel & Wild');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+    <div class="prod-card" data-variant="Edel &amp; Wild" onclick="selectVariant('Edel & Wild');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
         <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/royal-krone.jpg" alt="Edel &amp; Wild">
         <div class="prod-overlay">
@@ -1138,7 +1144,7 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
 
-    <div class="prod-card" onclick="selectVariant('Glitzer');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+    <div class="prod-card" data-variant="Glitzer" onclick="selectVariant('Glitzer');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
         <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/glitzer-krone.jpg" alt="Glitzer">
         <div class="prod-overlay">
@@ -1150,7 +1156,7 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
 
-    <div class="prod-card" onclick="selectVariant('Zahlenkrone Klassik');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+    <div class="prod-card" data-variant="Zahlenkrone Klassik" onclick="selectVariant('Zahlenkrone Klassik');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
         <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-klassik-krone.jpg" alt="Zahlenkrone Klassik" onerror="this.style.visibility='hidden'">
         <div class="prod-overlay">
@@ -1163,7 +1169,7 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
 
-    <div class="prod-card" onclick="selectVariant('Zahlenkrone Leo');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+    <div class="prod-card" data-variant="Zahlenkrone Leo" onclick="selectVariant('Zahlenkrone Leo');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
         <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-leo-krone.jpg" alt="Zahlenkrone Leo" onerror="this.style.visibility='hidden'">
         <div class="prod-overlay">
@@ -1176,7 +1182,7 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
 
-    <div class="prod-card" onclick="selectVariant('Zahlenkrone Glitzer');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+    <div class="prod-card" data-variant="Zahlenkrone Glitzer" onclick="selectVariant('Zahlenkrone Glitzer');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
         <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-glitzer-krone.jpg" alt="Zahlenkrone Glitzer rosa" onerror="this.style.visibility='hidden'">
         <div class="prod-overlay">
@@ -1189,7 +1195,7 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
 
-    <div class="prod-card" onclick="selectVariant('Zahlenkrone Konfetti');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+    <div class="prod-card" data-variant="Zahlenkrone Konfetti" onclick="selectVariant('Zahlenkrone Konfetti');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
         <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-konfetti-krone.jpg" alt="Zahlenkrone Konfetti" onerror="this.style.visibility='hidden'">
         <div class="prod-overlay">
@@ -1208,7 +1214,7 @@ button { cursor: pointer; font-family: inherit; }
 <!-- ============================================================
      FEATURES
      ============================================================ -->
-<section class="section section-beige">
+<section class="section section-beige section-feat">
   <div class="feat-grid">
     <div class="feat">
       <div class="feat-icon">
@@ -1216,7 +1222,7 @@ button { cursor: pointer; font-family: inherit; }
       </div>
       <div class="feat-body">
         <div class="feat-title">Personalisierbar</div>
-        <div class="feat-text">Mit dem Namen deines Hundes – für einen einzigartigen Look der garantiert auffällt.</div>
+        <div class="feat-text">Mit dem Namen deines Hundes oder mit austauschbaren Zahlen – für einen einzigartigen Look, der garantiert auffällt.</div>
       </div>
     </div>
     <div class="feat">
@@ -1307,7 +1313,7 @@ button { cursor: pointer; font-family: inherit; }
                 </span>
                 <span class="mode-title">Mit gewünschter Personalisierung</span>
                 <span class="mode-sub">Name deines Hundes fest auf der Krone</span>
-                <span class="mode-price">ab 12,00 €</span>
+                <span class="mode-price" data-ab-mode="name">ab 12,00 €</span>
               </button>
               <button type="button" class="mode-tab" data-mode="zahl" role="radio" aria-checked="false" onclick="selectMode('zahl')">
                 <span class="mode-check" aria-hidden="true"></span>
@@ -1317,7 +1323,7 @@ button { cursor: pointer; font-family: inherit; }
                 </span>
                 <span class="mode-title">Mit austauschbaren Zahlenpads</span>
                 <span class="mode-sub">Zahlen zum Wechseln – jedes Jahr wieder nutzbar</span>
-                <span class="mode-price">ab 18,00 €</span>
+                <span class="mode-price" data-ab-mode="zahl">ab 18,00 €</span>
               </button>
             </div>
             <div class="slbl" style="margin-top:14px">Variante wählen</div>
@@ -1393,7 +1399,7 @@ button { cursor: pointer; font-family: inherit; }
               <div class="pet-sub">Zahl antippen</div>
               <div class="pet-pad" id="petPad"></div>
               <div class="pet-other">Andere Zahl:
-                <input id="petOther" type="number" min="0" max="99" inputmode="numeric" placeholder="z.B. 25">
+                <input id="petOther" type="number" min="0" max="99" inputmode="numeric" placeholder="z.B. 25" onkeydown="if(event.key==='Enter'){event.preventDefault();addOtherNumber()}">
                 <button type="button" class="nhint-btn" onclick="addOtherNumber()">Hinzufügen</button>
               </div>
               <div class="pet-status" id="petStatus"></div>
@@ -1432,7 +1438,7 @@ button { cursor: pointer; font-family: inherit; }
   <div style="text-align:center">
     <a class="kg-insta-link" href="#" id="galerie-insta-link">
       <div class="ig-ic"><svg viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" stroke="white" stroke-width="2.5" fill="none"/><circle cx="12" cy="12" r="5" stroke="white" stroke-width="2" fill="none"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg></div>
-      Mehr auf @milas.kronenwelt
+      Mehr auf <span id="galerie-insta-text">@kronenwelt</span>
     </a>
   </div>
   <div class="sec-line" style="margin-top:16px"></div>
@@ -1541,7 +1547,7 @@ button { cursor: pointer; font-family: inherit; }
     </div>
     <a class="ft-insta" href="#" id="footer-insta-link">
       <div class="ig-ic"><svg viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" stroke="white" stroke-width="2.5" fill="none"/><circle cx="12" cy="12" r="5" stroke="white" stroke-width="2" fill="none"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg></div>
-      @milas.kronenwelt
+      <span id="footer-insta-text">@kronenwelt</span>
     </a>
   </div>
   <div class="footer-bot">
@@ -1751,6 +1757,34 @@ function saveCart() {
   sessionStorage.setItem('mkw_cart', JSON.stringify(cart));
 }
 
+// Text sicher in HTML einsetzen (Warenkorb-Inhalte kommen aus dem Browser-Speicher)
+function esc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Preis eines Warenkorb-Artikels immer aus der Preisliste berechnen – nie dem gespeicherten Wert trauen
+function priceFor(item) {
+  const m = /^(.+?) \+ (\d+) Pets$/.exec(item.size || '');
+  const size = m ? m[1] : item.size;
+  const pets = m ? +m[2] : 0;
+  const base = (PRICES[item.variant] || {})[size];
+  if (typeof base !== 'number') return null;                 // unbekannte Variante/Grösse
+  if (isZahl(item.variant)) {
+    if (![3, 6, 9].includes(pets)) return null;
+    return base + petAufpreis(pets);
+  }
+  return base;
+}
+function repriceCart() {
+  const before = cart.length;
+  cart = cart.filter(i => i && typeof i === 'object')
+             .map(i => ({ ...i, price: priceFor(i) }))
+             .filter(i => typeof i.price === 'number');
+  saveCart();
+  updateCartBadge();
+  return before - cart.length;   // Anzahl entfernter, ungültiger Artikel
+}
+
 function openCart() {
   document.getElementById('cartPanel').classList.add('open');
   document.getElementById('cartOverlay').classList.add('open');
@@ -1799,13 +1833,13 @@ function renderCart() {
     div.className = 'cart-item';
     div.innerHTML = `
       <div class="cart-item-img">
-        ${imgSrc ? `<img src="${imgSrc}" alt="${item.variant}">` :
+        ${imgSrc ? `<img src="${esc(imgSrc)}" alt="${esc(item.variant)}">` :
           `<svg width="28" height="24" viewBox="0 0 44 36"><polygon points="22,2 32,14 42,6 38,28 6,28 2,6 12,14" fill="none" stroke="#729599" stroke-width="2.5" stroke-linejoin="round"/></svg>`}
       </div>
       <div class="cart-item-body">
-        <div class="cart-item-name">${item.variant}</div>
-        <div class="cart-item-meta">${item.color} · ${item.size}</div>
-        ${itemPers(item) ? `<div class="cart-item-personalisierung">${itemPers(item)}</div>` : `<div class="cart-item-meta">Ohne Namen</div>`}
+        <div class="cart-item-name">${esc(item.variant)}</div>
+        <div class="cart-item-meta">${esc(item.color)} · ${esc(item.size)}</div>
+        ${itemPers(item) ? `<div class="cart-item-personalisierung">${esc(itemPers(item))}</div>` : `<div class="cart-item-meta">Ohne Namen</div>`}
         <div class="cart-item-price">${item.price.toFixed(2).replace('.', ',')} €</div>
       </div>
       <button class="cart-item-del" onclick="removeFromCart(${idx})" aria-label="Entfernen">&#x2715;</button>
@@ -1870,8 +1904,8 @@ function addToCart() {
 function buildCartSummaryHTML(total) {
   return cart.map(i =>
     `<div style="padding:4px 0;border-bottom:0.5px solid #e8ddd4;font-size:12px">
-      <strong>${i.variant}</strong> · ${i.color} · ${i.size}
-      ${itemPers(i) ? `· <span style="color:#729599;letter-spacing:2px">${itemPers(i)}</span>` : '· ohne Namen'}
+      <strong>${esc(i.variant)}</strong> · ${esc(i.color)} · ${esc(i.size)}
+      ${itemPers(i) ? `· <span style="color:#729599;letter-spacing:2px">${esc(itemPers(i))}</span>` : '· ohne Namen'}
       <span style="float:right;font-weight:700">${i.price.toFixed(2).replace('.', ',')} €</span>
     </div>`
   ).join('') +
@@ -1924,6 +1958,9 @@ function clearCartAfterPayment(name) {
 function startCartCheckout(method) {
   if (cart.length === 0) return;
   if (!getCookieConsent()?.payment) { requestPaymentConsent(() => startCartCheckout(method)); return; }
+  // Preise vor dem Bezahlen frisch aus der Preisliste berechnen
+  if (repriceCart() > 0) { renderCart(); alert('Ein Artikel in deinem Warenkorb war nicht mehr verfügbar und wurde entfernt. Bitte prüfe deinen Warenkorb.'); return; }
+  if (cart.length === 0) return;
 
   const total = cart.reduce((s, i) => s + i.price, 0);
   const desc  = cart.map(i => `${i.variant} ${i.color} ${i.size} ${itemPers(i) ? '"' + itemPers(i) + '"' : 'ohne Namen'}`).join(' | ');
@@ -2253,6 +2290,37 @@ const state = {
 
 /* ---- 3. KONFIGURATOR ---- */
 
+// Farbmuster für die Farb-Chips: Punkte, Leo-Flecken, Glitzer usw. statt nur eines Farbpunkts
+function swatchFor(variant, f) {
+  const dots = (c, bg) => `radial-gradient(circle, ${c} 22%, transparent 25%) 0 0/5px 5px, ${bg}`;
+  const leo = (spot, bg) =>
+    `radial-gradient(ellipse 2.2px 1.6px at 4px 4px, ${spot} 90%, transparent 100%),` +
+    `radial-gradient(ellipse 1.8px 2.2px at 10px 6px, ${spot} 90%, transparent 100%),` +
+    `radial-gradient(ellipse 2px 1.5px at 6px 11px, ${spot} 90%, transparent 100%),` +
+    `radial-gradient(ellipse 1.6px 2px at 12px 12px, ${spot} 90%, transparent 100%),` +
+    `radial-gradient(ellipse 1.4px 1.4px at 1px 9px, ${spot} 90%, transparent 100%), ${bg}`;
+  const glitter = (bg) =>
+    `radial-gradient(circle at 30% 30%, rgba(255,255,255,.95) 0 1px, transparent 1.6px),` +
+    `radial-gradient(circle at 70% 45%, rgba(255,255,255,.85) 0 .8px, transparent 1.4px),` +
+    `radial-gradient(circle at 45% 75%, rgba(255,255,255,.9) 0 .9px, transparent 1.5px),` +
+    `linear-gradient(135deg, rgba(255,255,255,.45), rgba(255,255,255,0) 50%, rgba(0,0,0,.12)), ${bg}`;
+  const L = f.label;
+  if (variant === 'Party') {
+    if (L === 'Konfetti') return `radial-gradient(circle at 4px 4px, #e8a0b8 1.4px, transparent 1.8px), radial-gradient(circle at 10px 5px, #8cc4b8 1.4px, transparent 1.8px), radial-gradient(circle at 6px 10px, #e8c060 1.4px, transparent 1.8px), radial-gradient(circle at 11px 11px, #9cb4d8 1.4px, transparent 1.8px), #fff`;
+    if (L === 'Weiss/Blau/Grün') return 'conic-gradient(#ffffff 0 33%, #8fb0d8 0 66%, #9cc8a8 0)';
+    return dots('#ffffff', f.dot);
+  }
+  if (variant === 'Glitzer') return glitter(L === 'Weiss' ? '#efefeb' : L === 'Silber' ? '#c4c4cc' : f.dot);
+  if (variant === 'Edel & Wild') {
+    if (L === 'Gold')      return 'linear-gradient(135deg, #f3dc8a, #c09820 55%, #9a7410)';
+    if (L === 'Schwarz')   return '#22202c';
+    if (L === 'Leo Braun') return leo('#3a2414', '#b07a3a');
+    if (L === 'Leo Weiss') return leo('#5a4a40', '#f3ede4');
+    if (L === 'Leopard')   return leo('#1e1612', '#d9b27c');
+  }
+  return f.dot;
+}
+
 function renderColorChips(variant) {
   const container = document.getElementById('colorChips');
   if (!container) return;
@@ -2260,7 +2328,7 @@ function renderColorChips(variant) {
   container.innerHTML = farben.map((f, i) => {
     const dotHtml = f.pet
       ? `<span style="margin-right:6px;display:inline-flex">${miniPad(1, f.pet[0], f.pet[1], 18, hatNaht(variant))}</span>`
-      : `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${f.dot};margin-right:5px;vertical-align:middle;flex-shrink:0"></span>`;
+      : `<span class="swatch" style="background:${swatchFor(variant, f)};${f.label === 'Schwarz' ? 'border-color:#c9a85c' : ''}"></span>`;
     return `<span class="chip ${f.css || ''} ${i === 0 ? 'on' : ''}"
       data-c="${f.label}"
       data-bg="${f.bg}" data-sc="${f.sc}" data-dot="${f.dot}"
@@ -2737,10 +2805,27 @@ function initInstagram() {
   const handle = '@' + CONFIG.INSTA_HANDLE;
   ['nav-insta-link','galerie-insta-link','about-insta-link','footer-insta-link']
     .forEach(id => { const el = document.getElementById(id); if (el) el.href = url; });
-  ['nav-insta-text','mobile-insta-text']
+  ['nav-insta-text','mobile-insta-text','galerie-insta-text','footer-insta-text']
     .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = handle; });
   const mi = document.getElementById('mobile-insta-link'); if (mi) mi.href = url;
   const ge = document.getElementById('galerie-email');     if (ge) ge.textContent = CONFIG.EMAIL_GALERIE;
+}
+
+/* ---- 8b. "AB"-PREISE AUS DER PREISLISTE ---- */
+function abPreis(variant) {
+  const v = Object.values(PRICES[variant] || {}).filter(x => typeof x === 'number');
+  return v.length ? Math.min(...v) : null;
+}
+function fmtEuro(v) { return v.toFixed(2).replace('.', ',') + ' €'; }
+function updateAbPreise() {
+  document.querySelectorAll('.prod-card[data-variant]').forEach(c => {
+    const a = abPreis(c.dataset.variant), el = c.querySelector('.prod-price');
+    if (a != null && el) el.textContent = 'ab ' + fmtEuro(a);
+  });
+  document.querySelectorAll('[data-ab-mode]').forEach(el => {
+    const list = Object.keys(VARIANTEN).filter(v => (isZahl(v) ? 'zahl' : 'name') === el.dataset.abMode).map(abPreis).filter(x => x != null);
+    if (list.length) el.textContent = 'ab ' + fmtEuro(Math.min(...list));
+  });
 }
 
 /* ---- 9. START ---- */
@@ -2755,6 +2840,8 @@ Promise.all([
   fetch('galerie.json').then(r => r.json()).catch(() => null)
 ]).then(([preise, galerie]) => {
   if (preise) PRICES = { ...PRICES, ...preise };
+  repriceCart();
+  updateAbPreise();
   try { renderGalerie(galerie); } catch (e) { console.warn('Galerie:', e); }
   initConfigurator();
   initPayment();
