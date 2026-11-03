@@ -2086,16 +2086,16 @@ const VARIANTEN = {
   },
   /* ---- Zahlenkronen (austauschbare Zahlenpets) ---- */
   'Zahlenkrone Klassik': {
-    typ: 'zahl', naht: true,    // naht: true = Pads mit Ziernaht farbLabel: 'Hauptfarbe wählen',
+    typ: 'zahl', naht: true, farbLabel: 'Hauptfarbe wählen',   // naht: true = Pads mit Ziernaht
     groessen: ['Gross', 'Klein', 'Mini'],
     farben: [
       { label: 'Rosa',               bg: '#f7eaed', sc: '#a05070', dot: '#e8b8c8', css: 'chip-pink', pet: ['#d48aa4', '#ffffff'] },   // Pads Rosa
-      { label: 'Grün',               bg: '#e8f2e4', sc: '#3a6830', dot: '#a8c8a0', css: '',          pet: ['#9a9590', '#ffffff'] },   // Pads Grau
+      { label: 'Mint',               bg: '#e4f2f0', sc: '#3d7878', dot: '#a8d4cc', css: 'chip-mint', pet: ['#9a9590', '#ffffff'] },   // Pads Grau
       { label: 'Weiss/bunte Punkte', bg: '#f8f8f5', sc: '#706870', dot: '#d8c8e0', css: 'chip-weiss', pet: ['#3d8080', '#ffffff'] },   // Pads Petrol
     ]
   },
   'Zahlenkrone Leo': {
-    typ: 'zahl', naht: false,   // naht: true = Pads mit Ziernaht farbLabel: 'Farbe der Zahlenpets wählen',
+    typ: 'zahl', naht: false, farbLabel: 'Farbe der Zahlenpets wählen',   // naht: true = Pads mit Ziernaht
     groessen: ['Gross', 'Klein', 'Mini', 'Extra Mini'],
     farben: [
       { label: 'Gold / Zahlen schwarz',    bg: '#f5e8d0', sc: '#7a4a10', dot: '#c09820', css: 'chip-royal', pet: ['#d4b840', '#22202c'] },
@@ -2103,7 +2103,7 @@ const VARIANTEN = {
     ]
   },
   'Zahlenkrone Glitzer': {
-    typ: 'zahl', naht: false,   // naht: true = Pads mit Ziernaht farbLabel: 'Schriftfarbe wählen',
+    typ: 'zahl', naht: false, farbLabel: 'Schriftfarbe wählen',   // naht: true = Pads mit Ziernaht
     groessen: ['Gross', 'Klein', 'Mini', 'Extra Mini'],
     farben: [
       { label: 'Zahlen schwarz', bg: '#fce8f0', sc: '#b03068', dot: '#22202c', css: 'chip-pink', pet: ['#e396b4', '#22202c'] },
@@ -2111,7 +2111,7 @@ const VARIANTEN = {
     ]
   },
   'Zahlenkrone Konfetti': {
-    typ: 'zahl', naht: false,   // naht: true = Pads mit Ziernaht farbLabel: 'Farbe der Zahlenpads wählen',
+    typ: 'zahl', naht: false, farbLabel: 'Farbe der Zahlenpads wählen',   // naht: true = Pads mit Ziernaht
     groessen: ['Gross', 'Klein', 'Mini'],
     farben: [
       { label: 'Zahlenpads Mint', bg: '#fff8f0', sc: '#c07040', dot: '#8cc4b8', css: 'chip-mint', pet: ['#8cc4b8', '#22202c'] },
@@ -2180,7 +2180,7 @@ const PRODUCT_IMAGES = {
   'Zahlenkrone Klassik': {
     '_default':           CL + CLV + 'zahl-klassik-krone.jpg',
     'Rosa':               CL + CLV + 'zahl-klassik-rosa.jpg',
-    'Grün':               CL + CLV + 'zahl-klassik-gruen.jpg',
+    'Mint':               CL + CLV + 'zahl-klassik-gruen.jpg',   // Dateiname bleibt (Foto ist schon hochgeladen)
     'Weiss/bunte Punkte': CL + CLV + 'zahl-klassik-weiss-bunt.jpg',
   },
   'Zahlenkrone Leo': {

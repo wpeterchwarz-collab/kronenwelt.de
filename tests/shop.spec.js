@@ -145,6 +145,24 @@ test.describe('Zahlenkronen', () => {
     });
   }
 
+  test('Überschrift und Farben in Schritt 2 je Zahlenkrone', async ({ page }) => {
+    await openShop(page);
+    await page.click('.mode-tab[data-mode="zahl"]');
+    const erwartet = {
+      'Zahlenkrone Klassik':  ['Hauptfarbe wählen', ['Rosa', 'Mint', 'Weiss/bunte Punkte']],
+      'Zahlenkrone Leo':      ['Farbe der Zahlenpets wählen', ['Gold / Zahlen schwarz', 'Schwarz / Zahlen gold']],
+      'Zahlenkrone Glitzer':  ['Schriftfarbe wählen', ['Zahlen schwarz', 'Zahlen weiss']],
+      'Zahlenkrone Konfetti': ['Farbe der Zahlenpads wählen', ['Zahlenpads Mint', 'Zahlenpads Rosa']],
+    };
+    for (const [v, [titel, farben]] of Object.entries(erwartet)) {
+      await page.click(`.chip[data-v="${v}"]`);
+      await expect(page.locator('#cLbl')).toHaveText(titel);
+      expect(await page.$$eval('#colorChips [data-c]', e => e.map(x => x.dataset.c))).toEqual(farben);
+    }
+    await page.click('.mode-tab[data-mode="name"]');
+    await expect(page.locator('#cLbl')).toHaveText('Stil & Farbe wählen');
+  });
+
   test('Zahlen wählen, entfernen und in den Warenkorb legen', async ({ page }) => {
     await openShop(page);
     let meldung = '';
