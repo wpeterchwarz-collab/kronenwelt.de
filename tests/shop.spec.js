@@ -76,6 +76,14 @@ test.describe('Namenskronen', () => {
     await expect(page.locator('.cart-item-personalisierung')).toHaveText('MILA');
   });
 
+  test('Farbmuster: Schwarz ist schwarz, Leo hat Flecken', async ({ page }) => {
+    await openShop(page);
+    await page.click('.chip[data-v="Edel & Wild"]');
+    const bg = sel => page.locator(`#colorChips [data-c="${sel}"] .swatch`).evaluate(e => getComputedStyle(e).backgroundImage + '|' + getComputedStyle(e).backgroundColor);
+    expect(await bg('Schwarz')).toContain('rgb(34, 32, 44)');
+    for (const leo of ['Leo Braun', 'Leo Weiss', 'Leopard']) expect(await bg(leo)).toContain('radial-gradient');
+  });
+
   test('Leo-Muster ohne Namensaufdruck', async ({ page }) => {
     await openShop(page);
     await page.click('.chip[data-v="Edel & Wild"]');

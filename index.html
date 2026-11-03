@@ -414,6 +414,7 @@ button { cursor: pointer; font-family: inherit; }
 .pet-status { font-size: 12px; color: var(--brown3); margin-top: 8px; }
 .pet-status.ok { color: var(--teal2); font-weight: 700; }
 .pet-delta { font-size: 11px; opacity: 0.75; margin-left: 4px; }
+.swatch { display: inline-block; width: 16px; height: 16px; border-radius: 50%; margin-right: 7px; flex-shrink: 0; border: 1px solid rgba(38,50,52,0.18); }
 .mini-pad { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid; font-family: 'Gaegu', serif; font-weight: 700; letter-spacing: 0; line-height: 1; flex-shrink: 0; }
 #pnt .mini-pad { margin-right: 5px; }
 @media(max-width:600px){ .pet-pad { grid-template-columns: repeat(5, minmax(0,1fr)); }
@@ -2289,6 +2290,37 @@ const state = {
 
 /* ---- 3. KONFIGURATOR ---- */
 
+// Farbmuster für die Farb-Chips: Punkte, Leo-Flecken, Glitzer usw. statt nur eines Farbpunkts
+function swatchFor(variant, f) {
+  const dots = (c, bg) => `radial-gradient(circle, ${c} 22%, transparent 25%) 0 0/5px 5px, ${bg}`;
+  const leo = (spot, bg) =>
+    `radial-gradient(ellipse 2.2px 1.6px at 4px 4px, ${spot} 90%, transparent 100%),` +
+    `radial-gradient(ellipse 1.8px 2.2px at 10px 6px, ${spot} 90%, transparent 100%),` +
+    `radial-gradient(ellipse 2px 1.5px at 6px 11px, ${spot} 90%, transparent 100%),` +
+    `radial-gradient(ellipse 1.6px 2px at 12px 12px, ${spot} 90%, transparent 100%),` +
+    `radial-gradient(ellipse 1.4px 1.4px at 1px 9px, ${spot} 90%, transparent 100%), ${bg}`;
+  const glitter = (bg) =>
+    `radial-gradient(circle at 30% 30%, rgba(255,255,255,.95) 0 1px, transparent 1.6px),` +
+    `radial-gradient(circle at 70% 45%, rgba(255,255,255,.85) 0 .8px, transparent 1.4px),` +
+    `radial-gradient(circle at 45% 75%, rgba(255,255,255,.9) 0 .9px, transparent 1.5px),` +
+    `linear-gradient(135deg, rgba(255,255,255,.45), rgba(255,255,255,0) 50%, rgba(0,0,0,.12)), ${bg}`;
+  const L = f.label;
+  if (variant === 'Party') {
+    if (L === 'Konfetti') return `radial-gradient(circle at 4px 4px, #e8a0b8 1.4px, transparent 1.8px), radial-gradient(circle at 10px 5px, #8cc4b8 1.4px, transparent 1.8px), radial-gradient(circle at 6px 10px, #e8c060 1.4px, transparent 1.8px), radial-gradient(circle at 11px 11px, #9cb4d8 1.4px, transparent 1.8px), #fff`;
+    if (L === 'Weiss/Blau/Grün') return 'conic-gradient(#ffffff 0 33%, #8fb0d8 0 66%, #9cc8a8 0)';
+    return dots('#ffffff', f.dot);
+  }
+  if (variant === 'Glitzer') return glitter(L === 'Weiss' ? '#efefeb' : L === 'Silber' ? '#c4c4cc' : f.dot);
+  if (variant === 'Edel & Wild') {
+    if (L === 'Gold')      return 'linear-gradient(135deg, #f3dc8a, #c09820 55%, #9a7410)';
+    if (L === 'Schwarz')   return '#22202c';
+    if (L === 'Leo Braun') return leo('#3a2414', '#b07a3a');
+    if (L === 'Leo Weiss') return leo('#5a4a40', '#f3ede4');
+    if (L === 'Leopard')   return leo('#1e1612', '#d9b27c');
+  }
+  return f.dot;
+}
+
 function renderColorChips(variant) {
   const container = document.getElementById('colorChips');
   if (!container) return;
@@ -2296,7 +2328,7 @@ function renderColorChips(variant) {
   container.innerHTML = farben.map((f, i) => {
     const dotHtml = f.pet
       ? `<span style="margin-right:6px;display:inline-flex">${miniPad(1, f.pet[0], f.pet[1], 18, hatNaht(variant))}</span>`
-      : `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${f.dot};margin-right:5px;vertical-align:middle;flex-shrink:0"></span>`;
+      : `<span class="swatch" style="background:${swatchFor(variant, f)};${f.label === 'Schwarz' ? 'border-color:#c9a85c' : ''}"></span>`;
     return `<span class="chip ${f.css || ''} ${i === 0 ? 'on' : ''}"
       data-c="${f.label}"
       data-bg="${f.bg}" data-sc="${f.sc}" data-dot="${f.dot}"
