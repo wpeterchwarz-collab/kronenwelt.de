@@ -263,14 +263,6 @@ button { cursor: pointer; font-family: inherit; }
 .prod-badge-dark {
   background: rgba(20,16,10,0.88); color: #d4b840;
 }
-.prod-arrow {
-  width: 34px; height: 34px; border-radius: 50%;
-  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; transition: background 0.2s;
-  backdrop-filter: blur(4px);
-}
-.prod-card:hover .prod-arrow { background: var(--teal); border-color: var(--teal); }
 
 /* ============================================================
    FEATURES
@@ -377,6 +369,17 @@ button { cursor: pointer; font-family: inherit; }
 }
 .ninput:focus { outline: none; border-color: var(--teal); }
 .ninput::placeholder { letter-spacing: 2px; color: #c0b0a0; font-style: italic; }
+.prev-nametag.off { letter-spacing: 0.3px; font-size: 12px; font-style: italic; color: var(--brown3); text-transform: none; }
+.cnote { margin-top: 8px; font-size: 12.5px; color: var(--brown3); display: flex; align-items: center; gap: 6px; }
+.cnote::before { content: 'i'; width: 15px; height: 15px; border-radius: 50%; border: 1.3px solid currentColor; font: italic 700 10px Georgia, serif; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cnote[hidden], .nhint[hidden] { display: none; }
+.ninput-wrap.off .ninput { background: #f3efea; border-style: dashed; color: var(--brown3); cursor: not-allowed; }
+.ninput-wrap.off .ninput::placeholder { letter-spacing: 0.5px; font-style: normal; color: var(--brown3); }
+.ninput-wrap.off .ncnt { display: none; }
+.nhint { margin-top: 10px; padding: 12px 14px; border-radius: 10px; background: #f3f8f7; border: 1px solid #d6e8e5; font-size: 13px; line-height: 1.6; color: var(--brown); }
+.nhint-alt { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.nhint-btn { font: inherit; font-size: 12.5px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--teal); background: #fff; color: var(--teal2); cursor: pointer; }
+.nhint-btn:hover { background: var(--teal); color: #fff; }
 .ncnt { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #b0a090; }
 
 /* ============================================================
@@ -1067,9 +1070,6 @@ button { cursor: pointer; font-family: inherit; }
             <div class="prod-price">ab 12,00 €</div>
             <div class="prod-badge">★ Bestseller</div>
           </div>
-          <div class="prod-arrow">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </div>
         </div>
       </div>
     </div>
@@ -1081,9 +1081,6 @@ button { cursor: pointer; font-family: inherit; }
           <div class="prod-overlay-left">
             <div class="prod-name">Party</div>
             <div class="prod-price">ab 12,00 €</div>
-          </div>
-          <div class="prod-arrow">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </div>
         </div>
       </div>
@@ -1098,9 +1095,6 @@ button { cursor: pointer; font-family: inherit; }
             <div class="prod-price">ab 14,00 €</div>
             <div class="prod-badge prod-badge-dark">Premium</div>
           </div>
-          <div class="prod-arrow">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </div>
         </div>
       </div>
     </div>
@@ -1112,9 +1106,6 @@ button { cursor: pointer; font-family: inherit; }
           <div class="prod-overlay-left">
             <div class="prod-name">Glitzer</div>
             <div class="prod-price">ab 14,00 €</div>
-          </div>
-          <div class="prod-arrow">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </div>
         </div>
       </div>
@@ -1230,6 +1221,7 @@ button { cursor: pointer; font-family: inherit; }
           <div style="flex:1">
             <div class="slbl">Stil &amp; Farbe wählen</div>
             <div class="chips" id="colorChips"></div>
+            <div class="cnote" id="cNote" hidden>Dieses Muster gibt es ohne Namensaufdruck.</div>
           </div>
         </div>
         <div class="srow">
@@ -1263,11 +1255,12 @@ button { cursor: pointer; font-family: inherit; }
         <div class="srow">
           <div class="snum">4</div>
           <div style="flex:1">
-            <div class="slbl">Personalisierung eingeben (max. 11 Buchstaben)</div>
-            <div class="ninput-wrap">
+            <div class="slbl" id="nLbl">Personalisierung eingeben (max. 11 Buchstaben)</div>
+            <div class="ninput-wrap" id="nWrap">
               <input class="ninput" id="nIn" type="text" placeholder="MILA" maxlength="11" autocomplete="off"/>
               <span class="ncnt" id="nCnt">0 / 11</span>
             </div>
+            <div class="nhint" id="nHint" hidden></div>
           </div>
         </div>
       </div>
@@ -1880,7 +1873,7 @@ function renderCart() {
       <div class="cart-item-body">
         <div class="cart-item-name">${item.variant}</div>
         <div class="cart-item-meta">${item.color} · ${item.size}</div>
-        ${item.name ? `<div class="cart-item-personalisierung">${item.name}</div>` : ''}
+        ${item.name ? `<div class="cart-item-personalisierung">${item.name}</div>` : `<div class="cart-item-meta">Ohne Namen</div>`}
         <div class="cart-item-price">${item.price.toFixed(2).replace('.', ',')} €</div>
       </div>
       <button class="cart-item-del" onclick="removeFromCart(${idx})" aria-label="Entfernen">&#x2715;</button>
@@ -1901,7 +1894,7 @@ function removeFromCart(idx) {
 }
 
 function addToCart() {
-  if (!state.name.trim()) {
+  if (nameAllowed() && !state.name.trim()) {
     alert('Bitte gib unter Schritt 4 eine Personalisierung ein.');
     document.getElementById('nIn').focus();
     return;
@@ -1914,7 +1907,7 @@ function addToCart() {
     variant: state.variant,
     color:   state.color,
     size:    state.size,
-    name:    state.name,
+    name:    nameAllowed() ? state.name : '',
     price:   price
   });
 
@@ -1937,7 +1930,7 @@ function buildCartSummaryHTML(total) {
   return cart.map(i =>
     `<div style="padding:4px 0;border-bottom:0.5px solid #e8ddd4;font-size:12px">
       <strong>${i.variant}</strong> · ${i.color} · ${i.size}
-      ${i.name ? `· <span style="color:#4a9090;letter-spacing:2px">${i.name}</span>` : ''}
+      ${i.name ? `· <span style="color:#4a9090;letter-spacing:2px">${i.name}</span>` : '· ohne Namen'}
       <span style="float:right;font-weight:700">${i.price.toFixed(2).replace('.', ',')} €</span>
     </div>`
   ).join('') +
@@ -1957,7 +1950,7 @@ function sendOrderEmails(details, total) {
     variante:      cart.map(i => i.variant).join(', '),
     farbe:         cart.map(i => i.color).join(', '),
     groesse:       cart.map(i => i.size).join(', '),
-    hundename:     cart.map(i => i.name).join(', '),
+    hundename:     cart.map(i => i.name || 'ohne Namen').join(', '),
     preis:         total.toFixed(2).replace('.', ','),
     kunde_name:    details.payer.name.given_name + ' ' + details.payer.name.surname,
     kunde_email:   details.payer.email_address,
@@ -1990,7 +1983,7 @@ function startCartCheckout(method) {
   if (!getCookieConsent()?.payment) { requestPaymentConsent(() => startCartCheckout(method)); return; }
 
   const total = cart.reduce((s, i) => s + i.price, 0);
-  const desc  = cart.map(i => `${i.variant} ${i.color} ${i.size} "${i.name}"`).join(' | ');
+  const desc  = cart.map(i => `${i.variant} ${i.color} ${i.size} ${i.name ? '"' + i.name + '"' : 'ohne Namen'}`).join(' | ');
   closeCart();
 
   // PayPal (default)
@@ -2038,6 +2031,10 @@ function selectV(el) {
   state.variant = el.dataset.v;
   renderColorChips(state.variant);
   updatePreview();
+}
+function selectVariant(v) {
+  const btn = [...document.querySelectorAll('[data-v]')].find(b => b.dataset.v === v);
+  if (btn) selectV(btn);
 }
 function selectC(el) {
   document.querySelectorAll('[data-c]').forEach(b => b.classList.remove('on'));
@@ -2108,9 +2105,9 @@ const VARIANTEN = {
     farben: [
       { label: 'Gold',       bg: '#faf0d8', sc: '#9a7010', dot: '#c09820', css: 'chip-royal' },
       { label: 'Schwarz',    bg: '#22202c', sc: '#d4b840', dot: '#b89828', css: 'chip-royal' },
-      { label: 'Leo Braun',  bg: '#f5e8d0', sc: '#7a4a10', dot: '#a06820', css: ''           },
-      { label: 'Leo Weiss',  bg: '#f8f4ee', sc: '#706050', dot: '#907860', css: ''           },
-      { label: 'Leopard',    bg: '#ede0cc', sc: '#604020', dot: '#805030', css: ''           },
+      { label: 'Leo Braun',  bg: '#f5e8d0', sc: '#7a4a10', dot: '#a06820', css: '', noName: true },
+      { label: 'Leo Weiss',  bg: '#f8f4ee', sc: '#706050', dot: '#907860', css: '', noName: true },
+      { label: 'Leopard',    bg: '#ede0cc', sc: '#604020', dot: '#805030', css: '', noName: true },
     ]
   }
 };
@@ -2248,7 +2245,53 @@ function renderColorChips(variant) {
   }
 }
 
+// Darf bei der gewählten Farbe ein Name aufgedruckt werden?
+function nameAllowed() {
+  const f = ((VARIANTEN[state.variant] || {}).farben || []).find(x => x.label === state.color);
+  return !(f && f.noName);
+}
+
+let savedName = '';   // Name merken, falls der Kunde zurück zu einer Farbe mit Namen wechselt
+function applyNameAvailability() {
+  const input = document.getElementById('nIn');
+  if (!input) return;
+  const allowed = nameAllowed();
+  const wrap = document.getElementById('nWrap');
+  const hint = document.getElementById('nHint');
+  const lbl  = document.getElementById('nLbl');
+  const cnt  = document.getElementById('nCnt');
+  document.getElementById('cNote').hidden = allowed;
+  wrap.classList.toggle('off', !allowed);
+  input.disabled = !allowed;
+  hint.hidden = allowed;
+
+  if (!allowed) {
+    if (state.name) savedName = state.name;
+    state.name = '';
+    input.value = '';
+    input.placeholder = 'Bei diesem Muster ohne Namen';
+    lbl.textContent = 'Personalisierung';
+    const alt = ((VARIANTEN[state.variant] || {}).farben || []).filter(f => !f.noName);
+    hint.innerHTML = 'Auf dem Leo-Muster wäre ein Name kaum lesbar – deshalb fertigen wir diese Krone <strong>ohne Aufdruck</strong>. ' +
+      (alt.length ? 'Du möchtest einen Namen? Wähle eine dieser Farben:<div class="nhint-alt">' +
+        alt.map(f => `<button type="button" class="nhint-btn" onclick="pickColor('${f.label}')">${f.label}</button>`).join('') + '</div>' : '');
+  } else {
+    if (input.disabled === false && !state.name && savedName) {
+      state.name = savedName; input.value = savedName; savedName = '';
+    }
+    input.placeholder = 'MILA';
+    lbl.textContent = 'Personalisierung eingeben (max. 11 Buchstaben)';
+    if (cnt) cnt.textContent = state.name.length + ' / 11';
+  }
+}
+
+function pickColor(label) {
+  const chip = [...document.querySelectorAll('[data-c]')].find(c => c.dataset.c === label);
+  if (chip) { selectC(chip); document.getElementById('nIn').focus(); }
+}
+
 function updatePreview() {
+  applyNameAvailability();
   const el = (id) => document.getElementById(id);
   const pb = el('pBox'); if (!pb) return;
 
@@ -2265,12 +2308,12 @@ function updatePreview() {
   });
 
   const pt = el('pt');
-  if (pt) { pt.setAttribute('fill', state.sc); pt.textContent = state.name || 'MILA'; }
+  if (pt) { pt.setAttribute('fill', state.sc); pt.textContent = nameAllowed() ? (state.name || 'MILA') : ''; }
 
   const pvn = el('pvn'); if (pvn) pvn.textContent = state.variant;
   const pcd = el('pcd'); if (pcd) pcd.style.background = state.dot;
   const pcl = el('pcl'); if (pcl) pcl.textContent = state.color;
-  const pnt = el('pnt'); if (pnt) pnt.textContent = state.name;
+  const pnt = el('pnt'); if (pnt) { pnt.textContent = nameAllowed() ? state.name : 'ohne Namensaufdruck'; pnt.classList.toggle('off', !nameAllowed()); }
   const tp  = el('totP');
   if (tp) {
     const varPrices = PRICES[state.variant] || {};
