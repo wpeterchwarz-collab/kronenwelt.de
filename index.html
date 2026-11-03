@@ -7,8 +7,50 @@
 <meta http-equiv="Expires" content="0">
 <!-- Version: 20260407 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Mila's Kronenwelt – Personalisierte handgemachte Hundekronen für Geburtstage und besondere Momente. Jetzt bestellen auf kronenwelt.de">
-<title>Mila's Kronenwelt – Personalisierte Hundekronen</title>
+<meta name="description" content="Handgemachte Geburtstagskronen für Hunde – personalisiert mit Namen oder mit austauschbaren Zahlen. 4 Größen von Chihuahua bis Golden Retriever, kostenloser Versand.">
+<title>Hundekrone personalisiert – Geburtstagskronen für Hunde | Mila's Kronenwelt</title>
+<link rel="canonical" href="https://kronenwelt.de/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<!-- Vorschau beim Teilen (WhatsApp, Facebook, Pinterest …) -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="de_DE">
+<meta property="og:site_name" content="Mila's Kronenwelt">
+<meta property="og:url" content="https://kronenwelt.de/">
+<meta property="og:title" content="Personalisierte Geburtstagskronen für Hunde – handmade">
+<meta property="og:description" content="Hundekronen mit Namen oder austauschbaren Zahlen – liebevoll handgenäht, in 4 Größen. Kostenloser Versand in Deutschland.">
+<meta property="og:image" content="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/mila-hero.png">
+<meta property="og:image:alt" content="Border Collie Mila mit handgemachter Geburtstagskrone">
+<meta name="twitter:card" content="summary_large_image">
+<!-- Strukturierte Daten für Google: Shop/Marke. Die Produktdaten (mit Preisen)
+     werden unten per JS aus preise.json erzeugt, damit sie immer zu den Preisen passen. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "OnlineStore",
+      "@id": "https://kronenwelt.de/#shop",
+      "name": "Mila's Kronenwelt",
+      "alternateName": "Sternenstaubhandmade",
+      "url": "https://kronenwelt.de/",
+      "logo": "https://kronenwelt.de/favicon-192.png",
+      "image": "https://res.cloudinary.com/dw6amyijc/image/upload/v20551/mila-hero.png",
+      "description": "Handgemachte, personalisierte Geburtstagskronen für Hunde – mit Namen oder austauschbaren Zahlen.",
+      "email": "m.kronenwelt@gmail.com",
+      "areaServed": "DE",
+      "sameAs": ["https://www.instagram.com/kronenwelt"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://kronenwelt.de/#website",
+      "url": "https://kronenwelt.de/",
+      "name": "Mila's Kronenwelt",
+      "inLanguage": "de-DE",
+      "publisher": { "@id": "https://kronenwelt.de/#shop" }
+    }
+  ]
+}
+</script>
 <link rel="icon" href="favicon.ico" sizes="48x48">
 <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
 <link rel="icon" href="favicon-192.png" type="image/png" sizes="192x192">
@@ -207,6 +249,15 @@ button { cursor: pointer; font-family: inherit; }
 .sec-eyebrow { font-size: 12px; letter-spacing: 4px; color: var(--teal); text-align: center; margin-bottom: 8px; text-transform: uppercase; }
 .sec-title { font-family: 'Gaegu', Georgia, serif; font-size: 36px; color: var(--brown); font-style: italic; text-align: center; margin-bottom: 10px; }
 .sec-line { width: 44px; height: 2px; background: #d7d1c9; margin: 0 auto 36px; }
+/* FAQ */
+.faq-list { max-width: 760px; margin: 0 auto; }
+.faq-item { border-bottom: 1px solid var(--border); }
+.faq-item summary { cursor: pointer; list-style: none; padding: 16px 32px 16px 0; position: relative; font-weight: 500; color: var(--brown); font-size: 16px; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: '+'; position: absolute; right: 4px; top: 12px; font-size: 22px; color: var(--teal2); }
+.faq-item[open] summary::after { content: '–'; }
+.faq-item p { padding: 0 0 18px; color: var(--brown3); font-size: 15px; line-height: 1.7; }
+.faq-item a { color: var(--teal2); text-decoration: underline; }
 
 /* ============================================================
    PRODUKTE
@@ -1083,7 +1134,7 @@ button { cursor: pointer; font-family: inherit; }
     <rect x="700" y="100" width="8" height="4" rx="2" fill="#d4b840" opacity="0.4" transform="rotate(45 704 102)"/>
   </svg>
   <div class="hero-left">
-    <div class="h-eyebrow">Handmade · Geburtstagskronen</div>
+    <div class="h-eyebrow">Handmade · Geburtstagskronen für Hunde</div>
     <h1 class="h-title">Mila's<br><em>Kronenwelt</em></h1>
     <div class="h-subtitle">Für besondere Hunde</div>
     <p class="h-desc">Personalisierte Hundekronen für Geburtstage und unvergessliche Fotoshootings – handgefertigt mit Liebe, einzigartig wie dein Hund.</p>
@@ -1092,7 +1143,7 @@ button { cursor: pointer; font-family: inherit; }
   </div>
   <div class="hero-right">
     <div class="hero-photo">
-      <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/mila-hero.png" alt="Mila mit Krone" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
+      <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/mila-hero.png" alt="Border Collie Mila mit personalisierter Geburtstagskrone" fetchpriority="high" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
     </div>
   </div>
 </section>
@@ -1111,13 +1162,13 @@ button { cursor: pointer; font-family: inherit; }
      ============================================================ -->
 <section class="section section-white section-kronen" id="kronen">
   <div class="sec-eyebrow">KOLLEKTION</div>
-  <h2 class="sec-title">Unsere Kronen</h2>
+  <h2 class="sec-title">Unsere Hundekronen</h2>
   <div class="sec-line"></div>
   <div class="prod-grid">
 
     <div class="prod-card" data-variant="Einfarbig" onclick="selectVariant('Einfarbig');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
-        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/uni-mint.jpg" alt="Einfarbig">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/uni-mint.jpg" alt="Einfarbige Hundekrone mit Bommeln, personalisierbar mit Namen">
         <div class="prod-overlay">
           <div class="prod-overlay-left">
             <div class="prod-name">Einfarbig</div>
@@ -1130,7 +1181,7 @@ button { cursor: pointer; font-family: inherit; }
 
     <div class="prod-card" data-variant="Party" onclick="selectVariant('Party');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
-        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/party-krone.jpg" alt="Party">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/party-krone.jpg" alt="Bunte Party-Geburtstagskrone für Hunde mit Namen">
         <div class="prod-overlay">
           <div class="prod-overlay-left">
             <div class="prod-name">Party</div>
@@ -1142,7 +1193,7 @@ button { cursor: pointer; font-family: inherit; }
 
     <div class="prod-card" data-variant="Edel &amp; Wild" onclick="selectVariant('Edel & Wild');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
-        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/royal-krone.jpg" alt="Edel &amp; Wild">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/royal-krone.jpg" alt="Edle Hundekrone Edel &amp; Wild mit goldenen Bommeln">
         <div class="prod-overlay">
           <div class="prod-overlay-left">
             <div class="prod-name">Edel &amp; Wild</div>
@@ -1155,7 +1206,7 @@ button { cursor: pointer; font-family: inherit; }
 
     <div class="prod-card" data-variant="Glitzer" onclick="selectVariant('Glitzer');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
-        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/glitzer-krone.jpg" alt="Glitzer">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/glitzer-krone.jpg" alt="Glitzer-Geburtstagskrone für Hunde mit Namen">
         <div class="prod-overlay">
           <div class="prod-overlay-left">
             <div class="prod-name">Glitzer</div>
@@ -1167,7 +1218,7 @@ button { cursor: pointer; font-family: inherit; }
 
     <div class="prod-card" data-variant="Zahlenkrone Klassik" onclick="selectVariant('Zahlenkrone Klassik');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
-        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-klassik-krone.jpg" alt="Zahlenkrone Klassik" onerror="this.style.visibility='hidden'">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-klassik-krone.jpg" alt="Zahlenkrone Klassik für Hunde mit austauschbaren Geburtstagszahlen" onerror="this.style.visibility='hidden'">
         <div class="prod-overlay">
           <div class="prod-overlay-left">
             <div class="prod-name">Zahlenkrone Klassik</div>
@@ -1180,7 +1231,7 @@ button { cursor: pointer; font-family: inherit; }
 
     <div class="prod-card" data-variant="Zahlenkrone Leo" onclick="selectVariant('Zahlenkrone Leo');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
-        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-leo-krone.jpg" alt="Zahlenkrone Leo" onerror="this.style.visibility='hidden'">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-leo-krone.jpg" alt="Zahlenkrone Leo für Hunde mit austauschbaren Zahlen" onerror="this.style.visibility='hidden'">
         <div class="prod-overlay">
           <div class="prod-overlay-left">
             <div class="prod-name">Zahlenkrone Leo</div>
@@ -1193,7 +1244,7 @@ button { cursor: pointer; font-family: inherit; }
 
     <div class="prod-card" data-variant="Zahlenkrone Glitzer" onclick="selectVariant('Zahlenkrone Glitzer');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
-        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-glitzer-krone.jpg" alt="Zahlenkrone Glitzer rosa" onerror="this.style.visibility='hidden'">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-glitzer-krone.jpg" alt="Zahlenkrone Glitzer rosa für Hunde mit austauschbaren Zahlen" onerror="this.style.visibility='hidden'">
         <div class="prod-overlay">
           <div class="prod-overlay-left">
             <div class="prod-name">Zahlenkrone Glitzer rosa</div>
@@ -1206,7 +1257,7 @@ button { cursor: pointer; font-family: inherit; }
 
     <div class="prod-card" data-variant="Zahlenkrone Konfetti" onclick="selectVariant('Zahlenkrone Konfetti');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
       <div class="prod-img">
-        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-konfetti-krone.jpg" alt="Zahlenkrone Konfetti" onerror="this.style.visibility='hidden'">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-konfetti-krone.jpg" alt="Zahlenkrone Konfetti für Hunde mit austauschbaren Zahlen" onerror="this.style.visibility='hidden'">
         <div class="prod-overlay">
           <div class="prod-overlay-left">
             <div class="prod-name">Zahlenkrone Konfetti</div>
@@ -1491,7 +1542,7 @@ button { cursor: pointer; font-family: inherit; }
 <section class="section section-brown2" id="about">
   <div class="story-wrap">
     <div class="story-portrait">
-      <img src="img/mila-geschichte.jpg" alt="Border Collie Hündin Mila" width="800" height="800" loading="lazy">
+      <img src="img/mila-geschichte.jpg" alt="Border Collie Hündin Mila, das Gesicht von Mila's Kronenwelt" width="800" height="800" loading="lazy">
     </div>
     <div>
       <div class="s-eyebrow">ABOUT</div>
@@ -1542,6 +1593,42 @@ button { cursor: pointer; font-family: inherit; }
       <div class="szinfo-dim">Ø 5 cm<br>Umfang ca. 18 cm<br>Höhe ca. 6 cm</div>
       <div class="szinfo-breeds">Chihuahua · Katzen</div>
     </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     FAQ – häufige Fragen (auch wichtig für Google)
+     ============================================================ -->
+<section class="section section-beige" id="faq">
+  <div class="sec-eyebrow">FAQ</div>
+  <h2 class="sec-title">Häufige Fragen zur Hundekrone</h2>
+  <div class="sec-line"></div>
+  <div class="faq-list">
+    <details class="faq-item">
+      <summary>Welche Größe brauche ich für meinen Hund?</summary>
+      <p>Es gibt die Hundekronen in vier Größen: <strong>Gross</strong> (Umfang ca. 37 cm, z. B. Golden Retriever, Border Collie, Doodle), <strong>Klein</strong> (ca. 26 cm, z. B. Malteser, Französische Bulldogge), <strong>Mini</strong> (ca. 22 cm, z. B. Zwergdackel, Zwergpudel) und <strong>Extra Mini</strong> (ca. 18 cm, z. B. Chihuahua – passt auch Katzen). Alle Maße findest du im <a href="#groessen">Größenguide</a>. Unsicher? Schreib uns einfach per WhatsApp.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Kann ich den Namen meines Hundes auf die Krone drucken lassen?</summary>
+      <p>Ja – bei den Kronen Party, Einfarbig, Glitzer und Edel &amp; Wild personalisieren wir die Krone mit dem Namen deines Hundes (bis zu 11 Zeichen). Ausnahme sind die Leo- und Leopardenmuster: Auf dem Muster wäre der Aufdruck kaum lesbar, deshalb gibt es sie ohne Namen.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Was ist eine Zahlenkrone?</summary>
+      <p>Die Zahlenkrone ist eine Geburtstagskrone für Hunde mit <strong>austauschbaren Zahlenpads</strong>. So passt du das Alter jedes Jahr neu an und kannst die Krone zu jedem Hundegeburtstag wieder verwenden. Im Preis sind 3 Zahlenpads enthalten, 6 oder 9 Zahlen gibt es gegen einen kleinen Aufpreis.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Ist die Hundekrone bequem für meinen Hund?</summary>
+      <p>Die Kronen sind aus weichem Filz mit sanften Gewebebändern und handgefertigten Bommeln – leicht und angenehm zu tragen. Ideal für die Geburtstagsfeier, Feiertage oder ein Fotoshooting mit deinem Hund.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Wie lange dauert der Versand?</summary>
+      <p>Jede Krone wird für dich von Hand gefertigt. Die Lieferzeit beträgt 5–6 Werktage, der Versand innerhalb Deutschlands ist kostenlos.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Wie kann ich bezahlen?</summary>
+      <p>Die Zahlung läuft sicher über PayPal – dort kannst du auch per Kreditkarte, Lastschrift oder später bezahlen.</p>
+    </details>
   </div>
 </section>
 
@@ -2794,6 +2881,56 @@ function updateAbPreise() {
   });
 }
 
+/* ---- 8c. PRODUKTDATEN FÜR GOOGLE (JSON-LD) ----
+   Wird aus PRICES (preise.json) erzeugt – Preise bleiben so immer aktuell. */
+const SEO_TEXTE = {
+  'Party': 'Bunte Geburtstagskrone für Hunde mit Bommeln, personalisiert mit dem Namen deines Hundes.',
+  'Einfarbig': 'Einfarbige Hundekrone aus weichem Filz mit Bommeln, personalisiert mit dem Namen deines Hundes.',
+  'Glitzer': 'Glitzernde Geburtstagskrone für Hunde, personalisiert mit dem Namen deines Hundes.',
+  'Edel & Wild': 'Edle Hundekrone in Gold, Schwarz oder im Leo-Look – in Gold und Schwarz mit Namen personalisierbar.',
+  'Zahlenkrone Klassik': 'Geburtstagskrone für Hunde mit austauschbaren Zahlenpads – jedes Jahr wieder verwendbar.',
+  'Zahlenkrone Leo': 'Zahlenkrone im Leo-Look mit austauschbaren Zahlenpads für den Hundegeburtstag.',
+  'Zahlenkrone Glitzer': 'Zahlenkrone Glitzer rosa mit austauschbaren Zahlenpads für den Hundegeburtstag.',
+  'Zahlenkrone Konfetti': 'Zahlenkrone im Konfetti-Look mit austauschbaren Zahlenpads für den Hundegeburtstag.'
+};
+function updateProduktSchema() {
+  try {
+    const items = [];
+    document.querySelectorAll('.prod-card[data-variant]').forEach(c => {
+      const v = c.dataset.variant;
+      const preise = Object.values(PRICES[v] || {}).filter(x => typeof x === 'number');
+      if (!preise.length) return;
+      const img = c.querySelector('img');
+      const name = (c.querySelector('.prod-name') || {}).textContent || v;
+      items.push({
+        '@type': 'Product',
+        name: name.trim() + ' – Hundekrone',
+        description: SEO_TEXTE[v] || 'Handgemachte Krone für Hunde.',
+        image: img ? img.src : undefined,
+        brand: { '@type': 'Brand', name: "Mila's Kronenwelt" },
+        category: 'Hundezubehör > Hundekostüme',
+        offers: {
+          '@type': 'AggregateOffer',
+          priceCurrency: 'EUR',
+          lowPrice: Math.min(...preise).toFixed(2),
+          highPrice: Math.max(...preise).toFixed(2),
+          offerCount: preise.length,
+          availability: 'https://schema.org/InStock',
+          seller: { '@id': 'https://kronenwelt.de/#shop' }
+        }
+      });
+    });
+    let el = document.getElementById('ld-produkte');
+    if (!el) {
+      el = document.createElement('script');
+      el.type = 'application/ld+json';
+      el.id = 'ld-produkte';
+      document.head.appendChild(el);
+    }
+    el.textContent = JSON.stringify({ '@context': 'https://schema.org', '@graph': items });
+  } catch (e) { console.warn('SEO-Schema:', e); }
+}
+
 /* ---- 9. START ---- */
 initNav();
 initInstagram();
@@ -2808,13 +2945,36 @@ Promise.all([
   if (preise) PRICES = { ...PRICES, ...preise };
   repriceCart();
   updateAbPreise();
+  updateProduktSchema();
   try { renderGalerie(galerie); } catch (e) { console.warn('Galerie:', e); }
   initConfigurator();
   initPayment();
+  applyLinkAuswahl();
 }).catch(() => {
+  updateProduktSchema();
   initConfigurator();
   initPayment();
+  applyLinkAuswahl();
 });
+
+/* ---- 10. VORAUSWAHL PER LINK ----
+   z.B. https://kronenwelt.de/?krone=Party&groesse=Klein#bestellen
+   (wird von den Google-Shopping-Anzeigen genutzt, damit Krone + Größe + Preis
+   direkt richtig angezeigt werden) */
+function applyLinkAuswahl() {
+  try {
+    const q = new URLSearchParams(location.search);
+    const v = q.get('krone'), g = q.get('groesse');
+    if (!v || !VARIANTEN[v]) return;
+    selectVariant(v);
+    if (g) {
+      const card = [...document.querySelectorAll('.szcard[data-s]')].find(c => c.dataset.s === g && !c.hidden);
+      if (card) selectS(card);
+    }
+    const ziel = document.getElementById('bestellen');
+    if (ziel) setTimeout(() => ziel.scrollIntoView(), 50);
+  } catch (e) { console.warn('Link-Auswahl:', e); }
+}
 
 </script>
 </body>

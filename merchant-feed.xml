@@ -1,0 +1,639 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Automatisch erzeugt aus preise.json – nicht von Hand bearbeiten (scripts/merchant-feed.js) -->
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+<channel>
+  <title>Mila's Kronenwelt</title>
+  <link>https://kronenwelt.de/</link>
+  <description>Handgemachte, personalisierte Geburtstagskronen für Hunde</description>
+  <item>
+    <g:id>party-gross</g:id>
+    <g:item_group_id>party</g:item_group_id>
+    <g:title>Party Geburtstagskrone für Hunde mit Namen – Größe Groß</g:title>
+    <g:description>Bunte Geburtstagskrone für Hunde mit weichen Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Groß: Umfang ca. 37 cm, z. B. für Golden Retriever, Border Collie, Doodle. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Party&amp;groesse=Gross#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/party-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>15.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Party</g:product_type>
+    <g:size>Groß</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>party-klein</g:id>
+    <g:item_group_id>party</g:item_group_id>
+    <g:title>Party Geburtstagskrone für Hunde mit Namen – Größe Klein</g:title>
+    <g:description>Bunte Geburtstagskrone für Hunde mit weichen Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Klein: Umfang ca. 26 cm, z. B. für Malteser, Französische Bulldogge. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Party&amp;groesse=Klein#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/party-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>14.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Party</g:product_type>
+    <g:size>Klein</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>party-mini</g:id>
+    <g:item_group_id>party</g:item_group_id>
+    <g:title>Party Geburtstagskrone für Hunde mit Namen – Größe Mini</g:title>
+    <g:description>Bunte Geburtstagskrone für Hunde mit weichen Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Mini: Umfang ca. 22 cm, z. B. für Zwergdackel, Zwergpudel. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Party&amp;groesse=Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/party-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>13.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Party</g:product_type>
+    <g:size>Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>party-extra-mini</g:id>
+    <g:item_group_id>party</g:item_group_id>
+    <g:title>Party Geburtstagskrone für Hunde mit Namen – Größe Extra Mini</g:title>
+    <g:description>Bunte Geburtstagskrone für Hunde mit weichen Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Extra Mini: Umfang ca. 18 cm, z. B. für Chihuahua. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Party&amp;groesse=Extra%20Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/party-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>12.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Party</g:product_type>
+    <g:size>Extra Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>einfarbig-gross</g:id>
+    <g:item_group_id>einfarbig</g:item_group_id>
+    <g:title>Einfarbige Hundekrone mit Namen – Größe Groß</g:title>
+    <g:description>Einfarbige Hundekrone aus weichem Filz mit handgefertigten Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Groß: Umfang ca. 37 cm, z. B. für Golden Retriever, Border Collie, Doodle. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Einfarbig&amp;groesse=Gross#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/uni-mint.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>15.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Einfarbig</g:product_type>
+    <g:size>Groß</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>einfarbig-klein</g:id>
+    <g:item_group_id>einfarbig</g:item_group_id>
+    <g:title>Einfarbige Hundekrone mit Namen – Größe Klein</g:title>
+    <g:description>Einfarbige Hundekrone aus weichem Filz mit handgefertigten Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Klein: Umfang ca. 26 cm, z. B. für Malteser, Französische Bulldogge. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Einfarbig&amp;groesse=Klein#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/uni-mint.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>14.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Einfarbig</g:product_type>
+    <g:size>Klein</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>einfarbig-mini</g:id>
+    <g:item_group_id>einfarbig</g:item_group_id>
+    <g:title>Einfarbige Hundekrone mit Namen – Größe Mini</g:title>
+    <g:description>Einfarbige Hundekrone aus weichem Filz mit handgefertigten Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Mini: Umfang ca. 22 cm, z. B. für Zwergdackel, Zwergpudel. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Einfarbig&amp;groesse=Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/uni-mint.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>13.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Einfarbig</g:product_type>
+    <g:size>Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>einfarbig-extra-mini</g:id>
+    <g:item_group_id>einfarbig</g:item_group_id>
+    <g:title>Einfarbige Hundekrone mit Namen – Größe Extra Mini</g:title>
+    <g:description>Einfarbige Hundekrone aus weichem Filz mit handgefertigten Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Extra Mini: Umfang ca. 18 cm, z. B. für Chihuahua. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Einfarbig&amp;groesse=Extra%20Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/uni-mint.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>12.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Einfarbig</g:product_type>
+    <g:size>Extra Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>glitzer-gross</g:id>
+    <g:item_group_id>glitzer</g:item_group_id>
+    <g:title>Glitzer Geburtstagskrone für Hunde mit Namen – Größe Groß</g:title>
+    <g:description>Glitzernde Geburtstagskrone für Hunde mit Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Groß: Umfang ca. 37 cm, z. B. für Golden Retriever, Border Collie, Doodle. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Glitzer&amp;groesse=Gross#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/glitzer-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>17.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Glitzer</g:product_type>
+    <g:size>Groß</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>glitzer-klein</g:id>
+    <g:item_group_id>glitzer</g:item_group_id>
+    <g:title>Glitzer Geburtstagskrone für Hunde mit Namen – Größe Klein</g:title>
+    <g:description>Glitzernde Geburtstagskrone für Hunde mit Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Klein: Umfang ca. 26 cm, z. B. für Malteser, Französische Bulldogge. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Glitzer&amp;groesse=Klein#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/glitzer-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>16.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Glitzer</g:product_type>
+    <g:size>Klein</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>glitzer-mini</g:id>
+    <g:item_group_id>glitzer</g:item_group_id>
+    <g:title>Glitzer Geburtstagskrone für Hunde mit Namen – Größe Mini</g:title>
+    <g:description>Glitzernde Geburtstagskrone für Hunde mit Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Mini: Umfang ca. 22 cm, z. B. für Zwergdackel, Zwergpudel. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Glitzer&amp;groesse=Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/glitzer-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>15.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Glitzer</g:product_type>
+    <g:size>Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>glitzer-extra-mini</g:id>
+    <g:item_group_id>glitzer</g:item_group_id>
+    <g:title>Glitzer Geburtstagskrone für Hunde mit Namen – Größe Extra Mini</g:title>
+    <g:description>Glitzernde Geburtstagskrone für Hunde mit Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen). Größe Extra Mini: Umfang ca. 18 cm, z. B. für Chihuahua. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Glitzer&amp;groesse=Extra%20Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/glitzer-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>14.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Glitzer</g:product_type>
+    <g:size>Extra Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>edel-und-wild-gross</g:id>
+    <g:item_group_id>edel-und-wild</g:item_group_id>
+    <g:title>Hundekrone Edel &amp; Wild – Größe Groß</g:title>
+    <g:description>Edle Hundekrone in Gold, Schwarz oder im Leo-Look mit goldenen Bommeln. Gold und Schwarz mit Namen personalisierbar, Leo-Muster ohne Aufdruck. Größe Groß: Umfang ca. 37 cm, z. B. für Golden Retriever, Border Collie, Doodle. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Edel%20%26%20Wild&amp;groesse=Gross#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/royal-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>17.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Edel &amp; Wild</g:product_type>
+    <g:size>Groß</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>edel-und-wild-klein</g:id>
+    <g:item_group_id>edel-und-wild</g:item_group_id>
+    <g:title>Hundekrone Edel &amp; Wild – Größe Klein</g:title>
+    <g:description>Edle Hundekrone in Gold, Schwarz oder im Leo-Look mit goldenen Bommeln. Gold und Schwarz mit Namen personalisierbar, Leo-Muster ohne Aufdruck. Größe Klein: Umfang ca. 26 cm, z. B. für Malteser, Französische Bulldogge. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Edel%20%26%20Wild&amp;groesse=Klein#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/royal-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>16.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Edel &amp; Wild</g:product_type>
+    <g:size>Klein</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>edel-und-wild-mini</g:id>
+    <g:item_group_id>edel-und-wild</g:item_group_id>
+    <g:title>Hundekrone Edel &amp; Wild – Größe Mini</g:title>
+    <g:description>Edle Hundekrone in Gold, Schwarz oder im Leo-Look mit goldenen Bommeln. Gold und Schwarz mit Namen personalisierbar, Leo-Muster ohne Aufdruck. Größe Mini: Umfang ca. 22 cm, z. B. für Zwergdackel, Zwergpudel. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Edel%20%26%20Wild&amp;groesse=Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/royal-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>15.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Edel &amp; Wild</g:product_type>
+    <g:size>Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>edel-und-wild-extra-mini</g:id>
+    <g:item_group_id>edel-und-wild</g:item_group_id>
+    <g:title>Hundekrone Edel &amp; Wild – Größe Extra Mini</g:title>
+    <g:description>Edle Hundekrone in Gold, Schwarz oder im Leo-Look mit goldenen Bommeln. Gold und Schwarz mit Namen personalisierbar, Leo-Muster ohne Aufdruck. Größe Extra Mini: Umfang ca. 18 cm, z. B. für Chihuahua. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Edel%20%26%20Wild&amp;groesse=Extra%20Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/royal-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>14.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Edel &amp; Wild</g:product_type>
+    <g:size>Extra Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-klassik-gross</g:id>
+    <g:item_group_id>zahlenkrone-klassik</g:item_group_id>
+    <g:title>Zahlenkrone Klassik für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Groß</g:title>
+    <g:description>Geburtstagskrone für Hunde mit austauschbaren Zahlenpads – das Alter jedes Jahr neu anpassen und die Krone wieder verwenden. Inklusive 3 Zahlenpads. Größe Groß: Umfang ca. 37 cm, z. B. für Golden Retriever, Border Collie, Doodle. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Klassik&amp;groesse=Gross#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-klassik-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>21.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Klassik</g:product_type>
+    <g:size>Groß</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-klassik-klein</g:id>
+    <g:item_group_id>zahlenkrone-klassik</g:item_group_id>
+    <g:title>Zahlenkrone Klassik für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Klein</g:title>
+    <g:description>Geburtstagskrone für Hunde mit austauschbaren Zahlenpads – das Alter jedes Jahr neu anpassen und die Krone wieder verwenden. Inklusive 3 Zahlenpads. Größe Klein: Umfang ca. 26 cm, z. B. für Malteser, Französische Bulldogge. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Klassik&amp;groesse=Klein#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-klassik-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>20.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Klassik</g:product_type>
+    <g:size>Klein</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-klassik-mini</g:id>
+    <g:item_group_id>zahlenkrone-klassik</g:item_group_id>
+    <g:title>Zahlenkrone Klassik für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Mini</g:title>
+    <g:description>Geburtstagskrone für Hunde mit austauschbaren Zahlenpads – das Alter jedes Jahr neu anpassen und die Krone wieder verwenden. Inklusive 3 Zahlenpads. Größe Mini: Umfang ca. 22 cm, z. B. für Zwergdackel, Zwergpudel. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Klassik&amp;groesse=Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-klassik-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>19.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Klassik</g:product_type>
+    <g:size>Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-leo-gross</g:id>
+    <g:item_group_id>zahlenkrone-leo</g:item_group_id>
+    <g:title>Zahlenkrone Leo für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Groß</g:title>
+    <g:description>Geburtstagskrone für Hunde im Leo-Look mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads. Größe Groß: Umfang ca. 37 cm, z. B. für Golden Retriever, Border Collie, Doodle. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Leo&amp;groesse=Gross#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-leo-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>21.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Leo</g:product_type>
+    <g:size>Groß</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-leo-klein</g:id>
+    <g:item_group_id>zahlenkrone-leo</g:item_group_id>
+    <g:title>Zahlenkrone Leo für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Klein</g:title>
+    <g:description>Geburtstagskrone für Hunde im Leo-Look mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads. Größe Klein: Umfang ca. 26 cm, z. B. für Malteser, Französische Bulldogge. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Leo&amp;groesse=Klein#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-leo-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>20.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Leo</g:product_type>
+    <g:size>Klein</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-leo-mini</g:id>
+    <g:item_group_id>zahlenkrone-leo</g:item_group_id>
+    <g:title>Zahlenkrone Leo für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Mini</g:title>
+    <g:description>Geburtstagskrone für Hunde im Leo-Look mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads. Größe Mini: Umfang ca. 22 cm, z. B. für Zwergdackel, Zwergpudel. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Leo&amp;groesse=Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-leo-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>19.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Leo</g:product_type>
+    <g:size>Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-leo-extra-mini</g:id>
+    <g:item_group_id>zahlenkrone-leo</g:item_group_id>
+    <g:title>Zahlenkrone Leo für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Extra Mini</g:title>
+    <g:description>Geburtstagskrone für Hunde im Leo-Look mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads. Größe Extra Mini: Umfang ca. 18 cm, z. B. für Chihuahua. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Leo&amp;groesse=Extra%20Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-leo-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>18.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Leo</g:product_type>
+    <g:size>Extra Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-glitzer-gross</g:id>
+    <g:item_group_id>zahlenkrone-glitzer</g:item_group_id>
+    <g:title>Zahlenkrone Glitzer rosa für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Groß</g:title>
+    <g:description>Glitzernde Geburtstagskrone in Rosa mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads. Größe Groß: Umfang ca. 37 cm, z. B. für Golden Retriever, Border Collie, Doodle. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Glitzer&amp;groesse=Gross#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-glitzer-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>21.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Glitzer</g:product_type>
+    <g:size>Groß</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-glitzer-klein</g:id>
+    <g:item_group_id>zahlenkrone-glitzer</g:item_group_id>
+    <g:title>Zahlenkrone Glitzer rosa für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Klein</g:title>
+    <g:description>Glitzernde Geburtstagskrone in Rosa mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads. Größe Klein: Umfang ca. 26 cm, z. B. für Malteser, Französische Bulldogge. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Glitzer&amp;groesse=Klein#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-glitzer-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>20.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Glitzer</g:product_type>
+    <g:size>Klein</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-glitzer-mini</g:id>
+    <g:item_group_id>zahlenkrone-glitzer</g:item_group_id>
+    <g:title>Zahlenkrone Glitzer rosa für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Mini</g:title>
+    <g:description>Glitzernde Geburtstagskrone in Rosa mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads. Größe Mini: Umfang ca. 22 cm, z. B. für Zwergdackel, Zwergpudel. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Glitzer&amp;groesse=Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-glitzer-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>19.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Glitzer</g:product_type>
+    <g:size>Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-glitzer-extra-mini</g:id>
+    <g:item_group_id>zahlenkrone-glitzer</g:item_group_id>
+    <g:title>Zahlenkrone Glitzer rosa für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Extra Mini</g:title>
+    <g:description>Glitzernde Geburtstagskrone in Rosa mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads. Größe Extra Mini: Umfang ca. 18 cm, z. B. für Chihuahua. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Glitzer&amp;groesse=Extra%20Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-glitzer-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>18.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Glitzer</g:product_type>
+    <g:size>Extra Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-konfetti-gross</g:id>
+    <g:item_group_id>zahlenkrone-konfetti</g:item_group_id>
+    <g:title>Zahlenkrone Konfetti für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Groß</g:title>
+    <g:description>Geburtstagskrone im Konfetti-Look mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads. Größe Groß: Umfang ca. 37 cm, z. B. für Golden Retriever, Border Collie, Doodle. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Konfetti&amp;groesse=Gross#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-konfetti-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>21.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Konfetti</g:product_type>
+    <g:size>Groß</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-konfetti-klein</g:id>
+    <g:item_group_id>zahlenkrone-konfetti</g:item_group_id>
+    <g:title>Zahlenkrone Konfetti für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Klein</g:title>
+    <g:description>Geburtstagskrone im Konfetti-Look mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads. Größe Klein: Umfang ca. 26 cm, z. B. für Malteser, Französische Bulldogge. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Konfetti&amp;groesse=Klein#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-konfetti-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>20.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Konfetti</g:product_type>
+    <g:size>Klein</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+  <item>
+    <g:id>zahlenkrone-konfetti-mini</g:id>
+    <g:item_group_id>zahlenkrone-konfetti</g:item_group_id>
+    <g:title>Zahlenkrone Konfetti für Hunde – Geburtstagskrone mit Wechselzahlen – Größe Mini</g:title>
+    <g:description>Geburtstagskrone im Konfetti-Look mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads. Größe Mini: Umfang ca. 22 cm, z. B. für Zwergdackel, Zwergpudel. Handgemacht in Deutschland, kostenloser Versand.</g:description>
+    <g:link>https://kronenwelt.de/?krone=Zahlenkrone%20Konfetti&amp;groesse=Mini#bestellen</g:link>
+    <g:image_link>https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-konfetti-krone.jpg</g:image_link>
+    <g:availability>in_stock</g:availability>
+    <g:price>19.00 EUR</g:price>
+    <g:brand>Mila's Kronenwelt</g:brand>
+    <g:condition>new</g:condition>
+    <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>5004</g:google_product_category>
+    <g:product_type>Hundekronen &gt; Zahlenkrone Konfetti</g:product_type>
+    <g:size>Mini</g:size>
+    <g:is_bundle>no</g:is_bundle>
+    <g:shipping>
+      <g:country>DE</g:country>
+      <g:price>0.00 EUR</g:price>
+    </g:shipping>
+  </item>
+</channel>
+</rss>
