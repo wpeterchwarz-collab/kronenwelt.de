@@ -7,7 +7,7 @@
    ============================================================== */
 
 @font-face { font-family: 'Gaegu'; font-weight: 700; font-display: swap;
-  src: url('../fonts/gaegu-latin-700-normal.woff2') format('woff2'); }
+  src: url('../fonts/gaegu-latin-700-normal.woff2?v=2') format('woff2'); }
 @font-face { font-family: 'Jost'; font-weight: 400; font-display: swap;
   src: url('../fonts/jost-latin-400-normal.woff2') format('woff2'); }
 @font-face { font-family: 'Jost'; font-weight: 500; font-display: swap;
@@ -113,6 +113,7 @@ body { font-family: var(--f-sans); background: var(--paper); color: var(--ink); 
 .section-white { background: #fff; }
 .section-beige { background: var(--paper2); }
 .section-beige3 { background: var(--rose); }
+#bestellen { background: #fbf6f5; } /* Konfigurator: nur ein Hauch Rosé */
 .section-brown2 { background: var(--powder); }
 .sec-eyebrow { font-family: var(--f-sans); color: var(--petrol-d); letter-spacing: 5px; font-size: 12.5px; font-weight: 500; }
 .sec-title { font-size: 56px; line-height: 1; color: var(--ink); margin-bottom: 18px; }
@@ -217,8 +218,8 @@ body { font-family: var(--f-sans); background: var(--paper); color: var(--ink); 
 
 /* ---------- Über Mila ---------- */
 .story-wrap { max-width: 1000px; margin: 0 auto; gap: 72px; }
-.story-portrait { width: 250px; height: 250px; border: 1px solid var(--petrol); padding: 10px; background: #fff; }
-.story-portrait img { border-radius: 50%; }
+.story-portrait { width: 260px; height: 260px; border: none; padding: 0; background: none; }
+.story-portrait img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .s-eyebrow { font-family: var(--f-sans); color: var(--petrol-d); letter-spacing: 5px; font-weight: 500; }
 .s-name { font-size: 56px; line-height: 1; }
 .s-name span { color: var(--petrol); }
