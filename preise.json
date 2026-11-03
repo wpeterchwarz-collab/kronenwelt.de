@@ -22,5 +22,26 @@
     "Klein": 16,
     "Mini": 15,
     "Extra Mini": 14
+  },
+  "Zahlenkrone Klassik": {
+    "Gross": 21,
+    "Klein": 20,
+    "Mini": 19
+  },
+  "Zahlenkrone Leo": {
+    "Gross": 21,
+    "Klein": 20,
+    "Mini": 19,
+    "Extra Mini": 18
+  },
+  "Zahlenkrone Glitzer": {
+    "Gross": 21,
+    "Klein": 20,
+    "Mini": 19,
+    "Extra Mini": 18
+  },
+  "Zahlenpets Aufpreis": {
+    "6 Pets": 3,
+    "9 Pets": 6
   }
 }

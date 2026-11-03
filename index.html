@@ -358,6 +358,29 @@ button { cursor: pointer; font-family: inherit; }
 .nhint-alt { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .nhint-btn { font: inherit; font-size: 12.5px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--teal); background: #fff; color: var(--teal2); cursor: pointer; }
 .nhint-btn:hover { background: var(--teal); color: #fff; }
+/* ---- Zahlenkronen ---- */
+.mode-tabs { display: inline-flex; padding: 3px; border-radius: 22px; background: var(--beige2); margin-bottom: 10px; gap: 2px; }
+.mode-tab { font: inherit; font-size: 12.5px; padding: 6px 14px; border-radius: 20px; border: 0; background: transparent; color: var(--brown2); cursor: pointer; letter-spacing: 0.3px; transition: all 0.15s; }
+.mode-tab.on { background: var(--brown); color: #f8f6f3; }
+.chip[hidden], .szcard[hidden], [data-block][hidden] { display: none !important; }
+.pet-sub { font-size: 12px; color: var(--brown3); margin: 10px 0 6px; }
+.pet-sub:first-child { margin-top: 0; }
+.pet-slots { display: flex; flex-wrap: wrap; gap: 8px; min-height: 40px; }
+.pet-slot { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Gaegu', serif; font-size: 19px; font-weight: 700; cursor: pointer; border: 1.5px solid transparent; transition: transform 0.12s; padding: 0; }
+.pet-slot.empty { background: var(--beige3) !important; border: 1.5px dashed var(--border2); color: var(--brown3) !important; font-size: 12px; font-weight: 400; cursor: default; }
+.pet-slot.next { border-color: var(--teal); }
+.pet-slot:not(.empty):hover { transform: scale(1.08); }
+.pet-pad { display: grid; grid-template-columns: repeat(10, minmax(0,1fr)); gap: 5px; }
+.pet-key { font: inherit; font-size: 13px; padding: 7px 0; border-radius: 8px; border: 1px solid var(--border2); background: var(--beige3); color: var(--brown); cursor: pointer; transition: all 0.12s; }
+.pet-key:hover:not(:disabled) { border-color: var(--teal); color: var(--teal2); }
+.pet-key:disabled { opacity: 0.4; cursor: not-allowed; }
+.pet-other { display: flex; gap: 6px; margin-top: 8px; align-items: center; font-size: 12px; color: var(--brown3); }
+.pet-other input { width: 84px; padding: 6px 8px; border: 1px solid var(--border2); border-radius: 8px; background: var(--beige3); font: inherit; font-size: 14px; color: var(--brown); }
+.pet-status { font-size: 12px; color: var(--brown3); margin-top: 8px; }
+.pet-status.ok { color: var(--teal2); font-weight: 700; }
+.pet-delta { font-size: 11px; opacity: 0.75; margin-left: 4px; }
+@media(max-width:600px){ .pet-pad { grid-template-columns: repeat(5, minmax(0,1fr)); } .mode-tab { padding: 6px 11px; } }
 .ncnt { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #b0a090; }
 
 /* ============================================================
@@ -1029,7 +1052,7 @@ button { cursor: pointer; font-family: inherit; }
 <div class="trust-strip">
   <div class="trust-item"><span class="trust-dot"></span>Handmade</div>
   <div class="trust-item"><span class="trust-dot"></span>Mit Namen personalisierbar</div>
-  <div class="trust-item"><span class="trust-dot"></span>4 Grössen · 4 Varianten</div>
+  <div class="trust-item"><span class="trust-dot"></span>4 Grössen · Namen oder Wechselzahlen</div>
   <div class="trust-item"><span class="trust-dot"></span>✓ Kostenloser Versand</div>
   <div class="trust-item"><span class="trust-dot"></span>Fragen? Wir sind per WhatsApp da!</div>
 </div>
@@ -1088,6 +1111,45 @@ button { cursor: pointer; font-family: inherit; }
           <div class="prod-overlay-left">
             <div class="prod-name">Glitzer</div>
             <div class="prod-price">ab 14,00 €</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prod-card" onclick="selectVariant('Zahlenkrone Klassik');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+      <div class="prod-img">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/zahl-rosa.jpg" alt="Zahlenkrone Klassik" onerror="this.style.visibility='hidden'">
+        <div class="prod-overlay">
+          <div class="prod-overlay-left">
+            <div class="prod-name">Zahlenkrone Klassik</div>
+            <div class="prod-price">ab 19,00 €</div>
+            <div class="prod-badge">Neu · Wechselzahlen</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prod-card" onclick="selectVariant('Zahlenkrone Leo');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+      <div class="prod-img">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/zahl-leo.jpg" alt="Zahlenkrone Leo" onerror="this.style.visibility='hidden'">
+        <div class="prod-overlay">
+          <div class="prod-overlay-left">
+            <div class="prod-name">Zahlenkrone Leo</div>
+            <div class="prod-price">ab 18,00 €</div>
+            <div class="prod-badge">Neu · Wechselzahlen</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prod-card" onclick="selectVariant('Zahlenkrone Glitzer');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+      <div class="prod-img">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/zahl-glitzer-rosa.jpg" alt="Zahlenkrone Glitzer rosa" onerror="this.style.visibility='hidden'">
+        <div class="prod-overlay">
+          <div class="prod-overlay-left">
+            <div class="prod-name">Zahlenkrone Glitzer rosa</div>
+            <div class="prod-price">ab 18,00 €</div>
+            <div class="prod-badge">Neu · Wechselzahlen</div>
           </div>
         </div>
       </div>
@@ -1190,18 +1252,25 @@ button { cursor: pointer; font-family: inherit; }
           <div class="snum">1</div>
           <div style="flex:1">
             <div class="slbl">Variante wählen</div>
+            <div class="mode-tabs" role="tablist">
+              <button type="button" class="mode-tab on" data-mode="name" onclick="selectMode('name')">Mit Namen</button>
+              <button type="button" class="mode-tab" data-mode="zahl" onclick="selectMode('zahl')">Mit Wechselzahlen</button>
+            </div>
             <div class="chips">
-              <span class="chip on" data-v="Party" onclick="selectV(this)">Party</span>
-              <span class="chip" data-v="Einfarbig" onclick="selectV(this)">Einfarbig</span>
-              <span class="chip" data-v="Glitzer" onclick="selectV(this)">Glitzer</span>
-              <span class="chip" data-v="Edel &amp; Wild" onclick="selectV(this)">Edel &amp; Wild</span>
+              <span class="chip on" data-v="Party" data-mode="name" onclick="selectV(this)">Party</span>
+              <span class="chip" data-v="Einfarbig" data-mode="name" onclick="selectV(this)">Einfarbig</span>
+              <span class="chip" data-v="Glitzer" data-mode="name" onclick="selectV(this)">Glitzer</span>
+              <span class="chip" data-v="Edel &amp; Wild" data-mode="name" onclick="selectV(this)">Edel &amp; Wild</span>
+              <span class="chip" data-v="Zahlenkrone Klassik" data-mode="zahl" onclick="selectV(this)" hidden>Klassik</span>
+              <span class="chip" data-v="Zahlenkrone Leo" data-mode="zahl" onclick="selectV(this)" hidden>Leo</span>
+              <span class="chip" data-v="Zahlenkrone Glitzer" data-mode="zahl" onclick="selectV(this)" hidden>Glitzer rosa</span>
             </div>
           </div>
         </div>
         <div class="srow">
           <div class="snum">2</div>
           <div style="flex:1">
-            <div class="slbl">Stil &amp; Farbe wählen</div>
+            <div class="slbl" id="cLbl">Stil &amp; Farbe wählen</div>
             <div class="chips" id="colorChips"></div>
             <div class="cnote" id="cNote" hidden>Dieses Muster gibt es ohne Namensaufdruck.</div>
           </div>
@@ -1237,12 +1306,32 @@ button { cursor: pointer; font-family: inherit; }
         <div class="srow">
           <div class="snum">4</div>
           <div style="flex:1">
+            <div data-block="name">
             <div class="slbl" id="nLbl">Personalisierung eingeben (max. 11 Buchstaben)</div>
             <div class="ninput-wrap" id="nWrap">
               <input class="ninput" id="nIn" type="text" placeholder="MILA" maxlength="11" autocomplete="off"/>
               <span class="ncnt" id="nCnt">0 / 11</span>
             </div>
             <div class="nhint" id="nHint" hidden></div>
+            </div>
+            <div data-block="zahl" hidden>
+              <div class="slbl">Zahlen wählen</div>
+              <div class="pet-sub">Wie viele Zahlenpets?</div>
+              <div class="chips" id="petCount">
+                <span class="chip on" data-p="3" onclick="selectPets(3)">3 Pets</span>
+                <span class="chip" data-p="6" onclick="selectPets(6)">6 Pets<span class="pet-delta">+3 €</span></span>
+                <span class="chip" data-p="9" onclick="selectPets(9)">9 Pets<span class="pet-delta">+6 €</span></span>
+              </div>
+              <div class="pet-sub">Deine Zahlen <span style="opacity:.8">– tippe unten auf die Zahlen, ein Pet antippen leert es wieder</span></div>
+              <div class="pet-slots" id="petSlots"></div>
+              <div class="pet-sub">Zahl antippen</div>
+              <div class="pet-pad" id="petPad"></div>
+              <div class="pet-other">Andere Zahl:
+                <input id="petOther" type="number" min="0" max="99" inputmode="numeric" placeholder="z.B. 25">
+                <button type="button" class="nhint-btn" onclick="addOtherNumber()">Hinzufügen</button>
+              </div>
+              <div class="pet-status" id="petStatus"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1650,7 +1739,7 @@ function renderCart() {
       <div class="cart-item-body">
         <div class="cart-item-name">${item.variant}</div>
         <div class="cart-item-meta">${item.color} · ${item.size}</div>
-        ${item.name ? `<div class="cart-item-personalisierung">${item.name}</div>` : `<div class="cart-item-meta">Ohne Namen</div>`}
+        ${itemPers(item) ? `<div class="cart-item-personalisierung">${itemPers(item)}</div>` : `<div class="cart-item-meta">Ohne Namen</div>`}
         <div class="cart-item-price">${item.price.toFixed(2).replace('.', ',')} €</div>
       </div>
       <button class="cart-item-del" onclick="removeFromCart(${idx})" aria-label="Entfernen">&#x2715;</button>
@@ -1676,21 +1765,25 @@ function removeFromCart(idx) {
 }
 
 function addToCart() {
-  if (nameAllowed() && !state.name.trim()) {
+  if (isZahl()) {
+    if (state.numbers.length < state.pets) {
+      alert(`Bitte wähle unter Schritt 4 noch ${state.pets - state.numbers.length} Zahl(en) für deine ${state.pets} Zahlenpets.`);
+      document.getElementById('petSlots').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+  } else if (nameAllowed() && !state.name.trim()) {
     alert('Bitte gib unter Schritt 4 eine Personalisierung ein.');
     document.getElementById('nIn').focus();
     return;
   }
 
-  const varPrices = PRICES[state.variant] || {};
-  const price = varPrices[state.size] || 15;
-
   cart.push({
     variant: state.variant,
     color:   state.color,
-    size:    state.size,
-    name:    nameAllowed() ? state.name : '',
-    price:   price
+    size:    isZahl() ? `${state.size} + ${state.pets} Pets` : state.size,
+    name:    !isZahl() && nameAllowed() ? state.name : '',
+    zahlen:  isZahl() ? state.numbers.join(', ') : '',
+    price:   currentPrice()
   });
 
   saveCart();
@@ -1712,7 +1805,7 @@ function buildCartSummaryHTML(total) {
   return cart.map(i =>
     `<div style="padding:4px 0;border-bottom:0.5px solid #e8ddd4;font-size:12px">
       <strong>${i.variant}</strong> · ${i.color} · ${i.size}
-      ${i.name ? `· <span style="color:#729599;letter-spacing:2px">${i.name}</span>` : '· ohne Namen'}
+      ${itemPers(i) ? `· <span style="color:#729599;letter-spacing:2px">${itemPers(i)}</span>` : '· ohne Namen'}
       <span style="float:right;font-weight:700">${i.price.toFixed(2).replace('.', ',')} €</span>
     </div>`
   ).join('') +
@@ -1732,7 +1825,7 @@ function sendOrderEmails(details, total) {
     variante:      cart.map(i => i.variant).join(', '),
     farbe:         cart.map(i => i.color).join(', '),
     groesse:       cart.map(i => i.size).join(', '),
-    hundename:     cart.map(i => i.name || 'ohne Namen').join(', '),
+    hundename:     cart.map(i => itemPers(i) || 'ohne Namen').join(' | '),
     preis:         total.toFixed(2).replace('.', ','),
     kunde_name:    details.payer.name.given_name + ' ' + details.payer.name.surname,
     kunde_email:   details.payer.email_address,
@@ -1767,7 +1860,7 @@ function startCartCheckout(method) {
   if (!getCookieConsent()?.payment) { requestPaymentConsent(() => startCartCheckout(method)); return; }
 
   const total = cart.reduce((s, i) => s + i.price, 0);
-  const desc  = cart.map(i => `${i.variant} ${i.color} ${i.size} ${i.name ? '"' + i.name + '"' : 'ohne Namen'}`).join(' | ');
+  const desc  = cart.map(i => `${i.variant} ${i.color} ${i.size} ${itemPers(i) ? '"' + itemPers(i) + '"' : 'ohne Namen'}`).join(' | ');
   closeCart();
 
   // PayPal (default)
@@ -1808,11 +1901,18 @@ function startCartCheckout(method) {
   }
 }
 
+// Personalisierungstext eines Warenkorb-Artikels (Name oder Zahlen)
+function itemPers(i) {
+  if (i.zahlen) return 'Zahlen ' + i.zahlen;
+  return i.name || '';
+}
+
 /* ---- KONFIGURATOR HELPERS (für dynamisch generierte Chips) ---- */
 function selectV(el) {
   document.querySelectorAll('[data-v]').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   state.variant = el.dataset.v;
+  applyMode();
   renderColorChips(state.variant);
   updatePreview();
 }
@@ -1893,8 +1993,48 @@ const VARIANTEN = {
       { label: 'Leo Weiss',  bg: '#f8f4ee', sc: '#706050', dot: '#907860', css: '', noName: true },
       { label: 'Leopard',    bg: '#ede0cc', sc: '#604020', dot: '#805030', css: '', noName: true },
     ]
+  },
+  /* ---- Zahlenkronen (austauschbare Zahlenpets) ---- */
+  'Zahlenkrone Klassik': {
+    typ: 'zahl', farbLabel: 'Hauptfarbe wählen',
+    groessen: ['Gross', 'Klein', 'Mini'],
+    farben: [
+      { label: 'Rosa',               bg: '#f7eaed', sc: '#a05070', dot: '#e8b8c8', css: 'chip-pink', pet: ['#d48aa4', '#ffffff'] },
+      { label: 'Grün',               bg: '#e8f2e4', sc: '#3a6830', dot: '#a8c8a0', css: '',          pet: ['#7fa477', '#ffffff'] },
+      { label: 'Weiss/bunte Punkte', bg: '#f8f8f5', sc: '#706870', dot: '#d8c8e0', css: 'chip-weiss', pet: ['#ffffff', '#706870'] },
+    ]
+  },
+  'Zahlenkrone Leo': {
+    typ: 'zahl', farbLabel: 'Farbe der Zahlenpets wählen',
+    groessen: ['Gross', 'Klein', 'Mini', 'Extra Mini'],
+    farben: [
+      { label: 'Gold / Zahlen schwarz',    bg: '#f5e8d0', sc: '#7a4a10', dot: '#c09820', css: 'chip-royal', pet: ['#d4b840', '#22202c'] },
+      { label: 'Schwarz / Zahlen gold',    bg: '#ede0cc', sc: '#604020', dot: '#22202c', css: '',           pet: ['#22202c', '#d4b840'] },
+    ]
+  },
+  'Zahlenkrone Glitzer': {
+    typ: 'zahl', farbLabel: 'Schriftfarbe wählen',
+    groessen: ['Gross', 'Klein', 'Mini', 'Extra Mini'],
+    farben: [
+      { label: 'Zahlen schwarz', bg: '#fce8f0', sc: '#b03068', dot: '#22202c', css: 'chip-pink', pet: ['#f8f4f2', '#22202c'] },
+      { label: 'Zahlen weiss',   bg: '#fce8f0', sc: '#b03068', dot: '#ffffff', css: 'chip-pink', pet: ['#c8668c', '#ffffff'] },
+    ]
   }
 };
+
+/* Aufpreis je Anzahl Zahlenpets (Grundpreis in PRICES gilt für 3 Pets).
+   Wird über preise.json → "Zahlenpets Aufpreis" im Admin gepflegt; das hier ist nur der Fallback. */
+const PET_AUFPREIS = { 3: 0, 6: 3, 9: 6 };
+function petAufpreis(n) {
+  const a = PRICES['Zahlenpets Aufpreis'];
+  if (n === 3) return 0;
+  return (a && typeof a[n + ' Pets'] === 'number') ? a[n + ' Pets'] : (PET_AUFPREIS[n] || 0);
+}
+const isZahl = (v) => (VARIANTEN[v || state.variant] || {}).typ === 'zahl';
+function currentPrice() {
+  const base = (PRICES[state.variant] || {})[state.size] || 15;
+  return base + (isZahl() ? petAufpreis(state.pets) : 0);
+}
 
 /* ---- PRODUKTFOTOS ---- */
 const CL = 'https://res.cloudinary.com/dw6amyijc/image/upload/';
@@ -1938,6 +2078,20 @@ const PRODUCT_IMAGES = {
     'Leo Braun':  CL + CLV + 'wild-leo.jpg',
     'Leo Weiss':  CL + CLV + 'wild-leo-weiss.jpg',
     'Leopard':    CL + CLV + 'wild-leopard.jpg',
+  },
+  'Zahlenkrone Klassik': {
+    '_default':           CL + CLV + 'zahl-rosa.jpg',
+    'Rosa':               CL + CLV + 'zahl-rosa.jpg',
+    'Grün':               CL + CLV + 'zahl-gruen.jpg',
+    'Weiss/bunte Punkte': CL + CLV + 'zahl-weiss-bunt.jpg',
+  },
+  'Zahlenkrone Leo': {
+    '_default':               CL + CLV + 'zahl-leo.jpg',
+    'Gold / Zahlen schwarz':  CL + CLV + 'zahl-leo-gold.jpg',
+    'Schwarz / Zahlen gold':  CL + CLV + 'zahl-leo.jpg',
+  },
+  'Zahlenkrone Glitzer': {
+    '_default':       CL + CLV + 'zahl-glitzer-rosa.jpg',
   }
 };
 
@@ -1983,14 +2137,21 @@ let PRICES = {
   'Party':       { 'Gross': 15, 'Klein': 14, 'Mini': 13, 'Extra Mini': 12 },
   'Einfarbig':   { 'Gross': 15, 'Klein': 14, 'Mini': 13, 'Extra Mini': 12 },
   'Glitzer':     { 'Gross': 17, 'Klein': 16, 'Mini': 15, 'Extra Mini': 14 },
-  'Edel & Wild': { 'Gross': 17, 'Klein': 16, 'Mini': 15, 'Extra Mini': 14 }
+  'Edel & Wild': { 'Gross': 17, 'Klein': 16, 'Mini': 15, 'Extra Mini': 14 },
+  // Zahlenkronen: Preis inkl. 3 Zahlenpets (6 Pets +3 €, 9 Pets +6 €, siehe PET_AUFPREIS)
+  'Zahlenkrone Klassik': { 'Gross': 21, 'Klein': 20, 'Mini': 19 },
+  'Zahlenkrone Leo':     { 'Gross': 21, 'Klein': 20, 'Mini': 19, 'Extra Mini': 18 },
+  'Zahlenkrone Glitzer': { 'Gross': 21, 'Klein': 20, 'Mini': 19, 'Extra Mini': 18 }
 };
 
 const BOMMELS = {
   'Party':       ['#f8d0a0', '#f0b0c8', '#f8d0a0'],
   'Einfarbig':   ['#d4d4d4', '#b8e0d8', '#d4d4d4'],
   'Glitzer':     ['#e8d8a0', '#e0c8f0', '#e8d8a0'],
-  'Edel & Wild': ['#d4b840', '#d4b840', '#d4b840']
+  'Edel & Wild': ['#d4b840', '#d4b840', '#d4b840'],
+  'Zahlenkrone Klassik': ['#f0c8d4', '#d8d0e8', '#f0c8d4'],
+  'Zahlenkrone Leo':     ['#d4b840', '#d4b840', '#d4b840'],
+  'Zahlenkrone Glitzer': ['#f0d8c8', '#f0d8c8', '#f0d8c8']
 };
 
 /* ---- 2. ZUSTAND ---- */
@@ -2001,7 +2162,9 @@ const state = {
   bg:      '#f7eaed',
   sc:      '#a05070',
   dot:     '#c07090',
-  name:    ''
+  name:    '',
+  pets:    3,     // Zahlenkronen: Anzahl Zahlenpets
+  numbers: []     // Zahlenkronen: gewählte Zahlen
 };
 
 /* ---- 3. KONFIGURATOR ---- */
@@ -2074,6 +2237,102 @@ function pickColor(label) {
   if (chip) { selectC(chip); document.getElementById('nIn').focus(); }
 }
 
+/* ---- ZAHLENKRONEN ---- */
+function selectMode(mode) {
+  const first = [...document.querySelectorAll('.chip[data-v]')].find(c => c.dataset.mode === mode);
+  if (first && first.dataset.mode !== (isZahl() ? 'zahl' : 'name')) selectV(first);
+}
+
+// Tabs, Varianten-Chips, Grössen und Schritt 4 an die gewählte Variante anpassen
+function applyMode() {
+  const mode = isZahl() ? 'zahl' : 'name';
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('on', t.dataset.mode === mode));
+  document.querySelectorAll('.chip[data-v]').forEach(c => c.hidden = c.dataset.mode !== mode);
+  document.querySelectorAll('[data-block]').forEach(b => b.hidden = b.dataset.block !== mode);
+  const cfg = VARIANTEN[state.variant] || {};
+  const lbl = document.getElementById('cLbl');
+  if (lbl) lbl.textContent = cfg.farbLabel || 'Stil & Farbe wählen';
+
+  const sizes = cfg.groessen || ['Gross', 'Klein', 'Mini', 'Extra Mini'];
+  document.querySelectorAll('.szcard[data-s]').forEach(c => c.hidden = !sizes.includes(c.dataset.s));
+  if (!sizes.includes(state.size)) {
+    const card = document.querySelector(`.szcard[data-s="${sizes[0]}"]`);
+    if (card) selectS(card);
+  }
+  if (mode === 'zahl') {
+    document.querySelectorAll('#petCount [data-p]').forEach(c => {
+      const d = c.querySelector('.pet-delta'), a = petAufpreis(+c.dataset.p);
+      if (d) d.textContent = a ? '+' + String(a).replace('.', ',') + ' €' : '';
+    });
+    renderPets();
+  }
+}
+
+function petColors() {
+  const f = ((VARIANTEN[state.variant] || {}).farben || []).find(x => x.label === state.color);
+  return (f && f.pet) || ['#e6eeef', '#263234'];
+}
+
+function selectPets(n) {
+  state.pets = n;
+  state.numbers = state.numbers.slice(0, n);
+  document.querySelectorAll('#petCount [data-p]').forEach(c => c.classList.toggle('on', +c.dataset.p === n));
+  renderPets();
+  updatePreview();
+}
+
+function addNumber(n) {
+  if (state.numbers.length >= state.pets) return;
+  state.numbers.push(String(n));
+  renderPets();
+  updatePreview();
+}
+
+function addOtherNumber() {
+  const inp = document.getElementById('petOther');
+  const v = parseInt(inp.value, 10);
+  if (isNaN(v) || v < 0 || v > 99) { inp.focus(); return; }
+  addNumber(v);
+  inp.value = '';
+}
+
+function removeNumber(i) {
+  state.numbers.splice(i, 1);
+  renderPets();
+  updatePreview();
+}
+
+function renderPets() {
+  const slots = document.getElementById('petSlots');
+  const pad   = document.getElementById('petPad');
+  if (!slots || !pad) return;
+  const [bg, fg] = petColors();
+  const full = state.numbers.length >= state.pets;
+  let html = '';
+  for (let i = 0; i < state.pets; i++) {
+    const n = state.numbers[i];
+    html += n !== undefined
+      ? `<button type="button" class="pet-slot" style="background:${bg};color:${fg};border-color:${bg === '#ffffff' || bg === '#f8f4f2' ? 'var(--border2)' : bg}" onclick="removeNumber(${i})" title="Entfernen">${n}</button>`
+      : `<span class="pet-slot empty ${i === state.numbers.length ? 'next' : ''}">${i + 1}</span>`;
+  }
+  slots.innerHTML = html;
+  if (!pad.dataset.built) {
+    pad.innerHTML = Array.from({ length: 20 }, (_, i) =>
+      `<button type="button" class="pet-key" onclick="addNumber(${i + 1})">${i + 1}</button>`).join('');
+    pad.dataset.built = '1';
+  }
+  pad.querySelectorAll('.pet-key').forEach(k => k.disabled = full);
+  const other = document.getElementById('petOther');
+  if (other) other.disabled = full;
+  const st = document.getElementById('petStatus');
+  if (st) {
+    st.classList.toggle('ok', full);
+    st.textContent = full
+      ? `✓ Alle ${state.pets} Zahlen gewählt – zum Ändern ein Pet antippen.`
+      : `${state.numbers.length} von ${state.pets} Zahlen gewählt`;
+  }
+}
+
 function softBg(hex) {
   // Vorschau-Hintergrund dezent: Farbe zu 40 % auf Weiß (dunkle Farben bleiben)
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return hex;
@@ -2084,7 +2343,12 @@ function softBg(hex) {
 }
 
 function updatePreview() {
-  applyNameAvailability();
+  if (isZahl()) {
+    document.getElementById('cNote').hidden = true;
+    renderPets();
+  } else {
+    applyNameAvailability();
+  }
   const el = (id) => document.getElementById(id);
   const pb = el('pBox'); if (!pb) return;
 
@@ -2101,18 +2365,18 @@ function updatePreview() {
   });
 
   const pt = el('pt');
-  if (pt) { pt.setAttribute('fill', state.sc); pt.textContent = nameAllowed() ? (state.name || 'MILA') : ''; }
+  if (pt) { pt.setAttribute('fill', state.sc); pt.textContent = isZahl() ? (state.numbers.join(' ') || '1 2 3') : (nameAllowed() ? (state.name || 'MILA') : ''); }
 
   const pvn = el('pvn'); if (pvn) pvn.textContent = state.variant;
   const pcd = el('pcd'); if (pcd) pcd.style.background = state.dot;
   const pcl = el('pcl'); if (pcl) pcl.textContent = state.color;
-  const pnt = el('pnt'); if (pnt) { pnt.textContent = nameAllowed() ? state.name : 'ohne Namensaufdruck'; pnt.classList.toggle('off', !nameAllowed()); }
-  const tp  = el('totP');
-  if (tp) {
-    const varPrices = PRICES[state.variant] || {};
-    const price = varPrices[state.size] || 15;
-    tp.textContent = price.toFixed(2).replace('.', ',') + ' €';
+  const pnt = el('pnt');
+  if (pnt) {
+    if (isZahl()) { pnt.textContent = state.numbers.join(' · '); pnt.classList.remove('off'); }
+    else { pnt.textContent = nameAllowed() ? state.name : 'ohne Namensaufdruck'; pnt.classList.toggle('off', !nameAllowed()); }
   }
+  const tp  = el('totP');
+  if (tp) tp.textContent = currentPrice().toFixed(2).replace('.', ',') + ' €';
 
   updatePreviewImage();
 }
@@ -2164,6 +2428,7 @@ function initConfigurator() {
     });
   }
 
+  applyMode();
   renderColorChips(state.variant);
   updatePreview();
 }
@@ -2383,7 +2648,7 @@ Promise.all([
   fetch('preise.json').then(r => r.json()).catch(() => null),
   fetch('galerie.json').then(r => r.json()).catch(() => null)
 ]).then(([preise, galerie]) => {
-  if (preise) PRICES = preise;
+  if (preise) PRICES = { ...PRICES, ...preise };
   try { renderGalerie(galerie); } catch (e) { console.warn('Galerie:', e); }
   initConfigurator();
   initPayment();
