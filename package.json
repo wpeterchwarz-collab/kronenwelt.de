@@ -1,0 +1,11 @@
+{
+  "name": "kronenwelt-tests",
+  "private": true,
+  "description": "Automatische Tests für kronenwelt.de (nur für die Entwicklung, nicht Teil des Shops)",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

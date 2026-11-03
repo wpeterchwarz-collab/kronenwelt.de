@@ -118,6 +118,9 @@ body { font-family: var(--f-sans); background: var(--paper); color: var(--ink); 
 .sec-eyebrow { font-family: var(--f-sans); color: var(--petrol-d); letter-spacing: 5px; font-size: 12.5px; font-weight: 500; }
 .sec-title { font-size: 56px; line-height: 1; color: var(--ink); margin-bottom: 18px; }
 .sec-line { width: 48px; height: 2px; background: var(--petrol); margin: 0 auto 52px; }
+/* Kompakte Abstände rund um die Vorteile-Kacheln */
+.section-kronen { padding-bottom: 56px; }
+.section-feat { padding-top: 40px; padding-bottom: 40px; }
 
 /* ---------- Kronen-Karten ---------- */
 .prod-grid { max-width: 1280px; margin: 0 auto; gap: 28px; }
@@ -126,9 +129,9 @@ body { font-family: var(--f-sans); background: var(--paper); color: var(--ink); 
 .prod-img { height: auto; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .prod-img img { height: 320px; }
 .prod-overlay { position: static; flex: 1; background: #fff; padding: 18px 20px 22px; align-items: flex-start; border-top: 4px solid var(--rose-d); }
-.prod-card:nth-child(2) .prod-overlay { border-top-color: var(--petrol); }
-.prod-card:nth-child(3) .prod-overlay { border-top-color: #c9b8d6; }
-.prod-card:nth-child(4) .prod-overlay { border-top-color: var(--gold); }
+.prod-card:nth-child(4n+2) .prod-overlay { border-top-color: var(--petrol); }
+.prod-card:nth-child(4n+3) .prod-overlay { border-top-color: #c9b8d6; }
+.prod-card:nth-child(4n+4) .prod-overlay { border-top-color: var(--gold); }
 .prod-name { font-size: 28px; color: var(--ink); text-shadow: none; line-height: 1; margin-bottom: 6px; }
 .prod-price { color: var(--muted); font-weight: 400; font-size: 15px; }
 .prod-badge, .prod-badge-dark { background: none; border: none; padding: 0; margin-top: 8px; color: var(--petrol-d); font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
@@ -263,6 +266,8 @@ body { font-family: var(--f-sans); background: var(--paper); color: var(--ink); 
   .h-title { font-size: 66px; }
   .hero-photo { width: 270px; height: 270px; }
   .section { padding: 64px 24px; }
+  .section-kronen { padding-bottom: 48px; }
+  .section-feat { padding-top: 40px; padding-bottom: 40px; }
   .sec-title { font-size: 46px; }
   .prod-card { width: calc(50% - 14px); }
   .szinfo-grid { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
@@ -280,6 +285,8 @@ body { font-family: var(--f-sans); background: var(--paper); color: var(--ink); 
   .trust-strip { gap: 8px 18px; justify-content: center; padding: 14px 16px; }
   .trust-item { font-size: 13.5px; }
   .section { padding: 56px 16px; }
+  .section-kronen { padding-bottom: 40px; }
+  .section-feat { padding-top: 32px; padding-bottom: 32px; }
   .sec-title { font-size: 42px; }
   .prod-grid { gap: 12px; }
   .prod-card { width: calc(50% - 6px); min-width: 0; }
