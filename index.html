@@ -61,7 +61,7 @@
 </script>
 
 <!-- EmailJS SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/emailjs-4.4.1.min.js"></script>
 <script>emailjs.init('VVvZEcTTvWomh7kAW');</script>
 
 <style>
@@ -600,99 +600,88 @@ button { cursor: pointer; font-family: inherit; }
 /* ============================================================
    COOKIE BANNER
    ============================================================ */
-.cookie-overlay {
-  position: fixed; inset: 0;
-  background: rgba(61,46,34,0.55);
-  z-index: 9998; display: flex;
-  align-items: flex-end; justify-content: center;
-  padding: 20px;
-  animation: fadeIn 0.3s ease;
-  pointer-events: none;
+.ck-backdrop {
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(45,33,24,0.45);
+  backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+  display: none; animation: ckFade 0.25s ease;
 }
-.cookie-box {
-  pointer-events: all;
+.ck-backdrop.show { display: block; }
+.ck-banner {
+  position: fixed; z-index: 9999; left: 24px; bottom: 24px;
+  width: 420px; max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 48px); overflow-y: auto;
+  background: #fff; color: var(--brown);
+  border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 12px 48px rgba(45,33,24,0.18), 0 2px 8px rgba(45,33,24,0.06);
+  padding: 24px; display: none;
+  font-family: 'Lato', system-ui, sans-serif;
+  animation: ckUp 0.3s cubic-bezier(.2,.8,.2,1);
 }
-.cookie-overlay.hidden { display: none; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-.cookie-box {
-  background: #fff;
-  border-radius: 18px 18px 18px 18px;
-  border: 1px solid var(--border);
-  max-width: 740px; width: 100%;
-  padding: 28px 32px;
-  box-shadow: 0 8px 40px rgba(61,46,34,0.18);
-  animation: slideUp 0.35s ease;
+.ck-banner.show { display: block; }
+.ck-banner.ck-center {
+  left: 50%; top: 50%; bottom: auto; transform: translate(-50%,-50%);
+  animation: ckFade 0.25s ease;
 }
-@keyframes slideUp { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
-.cookie-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
-.cookie-icon {
-  width: 44px; height: 44px; border-radius: 50%;
-  background: #e4f2f0; display: flex; align-items: center;
-  justify-content: center; flex-shrink: 0;
+@keyframes ckUp { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ckFade { from { opacity: 0; } to { opacity: 1; } }
+.ck-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.ck-icon {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  background: #e8f3f1; display: flex; align-items: center; justify-content: center;
 }
-.cookie-title { font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: var(--brown); font-style: italic; margin-bottom: 4px; }
-.cookie-text { font-size: 13px; color: var(--brown3); line-height: 1.7; font-weight: 300; }
-.cookie-text a { color: var(--teal); text-decoration: underline; }
-.cookie-details { margin: 14px 0; display: flex; flex-direction: column; gap: 8px; }
-.cookie-item {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px 14px; border-radius: 10px;
-  background: var(--beige3); border: 0.5px solid var(--border);
+.ck-title { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 19px; line-height: 1.25; color: var(--brown); }
+.ck-text { font-size: 13.5px; line-height: 1.65; color: var(--brown3); margin-bottom: 18px; }
+.ck-text a, .ck-legal a, .ck-alt a { color: var(--teal2); text-decoration: underline; text-underline-offset: 2px; }
+.ck-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ck-btn {
+  font: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.3px;
+  padding: 12px 14px; border-radius: 10px; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  min-height: 44px;
 }
-.cookie-item-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.cookie-item-body { flex: 1; }
-.cookie-item-title { font-size: 12px; font-weight: 700; color: var(--brown); margin-bottom: 1px; }
-.cookie-item-desc { font-size: 11px; color: var(--brown3); line-height: 1.5; }
-.cookie-item-required { font-size: 10px; color: #4a9090; letter-spacing: 1px; margin-left: auto; flex-shrink: 0; padding-top: 2px; }
-.cookie-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
-.cookie-btn-accept {
-  flex: 1; background: var(--brown); color: #f5ede4;
-  border: none; padding: 13px 20px; border-radius: 30px;
-  font-size: 13px; letter-spacing: 1px; cursor: pointer;
-  transition: opacity 0.2s; min-width: 160px;
+.ck-btn-primary { background: var(--brown); color: #fff; border: 1.5px solid var(--brown); }
+.ck-btn-primary:hover { background: #46352a; border-color: #46352a; }
+.ck-btn-secondary { background: #fff; color: var(--brown); border: 1.5px solid var(--brown); }
+.ck-btn-secondary:hover { background: var(--beige); }
+.ck-btn:focus-visible, .ck-link:focus-visible, .ck-fab:focus-visible, .ck-switch input:focus-visible + .ck-slider { outline: 2px solid var(--teal); outline-offset: 2px; }
+.ck-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.ck-link { background: none; border: none; padding: 4px 0; font: inherit; font-size: 12.5px; color: var(--brown); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.ck-legal { font-size: 11.5px; color: var(--brown3); }
+.ck-legal a { color: var(--brown3); }
+.ck-cats { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.ck-cat { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--beige3); }
+.ck-cat-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ck-cat-title { font-size: 13.5px; font-weight: 700; color: var(--brown); }
+.ck-cat-desc { font-size: 12.5px; line-height: 1.55; color: var(--brown3); margin-top: 6px; }
+.ck-badge { font-size: 10.5px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--teal2); background: #e8f3f1; padding: 4px 8px; border-radius: 6px; white-space: nowrap; }
+.ck-cat details { margin-top: 8px; }
+.ck-cat summary { font-size: 12px; color: var(--teal2); cursor: pointer; list-style: none; }
+.ck-cat summary::-webkit-details-marker { display: none; }
+.ck-cat summary::before { content: '▸ '; }
+.ck-cat details[open] summary::before { content: '▾ '; }
+.ck-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11.5px; color: var(--brown3); }
+.ck-table td { padding: 6px 0; border-top: 1px solid var(--border); vertical-align: top; }
+.ck-table td:first-child { font-weight: 700; color: var(--brown); padding-right: 10px; white-space: nowrap; }
+.ck-note { font-size: 11.5px; line-height: 1.55; color: var(--brown3); padding: 0 2px; }
+.ck-switch { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+.ck-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
+.ck-slider { position: absolute; inset: 0; background: #cfc6bd; border-radius: 26px; transition: background 0.2s; }
+.ck-slider::before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s; }
+.ck-switch input:checked + .ck-slider { background: var(--teal); }
+.ck-switch input:checked + .ck-slider::before { transform: translateX(18px); }
+.ck-alt { font-size: 12px; color: var(--brown3); text-align: center; margin-top: 12px; }
+.ck-fab {
+  position: fixed; left: 20px; bottom: 20px; z-index: 990;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #fff; border: 1px solid var(--border);
+  box-shadow: 0 2px 10px rgba(45,33,24,0.12);
+  display: none; align-items: center; justify-content: center; cursor: pointer;
+  transition: transform 0.15s;
 }
-.cookie-btn-accept:hover { opacity: 0.85; }
-.cookie-btn-reject {
-  background: transparent; color: var(--brown2);
-  border: 1.5px solid var(--border2); padding: 12px 20px; border-radius: 30px;
-  font-size: 13px; letter-spacing: 0.5px; cursor: pointer;
-  transition: border-color 0.2s; min-width: 140px;
-}
-.cookie-btn-reject:hover { border-color: var(--teal); color: var(--teal2); }
-.cookie-btn-settings {
-  background: transparent; color: var(--brown3);
-  border: none; padding: 12px 14px; border-radius: 30px;
-  font-size: 12px; cursor: pointer; text-decoration: underline;
-}
-.cookie-settings-panel { display: none; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px; }
-.cookie-settings-panel.open { display: block; }
-.cookie-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
-.cookie-toggle-row:last-child { border-bottom: none; }
-.cookie-toggle-label { font-size: 12px; color: var(--brown); font-weight: 700; }
-.cookie-toggle-desc { font-size: 11px; color: var(--brown3); margin-top: 1px; }
-.toggle-switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
-.toggle-slider {
-  position: absolute; cursor: pointer; inset: 0;
-  background: #ccc; border-radius: 24px; transition: 0.3s;
-}
-.toggle-slider::before {
-  content: ''; position: absolute;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: white; left: 3px; top: 3px; transition: 0.3s;
-}
-.toggle-switch input:checked + .toggle-slider { background: var(--teal); }
-.toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
-.toggle-switch input:disabled + .toggle-slider { background: var(--teal); cursor: not-allowed; opacity: 0.7; }
-.cookie-mini-btn {
-  position: fixed; bottom: 86px; right: 24px;
-  background: var(--brown); color: #f5ede4;
-  border: none; border-radius: 30px; padding: 8px 16px;
-  font-size: 11px; cursor: pointer; z-index: 990;
-  letter-spacing: 1px; display: none; transition: opacity 0.2s;
-  box-shadow: 0 2px 12px rgba(61,46,34,0.2);
-}
-.cookie-mini-btn:hover { opacity: 0.85; }
+.ck-fab.show { display: flex; }
+.ck-fab:hover { transform: scale(1.06); }
+@media (prefers-reduced-motion: reduce) { .ck-banner, .ck-backdrop { animation: none; } }
 @media(max-width:900px){
   .nav { padding: 0 24px; }
   .nav-links { display: none; }
@@ -801,10 +790,9 @@ button { cursor: pointer; font-family: inherit; }
   .ft-links { gap: 14px; }
   .wa-btn { width: 48px; height: 48px; bottom: 18px; right: 18px; }
   .cart-panel { width: 100vw; }
-  .cookie-box { padding: 20px 18px; border-radius: 18px 18px 0 0; }
-  .cookie-btns { flex-direction: column; }
-  .cookie-btn-accept, .cookie-btn-reject { min-width: unset; }
-  .cookie-mini-btn { bottom: 76px; right: 16px; }
+  .ck-banner { left: 12px; right: 12px; bottom: 12px; width: auto; max-width: none; padding: 20px 18px; }
+  .ck-banner.ck-center { left: 12px; right: 12px; top: auto; bottom: 12px; transform: none; }
+  .ck-fab { left: 16px; bottom: 18px; }
 }
 
 /* ============================================================
@@ -1638,6 +1626,7 @@ button { cursor: pointer; font-family: inherit; }
       <a href="impressum.html">Impressum</a>
       <a href="datenschutz.html">Datenschutz</a>
       <a href="agb.html">AGB</a>
+      <a href="#" onclick="reopenCookieBanner();return false">Datenschutz-Einstellungen</a>
       <a href="/cdn-cgi/l/email-protection#036a6d656c4368716c6d666d74666f772d6766">Kontakt</a>
     </div>
     <div class="ft-copy">© 2024 Mila's Kronenwelt · kronenwelt.de · Alle Rechte vorbehalten</div>
@@ -1699,82 +1688,99 @@ button { cursor: pointer; font-family: inherit; }
 <!-- ============================================================
      COOKIE BANNER
      ============================================================ -->
-<div class="cookie-overlay" id="cookieOverlay" style="display:none">
-  <div class="cookie-box" role="dialog" aria-labelledby="cookieTitle" aria-describedby="cookieDesc">
-    <div class="cookie-top">
-      <div class="cookie-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="#4a9090" stroke-width="1.5"/>
-          <circle cx="8.5" cy="10" r="1.5" fill="#4a9090"/>
-          <circle cx="15" cy="8" r="1" fill="#4a9090"/>
-          <circle cx="15.5" cy="14" r="1.5" fill="#4a9090"/>
-          <circle cx="9" cy="15" r="1" fill="#4a9090"/>
-          <circle cx="12" cy="12" r="1" fill="#4a9090"/>
-        </svg>
-      </div>
-      <div>
-        <div class="cookie-title" id="cookieTitle">Wir verwenden Cookies 🍪</div>
-        <p class="cookie-text" id="cookieDesc">
-          Für den Betrieb dieser Website verwenden wir technisch notwendige Cookies. Mit deiner Zustimmung laden wir auch den Zahlungsdienst PayPal, der eigene Cookies setzt. Weitere Informationen findest du in unserer <a href="datenschutz.html">Datenschutzerklärung</a>.
-        </p>
-      </div>
-    </div>
+<div class="ck-backdrop" id="ckBackdrop"></div>
+<div class="ck-banner" id="ckBanner" role="dialog" aria-labelledby="ckTitle" aria-describedby="ckText">
 
-    <div class="cookie-details">
-      <div class="cookie-item">
-        <div class="cookie-item-icon" style="background:#e4f2f0">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 2l1.5 4.5H16l-3.5 2.5 1.5 4.5L10 11l-4 2.5 1.5-4.5L4 6.5h4.5z" stroke="#4a9090" stroke-width="1.5" stroke-linejoin="round"/></svg>
-        </div>
-        <div class="cookie-item-body">
-          <div class="cookie-item-title">Technisch notwendige Cookies</div>
-          <div class="cookie-item-desc">Grundfunktionen der Website – immer aktiv, keine Zustimmung nötig</div>
-        </div>
-        <div class="cookie-item-required">IMMER AKTIV</div>
+  <!-- Ansicht 1: Hinweis -->
+  <div id="ckViewMain">
+    <div class="ck-head">
+      <div class="ck-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3d7878" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
       </div>
-      <div class="cookie-item">
-        <div class="cookie-item-icon" style="background:#fff8e8">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="11" rx="2" stroke="#d4b840" stroke-width="1.5" fill="none"/><path d="M2 9h16" stroke="#d4b840" stroke-width="1.5"/></svg>
-        </div>
-        <div class="cookie-item-body">
-          <div class="cookie-item-title">Zahlungsdienst (PayPal)</div>
-          <div class="cookie-item-desc">Werden nur geladen wenn du auf "Bezahlen" klickst – nach deiner Zustimmung</div>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="paymentCookieToggle" checked>
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
+      <div class="ck-title" id="ckTitle">Deine Privatsphäre</div>
     </div>
+    <p class="ck-text" id="ckText">Wir speichern nur, was der Shop braucht: deinen Warenkorb und diese Auswahl. Den Zahlungsdienst <strong>PayPal</strong> laden wir erst an der Kasse – und nur, wenn du zustimmst. Mehr in der <a href="datenschutz.html">Datenschutzerklärung</a>.</p>
+    <div class="ck-btns">
+      <button type="button" class="ck-btn ck-btn-secondary" onclick="ckSave(false)">Nur notwendige</button>
+      <button type="button" class="ck-btn ck-btn-primary" onclick="ckSave(true)">Alle akzeptieren</button>
+    </div>
+    <div class="ck-foot">
+      <button type="button" class="ck-link" onclick="ckShowView('settings')">Einstellungen anpassen</button>
+      <span class="ck-legal"><a href="datenschutz.html">Datenschutz</a> · <a href="impressum.html">Impressum</a></span>
+    </div>
+  </div>
 
-    <!-- Einstellungen aufklappen -->
-    <div id="cookieSettingsPanel" class="cookie-settings-panel">
-      <div class="cookie-toggle-row">
-        <div>
-          <div class="cookie-toggle-label">Technisch notwendige Cookies</div>
-          <div class="cookie-toggle-desc">Warenkorb, Sitzung, Sicherheit – können nicht deaktiviert werden</div>
-        </div>
-        <label class="toggle-switch"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+  <!-- Ansicht 2: Einstellungen -->
+  <div id="ckViewSettings" style="display:none">
+    <div class="ck-head">
+      <div class="ck-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3d7878" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
       </div>
-      <div class="cookie-toggle-row">
-        <div>
-          <div class="cookie-toggle-label">PayPal</div>
-          <div class="cookie-toggle-desc">PayPal, Kreditkarte, Lastschrift und später bezahlen</div>
-        </div>
-        <label class="toggle-switch"><input type="checkbox" id="paypalToggle" checked><span class="toggle-slider"></span></label>
-      </div>
+      <div class="ck-title">Datenschutz-Einstellungen</div>
     </div>
+    <div class="ck-cats">
+      <div class="ck-cat">
+        <div class="ck-cat-row">
+          <span class="ck-cat-title">Notwendig</span>
+          <span class="ck-badge">Immer aktiv</span>
+        </div>
+        <div class="ck-cat-desc">Damit der Warenkorb funktioniert und wir uns deine Auswahl merken.</div>
+        <details>
+          <summary>Details</summary>
+          <table class="ck-table">
+            <tr><td>mkw_cart</td><td>Warenkorb · Session Storage · gelöscht beim Schließen des Tabs</td></tr>
+            <tr><td>mk_cookie_consent</td><td>Deine Auswahl · Cookie · 12 Monate</td></tr>
+          </table>
+        </details>
+      </div>
+      <div class="ck-cat">
+        <div class="ck-cat-row">
+          <label class="ck-cat-title" for="ckPayment">Zahlung (PayPal)</label>
+          <span class="ck-switch"><input type="checkbox" id="ckPayment" role="switch"><span class="ck-slider"></span></span>
+        </div>
+        <div class="ck-cat-desc">Lädt an der Kasse die Bezahlmöglichkeiten PayPal, Kreditkarte, Lastschrift und „Später bezahlen“. Ohne Zustimmung ist eine Bestellung über die Webseite nicht möglich.</div>
+        <details>
+          <summary>Details</summary>
+          <table class="ck-table">
+            <tr><td>Anbieter</td><td>PayPal (Europe) S.à r.l. et Cie, S.C.A., Luxemburg</td></tr>
+            <tr><td>Zweck</td><td>Zahlungsabwicklung, Betrugsprävention</td></tr>
+            <tr><td>Speicher</td><td>Cookies von paypal.com</td></tr>
+            <tr><td>Drittland</td><td>Übermittlung in die USA möglich (Data Privacy Framework)</td></tr>
+          </table>
+        </details>
+      </div>
+      <p class="ck-note">Ohne Cookies und nur zur Bereitstellung des Shops: Produktbilder kommen von Cloudinary, beim Bestellen nutzen wir EmailJS (Bestätigungs-Mails) und Google Sheets (Bestellverwaltung). Details in der <a href="datenschutz.html" style="color:inherit">Datenschutzerklärung</a>.</p>
+    </div>
+    <div class="ck-btns">
+      <button type="button" class="ck-btn ck-btn-secondary" onclick="ckSave(document.getElementById('ckPayment').checked)">Auswahl speichern</button>
+      <button type="button" class="ck-btn ck-btn-primary" onclick="ckSave(true)">Alle akzeptieren</button>
+    </div>
+    <div class="ck-foot">
+      <button type="button" class="ck-link" onclick="ckShowView('main')">← Zurück</button>
+      <span class="ck-legal"><a href="datenschutz.html">Datenschutz</a> · <a href="impressum.html">Impressum</a></span>
+    </div>
+  </div>
 
-    <div class="cookie-btns">
-      <button class="cookie-btn-accept" onclick="acceptAllCookies()">Alle akzeptieren</button>
-      <button class="cookie-btn-reject" onclick="rejectOptionalCookies()">Nur notwendige</button>
-      <button class="cookie-btn-settings" onclick="toggleCookieSettings()">Einstellungen ▾</button>
+  <!-- Ansicht 3: Zustimmung an der Kasse -->
+  <div id="ckViewCheckout" style="display:none">
+    <div class="ck-head">
+      <div class="ck-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3d7878" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </div>
+      <div class="ck-title">Sicher bezahlen mit PayPal</div>
     </div>
+    <p class="ck-text">Für die Bezahlung binden wir PayPal ein – damit kannst du per PayPal, Kreditkarte, Lastschrift oder später bezahlen. PayPal setzt dabei eigene Cookies und kann Daten auch in die USA übermitteln. Mehr in der <a href="datenschutz.html">Datenschutzerklärung</a>.</p>
+    <div class="ck-btns">
+      <button type="button" class="ck-btn ck-btn-secondary" onclick="ckHide()">Abbrechen</button>
+      <button type="button" class="ck-btn ck-btn-primary" onclick="ckSave(true)">Zustimmen &amp; weiter</button>
+    </div>
+    <div class="ck-alt">Lieber ohne PayPal? <a href="#" onclick="ckWhatsApp(event)">Bestell einfach per WhatsApp</a>.</div>
   </div>
 </div>
 
-<!-- Mini-Button zum Wiederöffnen der Cookie-Einstellungen -->
-<button class="cookie-mini-btn" id="cookieMiniBtn" onclick="reopenCookieBanner()" aria-label="Cookie-Einstellungen">
-  🍪 Cookies
+<!-- Button zum Wiederöffnen der Datenschutz-Einstellungen -->
+<button type="button" class="ck-fab" id="ckFab" onclick="ckOpen('settings')" aria-label="Datenschutz-Einstellungen" title="Datenschutz-Einstellungen">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5a4538" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/></svg>
 </button>
 
 
@@ -1981,7 +1987,7 @@ function clearCartAfterPayment(name) {
 
 function startCartCheckout(method) {
   if (cart.length === 0) return;
-  if (!getCookieConsent()?.payment) { showCookieBanner(); return; }
+  if (!getCookieConsent()?.payment) { requestPaymentConsent(() => startCartCheckout(method)); return; }
 
   const total = cart.reduce((s, i) => s + i.price, 0);
   const desc  = cart.map(i => `${i.variant} ${i.color} ${i.size} "${i.name}"`).join(' | ');
@@ -2355,75 +2361,94 @@ function toggleLike(btn) {
 }
 
 /* ---- 6. COOKIE MANAGEMENT ---- */
+// Version erhöhen, wenn sich Dienste ändern -> alle Besucher werden neu gefragt
 const COOKIE_KEY = 'mk_cookie_consent';
+const CONSENT_VERSION = 2;
+let ckAfterConsent = null;   // Aktion, die nach Zustimmung an der Kasse weiterläuft
 
-function setCookieConsent(data) {
+function setCookieConsent(payment) {
   const exp = new Date();
   exp.setFullYear(exp.getFullYear() + 1);
-  document.cookie = COOKIE_KEY + '=' + JSON.stringify(data) +
-    '; expires=' + exp.toUTCString() + '; path=/; SameSite=Lax';
+  const data = { v: CONSENT_VERSION, payment: !!payment, ts: new Date().toISOString() };
+  document.cookie = COOKIE_KEY + '=' + encodeURIComponent(JSON.stringify(data)) +
+    '; expires=' + exp.toUTCString() + '; path=/; SameSite=Lax; Secure';
 }
 
 function getCookieConsent() {
   const m = document.cookie.match(new RegExp('(?:^|; )' + COOKIE_KEY + '=([^;]*)'));
-  try { return m ? JSON.parse(decodeURIComponent(m[1])) : null; } catch { return null; }
+  try {
+    const c = m ? JSON.parse(decodeURIComponent(m[1])) : null;
+    return c && c.v === CONSENT_VERSION ? c : null;   // alte Einwilligungen neu abfragen
+  } catch { return null; }
 }
 
-function showCookieBanner() {
-  document.getElementById('cookieOverlay').style.display = 'flex';
-  document.getElementById('cookieMiniBtn').style.display = 'none';
-}
-
-function hideCookieBanner() {
-  document.getElementById('cookieOverlay').style.display = 'none';
-  document.getElementById('cookieMiniBtn').style.display = 'block';
-}
-
-function toggleCookieSettings() {
-  const panel = document.getElementById('cookieSettingsPanel');
-  const btn   = document.querySelector('.cookie-btn-settings');
-  panel.classList.toggle('open');
-  btn.textContent = panel.classList.contains('open') ? 'Einstellungen ▴' : 'Einstellungen ▾';
-}
-
-function acceptAllCookies() {
-  setCookieConsent({ necessary: true, payment: true, timestamp: new Date().toISOString() });
-  hideCookieBanner();
-  enablePaymentButtons();
-}
-
-function rejectOptionalCookies() {
-  const paypal = document.getElementById('paypalToggle')?.checked ?? false;
-  setCookieConsent({ necessary: true, payment: paypal,
-    paypal, timestamp: new Date().toISOString() });
-  hideCookieBanner();
-  paypal ? enablePaymentButtons() : disablePaymentButtons();
-}
-
-function reopenCookieBanner() { showCookieBanner(); }
-
-function enablePaymentButtons() {
-  document.querySelectorAll('.pbt-pp').forEach(b => {
-    b.disabled = false; b.style.opacity = '1'; b.title = '';
+function ckShowView(view) {
+  ['main', 'settings', 'checkout'].forEach(v => {
+    document.getElementById('ckView' + v[0].toUpperCase() + v.slice(1)).style.display = v === view ? '' : 'none';
   });
+  if (view === 'settings') {
+    document.getElementById('ckPayment').checked = !!getCookieConsent()?.payment;
+  }
 }
 
-function disablePaymentButtons() {
-  document.querySelectorAll('.pbt-pp').forEach(b => {
-    b.disabled = true; b.style.opacity = '0.5';
-    b.title = 'Bitte akzeptiere Cookies um bezahlen zu können';
-  });
+function ckOpen(view) {
+  const banner = document.getElementById('ckBanner');
+  const modal  = view === 'checkout' || view === 'settings';
+  ckShowView(view);
+  banner.classList.toggle('ck-center', modal);
+  banner.setAttribute('aria-modal', modal ? 'true' : 'false');
+  document.getElementById('ckBackdrop').classList.toggle('show', modal);
+  banner.classList.add('show');
+  document.getElementById('ckFab').classList.remove('show');
+  const first = banner.querySelector('[id^="ckView"]:not([style*="none"]) button');
+  if (modal && first) first.focus();
 }
+
+function ckHide() {
+  document.getElementById('ckBanner').classList.remove('show');
+  document.getElementById('ckBackdrop').classList.remove('show');
+  ckAfterConsent = null;
+  if (getCookieConsent()) document.getElementById('ckFab').classList.add('show');
+}
+
+function ckSave(payment) {
+  const hadPayment = !!getCookieConsent()?.payment;
+  setCookieConsent(payment);
+  const next = payment ? ckAfterConsent : null;
+  ckHide();
+  // Widerruf: bereits geladenes PayPal-Script entfernen durch Neuladen
+  if (hadPayment && !payment && window.paypal) { location.reload(); return; }
+  if (next) next();
+}
+
+function ckWhatsApp(e) {
+  e.preventDefault();
+  ckHide();
+  window.open('https://wa.me/' + CONFIG.WA_NUMBER, '_blank', 'noopener');
+}
+
+// Wird von der Kasse aufgerufen, wenn noch keine Zustimmung vorliegt
+function requestPaymentConsent(then) {
+  ckOpen('checkout');
+  ckAfterConsent = then;
+}
+
+// Kompatibilität mit bestehenden Aufrufen
+function showCookieBanner() { ckOpen('main'); }
+function reopenCookieBanner() { ckOpen('settings'); }
+
+document.addEventListener('keydown', e => {
+  const b = document.getElementById('ckBanner');
+  if (e.key === 'Escape' && b.classList.contains('show') && b.classList.contains('ck-center')) {
+    getCookieConsent() ? ckHide() : ckOpen('main');
+  }
+});
+document.getElementById('ckBackdrop')?.addEventListener('click', () => {
+  getCookieConsent() ? ckHide() : ckOpen('main');
+});
 
 function initCookies() {
-  const consent = getCookieConsent();
-  if (!consent) {
-    showCookieBanner();
-    disablePaymentButtons();
-  } else {
-    hideCookieBanner();
-    consent.payment ? enablePaymentButtons() : disablePaymentButtons();
-  }
+  getCookieConsent() ? document.getElementById('ckFab').classList.add('show') : ckOpen('main');
 }
 
 /* ---- 7. NAVIGATION ---- */
