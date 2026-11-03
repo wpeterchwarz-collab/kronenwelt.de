@@ -359,9 +359,20 @@ button { cursor: pointer; font-family: inherit; }
 .nhint-btn { font: inherit; font-size: 12.5px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--teal); background: #fff; color: var(--teal2); cursor: pointer; }
 .nhint-btn:hover { background: var(--teal); color: #fff; }
 /* ---- Zahlenkronen ---- */
-.mode-tabs { display: inline-flex; padding: 3px; border-radius: 22px; background: var(--beige2); margin-bottom: 10px; gap: 2px; }
-.mode-tab { font: inherit; font-size: 12.5px; padding: 6px 14px; border-radius: 20px; border: 0; background: transparent; color: var(--brown2); cursor: pointer; letter-spacing: 0.3px; transition: all 0.15s; }
-.mode-tab.on { background: var(--brown); color: #f8f6f3; }
+.mode-tabs { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-bottom: 4px; }
+.mode-tab { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left;
+  font: inherit; padding: 14px 14px 12px; border-radius: 12px; border: 2px solid var(--border2); background: #fff;
+  color: var(--teal2); cursor: pointer; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s; }
+.mode-tab:hover { border-color: var(--teal); box-shadow: 0 4px 14px rgba(38,50,52,0.08); transform: translateY(-1px); }
+.mode-tab:focus-visible { outline: 3px solid rgba(114,149,153,0.45); outline-offset: 2px; }
+.mode-tab.on { border-color: var(--teal2); background: #e6eeef; box-shadow: 0 4px 16px rgba(77,109,113,0.18); }
+.mode-ico { display: flex; margin-bottom: 4px; }
+.mode-title { font-size: 14px; font-weight: 700; color: var(--brown); line-height: 1.3; padding-right: 22px; }
+.mode-sub { font-size: 12px; color: var(--brown3); line-height: 1.45; }
+.mode-price { font-size: 12px; font-weight: 700; color: var(--teal2); margin-top: 4px; letter-spacing: 0.3px; }
+.mode-check { position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border2); background: #fff; }
+.mode-tab.on .mode-check { border-color: var(--teal2); background: var(--teal2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/12px no-repeat; }
+.mode-new { position: absolute; top: -9px; left: 12px; background: #c8668c; color: #fff; font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; }
 .chip[hidden], .szcard[hidden], [data-block][hidden] { display: none !important; }
 .pet-sub { font-size: 12px; color: var(--brown3); margin: 10px 0 6px; }
 .pet-sub:first-child { margin-top: 0; }
@@ -381,8 +392,9 @@ button { cursor: pointer; font-family: inherit; }
 .pet-status.ok { color: var(--teal2); font-weight: 700; }
 .pet-delta { font-size: 11px; opacity: 0.75; margin-left: 4px; }
 @media(max-width:600px){ .pet-pad { grid-template-columns: repeat(5, minmax(0,1fr)); }
-  .mode-tabs { display: flex; width: 100%; border-radius: 14px; }
-  .mode-tab { flex: 1; padding: 7px 8px; line-height: 1.3; border-radius: 12px; } }
+  .mode-tab { padding: 12px 10px 10px; }
+  .mode-title { font-size: 13px; padding-right: 18px; }
+  .mode-sub { font-size: 11.5px; } }
 .ncnt { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #b0a090; }
 
 /* ============================================================
@@ -1253,11 +1265,29 @@ button { cursor: pointer; font-family: inherit; }
         <div class="srow">
           <div class="snum">1</div>
           <div style="flex:1">
-            <div class="slbl">Variante wählen</div>
-            <div class="mode-tabs" role="tablist">
-              <button type="button" class="mode-tab on" data-mode="name" onclick="selectMode('name')">Mit gewünschter Personalisierung</button>
-              <button type="button" class="mode-tab" data-mode="zahl" onclick="selectMode('zahl')">Mit austauschbaren Zahlenpads</button>
+            <div class="slbl">Kronenart wählen</div>
+            <div class="mode-tabs" role="radiogroup" aria-label="Kronenart">
+              <button type="button" class="mode-tab on" data-mode="name" role="radio" aria-checked="true" onclick="selectMode('name')">
+                <span class="mode-check" aria-hidden="true"></span>
+                <span class="mode-ico" aria-hidden="true">
+                  <svg viewBox="0 0 44 36" width="38" height="31"><polygon points="22,2 32,14 42,6 38,28 6,28 2,6 12,14" fill="#fff" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><text x="22" y="24" text-anchor="middle" font-size="7.5" font-family="Georgia" fill="currentColor" letter-spacing="0.5">MILA</text></svg>
+                </span>
+                <span class="mode-title">Mit gewünschter Personalisierung</span>
+                <span class="mode-sub">Name deines Hundes fest auf der Krone</span>
+                <span class="mode-price">ab 12,00 €</span>
+              </button>
+              <button type="button" class="mode-tab" data-mode="zahl" role="radio" aria-checked="false" onclick="selectMode('zahl')">
+                <span class="mode-check" aria-hidden="true"></span>
+                <span class="mode-new">Neu</span>
+                <span class="mode-ico" aria-hidden="true">
+                  <svg viewBox="0 0 44 36" width="38" height="31"><polygon points="22,2 32,14 42,6 38,28 6,28 2,6 12,14" fill="#fff" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="22" cy="20" r="6.5" fill="currentColor"/><text x="22" y="23" text-anchor="middle" font-size="8" font-family="Georgia" font-weight="700" fill="#fff">5</text></svg>
+                </span>
+                <span class="mode-title">Mit austauschbaren Zahlenpads</span>
+                <span class="mode-sub">Zahlen zum Wechseln – jedes Jahr wieder nutzbar</span>
+                <span class="mode-price">ab 18,00 €</span>
+              </button>
             </div>
+            <div class="slbl" style="margin-top:14px">Variante wählen</div>
             <div class="chips">
               <span class="chip on" data-v="Party" data-mode="name" onclick="selectV(this)">Party</span>
               <span class="chip" data-v="Einfarbig" data-mode="name" onclick="selectV(this)">Einfarbig</span>
@@ -2250,7 +2280,7 @@ function selectMode(mode) {
 // Tabs, Varianten-Chips, Grössen und Schritt 4 an die gewählte Variante anpassen
 function applyMode() {
   const mode = isZahl() ? 'zahl' : 'name';
-  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('on', t.dataset.mode === mode));
+  document.querySelectorAll('.mode-tab').forEach(t => { const on = t.dataset.mode === mode; t.classList.toggle('on', on); t.setAttribute('aria-checked', on); });
   document.querySelectorAll('.chip[data-v]').forEach(c => c.hidden = c.dataset.mode !== mode);
   document.querySelectorAll('[data-block]').forEach(b => b.hidden = b.dataset.block !== mode);
   const cfg = VARIANTEN[state.variant] || {};
