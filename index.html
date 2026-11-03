@@ -381,7 +381,25 @@ button { cursor: pointer; font-family: inherit; }
   font-family: 'Gaegu', serif; font-size: 19px; font-weight: 700; cursor: pointer; border: 1.5px solid transparent; transition: transform 0.12s; padding: 0; }
 .pet-slot.empty { background: var(--beige3) !important; border: 1.5px dashed var(--border2); color: var(--brown3) !important; font-size: 12px; font-weight: 400; cursor: default; }
 .pet-slot.next { border-color: var(--teal); }
-.pet-slot:not(.empty):hover { transform: scale(1.08); }
+
+/* Zahlenpads: flache Oberseite, erhöht durch eine dunklere Seitenkante + Schatten.
+   Ziernaht nur, wenn die Variante in VARIANTEN 'naht: true' hat (Klasse .naht) */
+.pet-slot:not(.empty), .mini-pad {
+  position: relative;
+  box-shadow:
+    0 3px 0 var(--pad-edge, rgba(0,0,0,0.25)),
+    0 5px 6px rgba(38,50,52,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.30);
+  margin-bottom: 3px;
+}
+.mini-pad { box-shadow: 0 2px 0 var(--pad-edge, rgba(0,0,0,0.25)), 0 3px 4px rgba(38,50,52,0.20); margin-bottom: 2px; }
+.pet-slot:not(.empty):hover { transform: translateY(-1px); box-shadow: 0 4px 0 var(--pad-edge, rgba(0,0,0,0.25)), 0 7px 8px rgba(38,50,52,0.22), inset 0 1px 0 rgba(255,255,255,0.30); }
+.pet-slot:not(.empty):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--pad-edge, rgba(0,0,0,0.25)), 0 2px 3px rgba(38,50,52,0.2); }
+.pet-slot.naht:not(.empty)::after, .mini-pad.naht::after {
+  content: ''; position: absolute; inset: 3px; border-radius: 50%;
+  border: 1.2px dashed rgba(255,255,255,0.55); pointer-events: none;
+}
+.mini-pad.naht::after { inset: 2px; border-width: 1px; }
 .pet-pad { display: grid; grid-template-columns: repeat(10, minmax(0,1fr)); gap: 5px; }
 .pet-key { font: inherit; font-size: 13px; padding: 7px 0; border-radius: 8px; border: 1px solid var(--border2); background: var(--beige3); color: var(--brown); cursor: pointer; transition: all 0.12s; }
 .pet-key:hover:not(:disabled) { border-color: var(--teal); color: var(--teal2); }
@@ -2044,7 +2062,7 @@ const VARIANTEN = {
   },
   /* ---- Zahlenkronen (austauschbare Zahlenpets) ---- */
   'Zahlenkrone Klassik': {
-    typ: 'zahl', farbLabel: 'Hauptfarbe wählen',
+    typ: 'zahl', naht: false,   // naht: true = Pads mit Ziernaht farbLabel: 'Hauptfarbe wählen',
     groessen: ['Gross', 'Klein', 'Mini'],
     farben: [
       { label: 'Rosa',               bg: '#f7eaed', sc: '#a05070', dot: '#e8b8c8', css: 'chip-pink', pet: ['#d48aa4', '#ffffff'] },   // Pads Rosa
@@ -2053,7 +2071,7 @@ const VARIANTEN = {
     ]
   },
   'Zahlenkrone Leo': {
-    typ: 'zahl', farbLabel: 'Farbe der Zahlenpets wählen',
+    typ: 'zahl', naht: false,   // naht: true = Pads mit Ziernaht farbLabel: 'Farbe der Zahlenpets wählen',
     groessen: ['Gross', 'Klein', 'Mini', 'Extra Mini'],
     farben: [
       { label: 'Gold / Zahlen schwarz',    bg: '#f5e8d0', sc: '#7a4a10', dot: '#c09820', css: 'chip-royal', pet: ['#d4b840', '#22202c'] },
@@ -2061,7 +2079,7 @@ const VARIANTEN = {
     ]
   },
   'Zahlenkrone Glitzer': {
-    typ: 'zahl', farbLabel: 'Schriftfarbe wählen',
+    typ: 'zahl', naht: false,   // naht: true = Pads mit Ziernaht farbLabel: 'Schriftfarbe wählen',
     groessen: ['Gross', 'Klein', 'Mini', 'Extra Mini'],
     farben: [
       { label: 'Zahlen schwarz', bg: '#fce8f0', sc: '#b03068', dot: '#22202c', css: 'chip-pink', pet: ['#e396b4', '#22202c'] },
@@ -2069,7 +2087,7 @@ const VARIANTEN = {
     ]
   },
   'Zahlenkrone Konfetti': {
-    typ: 'zahl', farbLabel: 'Farbe der Zahlenpads wählen',
+    typ: 'zahl', naht: false,   // naht: true = Pads mit Ziernaht farbLabel: 'Farbe der Zahlenpads wählen',
     groessen: ['Gross', 'Klein', 'Mini'],
     farben: [
       { label: 'Zahlenpads Mint', bg: '#fff8f0', sc: '#c07040', dot: '#8cc4b8', css: 'chip-mint', pet: ['#8cc4b8', '#22202c'] },
@@ -2241,7 +2259,7 @@ function renderColorChips(variant) {
   const farben = (VARIANTEN[variant] || {}).farben || [];
   container.innerHTML = farben.map((f, i) => {
     const dotHtml = f.pet
-      ? `<span style="margin-right:6px;display:inline-flex">${miniPad(1, f.pet[0], f.pet[1], 18)}</span>`
+      ? `<span style="margin-right:6px;display:inline-flex">${miniPad(1, f.pet[0], f.pet[1], 18, hatNaht(variant))}</span>`
       : `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${f.dot};margin-right:5px;vertical-align:middle;flex-shrink:0"></span>`;
     return `<span class="chip ${f.css || ''} ${i === 0 ? 'on' : ''}"
       data-c="${f.label}"
@@ -2343,10 +2361,17 @@ function isLightHex(hex) {
   return ((n >> 16) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 225;
 }
 function padStyle(bg, fg) {
-  return `background:${bg};color:${fg};border-color:${isLightHex(bg) ? 'var(--border2)' : bg}`;
+  return `background-color:${bg};color:${fg};border-color:${isLightHex(bg) ? 'var(--border2)' : bg};--pad-edge:${shadeHex(bg, isLightHex(bg) ? 0.80 : 0.68)}`;
 }
-function miniPad(n, bg, fg, size) {
-  return `<span class="mini-pad" style="${padStyle(bg, fg)};width:${size}px;height:${size}px;font-size:${Math.round(size * 0.5)}px">${n}</span>`;
+// Farbe abdunkeln (für die Seitenkante der Pads)
+function shadeHex(hex, f) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return 'rgba(0,0,0,0.3)';
+  const n = parseInt(m[1], 16);
+  return '#' + [n >> 16, (n >> 8) & 255, n & 255].map(c => Math.round(c * f).toString(16).padStart(2, '0')).join('');
+}
+const hatNaht = (v) => !!(VARIANTEN[v || state.variant] || {}).naht;
+function miniPad(n, bg, fg, size, naht) {
+  return `<span class="mini-pad${naht ? ' naht' : ''}" style="${padStyle(bg, fg)};width:${size}px;height:${size}px;font-size:${Math.round(size * 0.5)}px">${n}</span>`;
 }
 
 function petColors() {
@@ -2393,7 +2418,7 @@ function renderPets() {
   for (let i = 0; i < state.pets; i++) {
     const n = state.numbers[i];
     html += n !== undefined
-      ? `<button type="button" class="pet-slot" style="${padStyle(bg, fg)}" onclick="removeNumber(${i})" title="Entfernen">${n}</button>`
+      ? `<button type="button" class="pet-slot${hatNaht() ? ' naht' : ''}" style="${padStyle(bg, fg)}" onclick="removeNumber(${i})" title="Entfernen">${n}</button>`
       : `<span class="pet-slot empty ${i === state.numbers.length ? 'next' : ''}">${i + 1}</span>`;
   }
   slots.innerHTML = html;
@@ -2453,7 +2478,7 @@ function updatePreview() {
   const pcl = el('pcl'); if (pcl) pcl.textContent = state.color;
   const pnt = el('pnt');
   if (pnt) {
-    if (isZahl()) { const [pbg, pfg] = petColors(); pnt.innerHTML = state.numbers.map(n => miniPad(n, pbg, pfg, 26)).join(''); pnt.classList.remove('off'); }
+    if (isZahl()) { const [pbg, pfg] = petColors(); pnt.innerHTML = state.numbers.map(n => miniPad(n, pbg, pfg, 26, hatNaht())).join(''); pnt.classList.remove('off'); }
     else { pnt.textContent = nameAllowed() ? state.name : 'ohne Namensaufdruck'; pnt.classList.toggle('off', !nameAllowed()); }
   }
   const tp  = el('totP');
