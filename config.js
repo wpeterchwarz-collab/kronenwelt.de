@@ -12,8 +12,8 @@ const CONFIG = {
   PAYPAL_ID: 'BAA0M7NjLoaJgDw-PcmiLDNoXN-5OcMuDLZ4HLp5rDmkrRDM8M3zqtpv4HrEtsPmiPdXUXNYz5xWDjYYAc',
 
   // SumUp (falls genutzt, sonst leer lassen)
-  SUMUP_KEY:      'sup_sk_zsEveP78KVWMVsFC00p2Qc2qy2Ag4SjQU',
-  SUMUP_MERCHANT: 'MCENKTPS',
+  // SUMUP_KEY:      '',
+  // SUMUP_MERCHANT: '',
 
   // WhatsApp Nummer (nur Zahlen, mit Ländervorwahl, kein +)
   WA_NUMBER: '4917631242035',
