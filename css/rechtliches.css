@@ -1,0 +1,110 @@
+/* ==============================================================
+   MILA'S KRONENWELT – Rechtsseiten (Impressum, Datenschutz, AGB, Widerruf)
+   Gleicher Look wie die Startseite (css/pastell.css):
+   Gaegu für Überschriften, Jost für Text, Petrol als Markenfarbe.
+   ============================================================== */
+@font-face { font-family: 'Gaegu'; font-weight: 700; font-display: swap;
+  src: url('../fonts/gaegu-latin-700-normal.woff2?v=2') format('woff2'); }
+@font-face { font-family: 'Jost'; font-weight: 400; font-display: swap;
+  src: url('../fonts/jost-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Jost'; font-weight: 500; font-display: swap;
+  src: url('../fonts/jost-latin-500-normal.woff2') format('woff2'); }
+
+:root {
+  --petrol: #729599; --petrol-d: #4d6d71; --petrol-dd: #3e5a5d;
+  --rose: #f4e1e3; --rose-d: #e3bfc4;
+  --ink: #263234; --muted: #5f6d6e;
+  --line: #e6e2dc; --line2: #d7d1c9;
+  --paper2: #f8f6f3;
+  --f-head: 'Gaegu', 'Comic Neue', system-ui, sans-serif;
+  --f-sans: 'Jost', 'Futura', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--f-sans); background: #fff; color: var(--ink); font-size: 16px; line-height: 1.7; -webkit-font-smoothing: antialiased; }
+::selection { background: var(--rose-d); }
+:focus-visible { outline: 2px solid var(--petrol-d); outline-offset: 2px; }
+a { color: var(--petrol-d); }
+a:hover { color: var(--petrol-dd); }
+p, li, a, td { overflow-wrap: anywhere; }
+
+/* ---------- Navigation ---------- */
+.nav { background: #fff; border-bottom: 1px solid var(--line); height: 76px; padding: 0 40px;
+  display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.logo-wrap { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); }
+.logo-mark { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.logo-bommels { display: flex; gap: 6px; align-items: flex-end; margin-bottom: 1px; }
+.bml { width: 6px; height: 6px; border-radius: 50%; background: var(--petrol); }
+.bml-m { width: 8px; height: 8px; border-radius: 50%; background: var(--petrol); }
+.logo-shape { width: 32px; height: 20px; }
+.logo-div { width: 1px; height: 34px; background: var(--line2); }
+.logo-name { font-family: var(--f-head); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; font-size: 25px; line-height: 1; color: var(--ink); }
+.logo-sub { color: var(--muted); letter-spacing: 3px; font-size: 9.5px; margin-top: 2px; }
+.nav-back { font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .14em;
+  background: var(--petrol-d); color: #fff; text-decoration: none; padding: 12px 22px; transition: background .2s; }
+.nav-back:hover { background: var(--petrol-dd); color: #fff; }
+.teal-bar { height: 3px; background: var(--petrol); }
+
+/* ---------- Kopfbereich ---------- */
+.hero { background: var(--paper2); padding: 64px 6vw 52px; text-align: center; }
+.hero-label { color: var(--petrol-d); letter-spacing: 5px; font-size: 12.5px; font-weight: 500; margin-bottom: 10px; }
+.hero-title { font-family: var(--f-head); font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  font-size: 52px; line-height: 1; color: var(--ink); }
+.hero::after { content: ''; display: block; width: 48px; height: 2px; background: var(--petrol); margin: 22px auto 0; }
+
+/* ---------- Inhalt ---------- */
+.content-wrap { max-width: 800px; margin: 0 auto; padding: 56px 40px 72px; }
+h2 { font-size: 20px; font-weight: 500; color: var(--ink); margin: 40px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 16px; font-weight: 500; color: var(--ink); margin: 24px 0 8px; }
+p { margin-bottom: 12px; font-size: 15.5px; color: var(--muted); line-height: 1.8; }
+strong { color: var(--ink); font-weight: 500; }
+ul, ol { padding-left: 22px; margin-bottom: 12px; color: var(--muted); font-size: 15.5px; }
+li { margin-bottom: 6px; }
+table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+td { border: 1px solid var(--line); padding: 10px 14px; font-size: 14.5px; color: var(--muted); }
+
+/* Inhaltsverzeichnis (AGB: .toc, Datenschutz: .index) */
+.toc, .index { background: var(--paper2); border-left: 4px solid var(--petrol); padding: 20px 24px; margin-bottom: 36px; list-style: none; }
+.toc-title, .toc > strong { display: block; font-size: 12.5px; letter-spacing: 4px; color: var(--petrol-d); font-weight: 500; margin-bottom: 8px; }
+.toc a, .index a { display: block; color: var(--ink); text-decoration: none; font-size: 14.5px; padding: 3px 0; }
+.toc a:hover, .index a:hover { color: var(--petrol-d); text-decoration: underline; text-underline-offset: 4px; }
+.index li { margin-bottom: 0; }
+
+/* Datenschutz: Aufzählungs-Kästchen */
+.m-elements { list-style: none; padding: 0; }
+.m-elements li { background: var(--paper2); padding: 10px 14px; margin-bottom: 8px; border: 1px solid var(--line); }
+.seal { margin-top: 36px; font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+
+/* Widerruf: Muster-Formular */
+.formular-box { border: 1px solid var(--line2); border-top: 4px solid var(--rose-d); padding: 24px; margin-top: 32px; background: #fff; }
+.formular-box p { margin-bottom: 8px; }
+.indent { padding-left: 16px; }
+
+/* Button unten */
+.back-btn { display: inline-block; margin-top: 36px; font-weight: 500; font-size: 13px; text-transform: uppercase; letter-spacing: .14em;
+  background: var(--petrol-d); color: #fff; text-decoration: none; padding: 16px 30px; transition: background .2s; }
+.back-btn:hover { background: var(--petrol-dd); color: #fff; }
+
+/* ---------- Footer ---------- */
+.footer { background: var(--petrol); padding: 40px 6vw 30px; color: #fff; }
+.footer-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;
+  padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,.3); }
+.ft-logo { font-family: var(--f-head); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; font-size: 30px; line-height: 1; color: #fff; }
+.ft-logo-sub { display: block; font-family: var(--f-sans); font-weight: 400; font-size: 9.5px; letter-spacing: 3px; opacity: .85; margin-top: 4px; }
+.footer-bot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.ft-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.ft-links a { color: #fff; font-size: 13px; letter-spacing: .06em; text-decoration: none; }
+.ft-links a:hover, .ft-links a[aria-current] { color: #fff; text-decoration: underline; text-underline-offset: 4px; }
+.ft-copy { font-size: 12px; opacity: .85; }
+
+/* ---------- Handy ---------- */
+@media (max-width: 700px) {
+  .nav { padding: 0 16px; height: 64px; }
+  .logo-mark, .logo-div { display: none; }
+  .logo-name { font-size: 20px; }
+  .nav-back { padding: 10px 14px; font-size: 11px; letter-spacing: .1em; }
+  .hero { padding: 40px 16px 34px; }
+  .hero-title { font-size: clamp(22px, 7.4vw, 34px); hyphens: auto; overflow-wrap: break-word; }
+  .content-wrap { padding: 32px 16px 48px; }
+  .footer { padding: 28px 16px 22px; }
+  .ft-links { gap: 14px; }
+}

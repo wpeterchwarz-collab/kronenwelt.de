@@ -9,61 +9,32 @@
 <link rel="icon" href="favicon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#4d6d71">
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Georgia,serif;background:#faf5f0;color:#3d2e22;font-size:16px;line-height:1.7}
-  .nav{background:#faf5f0;border-bottom:1px solid #e8ddd4;padding:0 40px;height:66px;display:flex;align-items:center;justify-content:space-between}
-  .logo-wrap{display:flex;align-items:center;gap:10px;text-decoration:none}
-  .logo-bommels{display:flex;gap:5px;align-items:flex-end;margin-bottom:1px}
-  .bml{width:6px;height:6px;border-radius:50%;background:#4a9090}
-  .bml-m{width:8px;height:8px;border-radius:50%;background:#4a9090}
-  .logo-name{font-size:18px;color:#3d2e22;font-style:italic}
-  .logo-sub{font-size:9px;letter-spacing:3px;color:#8a7060;font-family:sans-serif}
-  .nav-back{font-size:12px;color:#4a9090;text-decoration:none;font-family:sans-serif;letter-spacing:1px}
-  .teal-bar{background:#4a9090;height:3px}
-  .hero{background:#e8ddd4;padding:40px 40px 32px}
-  .hero-label{font-size:10px;letter-spacing:4px;color:#8a7060;margin-bottom:6px;font-family:sans-serif}
-  .hero-title{font-size:36px;color:#3d2e22;font-style:italic}
-  .content-wrap{max-width:800px;margin:0 auto;padding:48px 40px}
-  h2{font-size:18px;color:#3d2e22;margin-top:32px;margin-bottom:10px;font-family:sans-serif;font-weight:700}
-  h3{font-size:15px;color:#3d2e22;margin-top:20px;margin-bottom:6px;font-family:sans-serif;font-weight:700}
-  p{margin-bottom:12px;font-size:15px;color:#5a4838;line-height:1.8;font-family:sans-serif;font-weight:300}
-  a{color:#4a9090}
-  .toc{background:#f0e8e0;border-radius:10px;padding:20px 24px;margin-bottom:32px;font-family:sans-serif}
-  .toc a{display:block;color:#5a4538;text-decoration:none;font-size:14px;padding:3px 0}
-  .toc a:hover{color:#4a9090}
-  .back-btn{display:inline-flex;align-items:center;gap:8px;background:#3d2e22;color:#f5ede4;border:none;padding:11px 22px;border-radius:30px;font-size:12px;cursor:pointer;letter-spacing:1px;font-family:sans-serif;text-decoration:none;margin-top:32px}
-  .footer{background:#3d2e22;padding:22px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:48px}
-  .ft-logo{font-family:Georgia,serif;color:#f5ede4;font-size:15px;font-style:italic}
-  .ft-links{display:flex;gap:18px;flex-wrap:wrap}
-  .ft-links a{font-size:11px;color:#6b5548;text-decoration:none;letter-spacing:1px;font-family:sans-serif}
-  @media(max-width:600px){.nav{padding:0 16px}.hero{padding:28px 16px 22px}.hero-title{font-size:26px}.content-wrap{padding:28px 16px}.footer{padding:18px 16px;flex-direction:column;align-items:flex-start}}
-  p, li, a, td { overflow-wrap: anywhere; }
-</style>
+<link rel="stylesheet" href="css/rechtliches.css?v=1">
 </head>
 <body>
 
 <nav class="nav">
-  <a class="logo-wrap" href="index.html">
-    <div>
+  <a class="logo-wrap" href="index.html" aria-label="Zur Startseite von Mila's Kronenwelt">
+    <div class="logo-mark">
       <div class="logo-bommels"><span class="bml"></span><span class="bml-m"></span><span class="bml"></span></div>
-      <svg width="30" height="18" viewBox="0 0 44 24"><polygon points="22,1 32,13 42,5 38,22 6,22 2,5 12,13" fill="none" stroke="#4a9090" stroke-width="2.5" stroke-linejoin="round"/></svg>
+      <svg class="logo-shape" viewBox="0 0 44 24" aria-hidden="true"><polygon points="22,1 32,13 42,5 38,22 6,22 2,5 12,13" fill="rgba(114,149,153,0.08)" stroke="#729599" stroke-width="2.5" stroke-linejoin="round"/></svg>
     </div>
-    <div><div class="logo-name">Mila's Kronenwelt</div><div class="logo-sub">HANDMADE</div></div>
+    <div class="logo-div"></div>
+    <div><div class="logo-name">Mila's Kronenwelt</div><div class="logo-sub">HANDMADE · PERSONALISIERT</div></div>
   </a>
-  <a class="nav-back" href="index.html">← Zurück zum Shop</a>
+  <a class="nav-back" href="index.html">← Zum Shop</a>
 </nav>
 <div class="teal-bar"></div>
 
 <div class="hero">
   <div class="hero-label">RECHTLICHES</div>
-  <div class="hero-title">Allgemeine Geschäftsbedingungen</div>
+  <h1 class="hero-title">Allgemeine Geschäftsbedingungen</h1>
 </div>
 
 <div class="content-wrap">
 
   <div class="toc">
-    <strong style="font-family:sans-serif;font-size:13px;letter-spacing:1px;color:#8a7060;display:block;margin-bottom:8px">INHALTSVERZEICHNIS</strong>
+    <strong class="toc-title">INHALTSVERZEICHNIS</strong>
     <a href="#geltungsbereich">1. Geltungsbereich</a>
     <a href="#vertragspartner">2. Vertragspartner, Vertragsschluss, Korrekturmöglichkeiten</a>
     <a href="#vertragssprache">3. Vertragssprache, Vertragstextspeicherung</a>
@@ -125,14 +96,20 @@
   <a class="back-btn" href="index.html">← Zurück zum Shop</a>
 </div>
 
-<div class="footer">
-  <div class="ft-logo">Mila's Kronenwelt</div>
-  <div class="ft-links">
-    <a href="impressum.html">Impressum</a>
-    <a href="datenschutz.html">Datenschutz</a>
-    <a href="agb.html">AGB</a>
-    <a href="widerruf.html">Widerrufsbelehrung</a>
+<footer class="footer">
+  <div class="footer-top">
+    <div class="ft-logo">Mila's Kronenwelt<span class="ft-logo-sub">HANDMADE SEIT 2024</span></div>
   </div>
-</div>
+  <div class="footer-bot">
+    <div class="ft-links">
+      <a href="impressum.html">Impressum</a>
+      <a href="datenschutz.html">Datenschutz</a>
+      <a href="agb.html" aria-current="page">AGB</a>
+      <a href="widerruf.html">Widerrufsbelehrung</a>
+      <a href="mailto:m.kronenwelt@gmail.com">Kontakt</a>
+    </div>
+    <div class="ft-copy">© 2024 Mila's Kronenwelt · kronenwelt.de</div>
+  </div>
+</footer>
 </body>
 </html>
