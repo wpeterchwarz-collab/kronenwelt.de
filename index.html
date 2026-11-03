@@ -391,6 +391,8 @@ button { cursor: pointer; font-family: inherit; }
 .pet-status { font-size: 12px; color: var(--brown3); margin-top: 8px; }
 .pet-status.ok { color: var(--teal2); font-weight: 700; }
 .pet-delta { font-size: 11px; opacity: 0.75; margin-left: 4px; }
+.mini-pad { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid; font-family: 'Gaegu', serif; font-weight: 700; letter-spacing: 0; line-height: 1; flex-shrink: 0; }
+#pnt .mini-pad { margin-right: 5px; }
 @media(max-width:600px){ .pet-pad { grid-template-columns: repeat(5, minmax(0,1fr)); }
   .mode-tab { padding: 12px 10px 10px; }
   .mode-title { font-size: 13px; padding-right: 18px; }
@@ -1169,6 +1171,19 @@ button { cursor: pointer; font-family: inherit; }
       </div>
     </div>
 
+    <div class="prod-card" onclick="selectVariant('Zahlenkrone Konfetti');document.getElementById('bestellen').scrollIntoView({behavior:'smooth'})">
+      <div class="prod-img">
+        <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/zahl-konfetti-krone.jpg" alt="Zahlenkrone Konfetti" onerror="this.style.visibility='hidden'">
+        <div class="prod-overlay">
+          <div class="prod-overlay-left">
+            <div class="prod-name">Zahlenkrone Konfetti</div>
+            <div class="prod-price">ab 19,00 €</div>
+            <div class="prod-badge">Neu · Wechselzahlen</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -1296,6 +1311,7 @@ button { cursor: pointer; font-family: inherit; }
               <span class="chip" data-v="Zahlenkrone Klassik" data-mode="zahl" onclick="selectV(this)" hidden>Klassik</span>
               <span class="chip" data-v="Zahlenkrone Leo" data-mode="zahl" onclick="selectV(this)" hidden>Leo</span>
               <span class="chip" data-v="Zahlenkrone Glitzer" data-mode="zahl" onclick="selectV(this)" hidden>Glitzer rosa</span>
+              <span class="chip" data-v="Zahlenkrone Konfetti" data-mode="zahl" onclick="selectV(this)" hidden>Konfetti</span>
             </div>
           </div>
         </div>
@@ -2048,11 +2064,20 @@ const VARIANTEN = {
     typ: 'zahl', farbLabel: 'Schriftfarbe wählen',
     groessen: ['Gross', 'Klein', 'Mini', 'Extra Mini'],
     farben: [
-      { label: 'Zahlen schwarz', bg: '#fce8f0', sc: '#b03068', dot: '#22202c', css: 'chip-pink', pet: ['#f8f4f2', '#22202c'] },
-      { label: 'Zahlen weiss',   bg: '#fce8f0', sc: '#b03068', dot: '#ffffff', css: 'chip-pink', pet: ['#c8668c', '#ffffff'] },
+      { label: 'Zahlen schwarz', bg: '#fce8f0', sc: '#b03068', dot: '#22202c', css: 'chip-pink', pet: ['#e396b4', '#22202c'] },
+      { label: 'Zahlen weiss',   bg: '#fce8f0', sc: '#b03068', dot: '#ffffff', css: 'chip-pink', pet: ['#e396b4', '#ffffff'] },
+    ]
+  },
+  'Zahlenkrone Konfetti': {
+    typ: 'zahl', farbLabel: 'Farbe der Zahlenpads wählen',
+    groessen: ['Gross', 'Klein', 'Mini'],
+    farben: [
+      { label: 'Zahlenpads Mint', bg: '#fff8f0', sc: '#c07040', dot: '#8cc4b8', css: 'chip-mint', pet: ['#8cc4b8', '#22202c'] },
+      { label: 'Zahlenpads Rosa', bg: '#fff8f0', sc: '#c07040', dot: '#e8a0b8', css: 'chip-pink', pet: ['#e8a0b8', '#22202c'] },
     ]
   }
 };
+// pet: [Farbe des Zahlenpads, Farbe der Zahl] – wird in Auswahl, Vorschau und Farb-Chips verwendet
 
 /* Aufpreis je Anzahl Zahlenpets (Grundpreis in PRICES gilt für 3 Pets).
    Wird über preise.json → "Zahlenpets Aufpreis" im Admin gepflegt; das hier ist nur der Fallback. */
@@ -2126,6 +2151,11 @@ const PRODUCT_IMAGES = {
     '_default':       CL + CLV + 'zahl-glitzer-krone.jpg',
     'Zahlen schwarz': CL + CLV + 'zahl-glitzer-schwarz.jpg',
     'Zahlen weiss':   CL + CLV + 'zahl-glitzer-weiss.jpg',
+  },
+  'Zahlenkrone Konfetti': {
+    '_default':        CL + CLV + 'zahl-konfetti-krone.jpg',
+    'Zahlenpads Mint': CL + CLV + 'zahl-konfetti-mint.jpg',
+    'Zahlenpads Rosa': CL + CLV + 'zahl-konfetti-rosa.jpg',
   }
 };
 
@@ -2175,7 +2205,8 @@ let PRICES = {
   // Zahlenkronen: Preis inkl. 3 Zahlenpets (6 Pets +3 €, 9 Pets +6 €, siehe PET_AUFPREIS)
   'Zahlenkrone Klassik': { 'Gross': 21, 'Klein': 20, 'Mini': 19 },
   'Zahlenkrone Leo':     { 'Gross': 21, 'Klein': 20, 'Mini': 19, 'Extra Mini': 18 },
-  'Zahlenkrone Glitzer': { 'Gross': 21, 'Klein': 20, 'Mini': 19, 'Extra Mini': 18 }
+  'Zahlenkrone Glitzer': { 'Gross': 21, 'Klein': 20, 'Mini': 19, 'Extra Mini': 18 },
+  'Zahlenkrone Konfetti': { 'Gross': 21, 'Klein': 20, 'Mini': 19 }
 };
 
 const BOMMELS = {
@@ -2185,7 +2216,8 @@ const BOMMELS = {
   'Edel & Wild': ['#d4b840', '#d4b840', '#d4b840'],
   'Zahlenkrone Klassik': ['#f0c8d4', '#d8d0e8', '#f0c8d4'],
   'Zahlenkrone Leo':     ['#d4b840', '#d4b840', '#d4b840'],
-  'Zahlenkrone Glitzer': ['#f0d8c8', '#f0d8c8', '#f0d8c8']
+  'Zahlenkrone Glitzer': ['#f0d8c8', '#f0d8c8', '#f0d8c8'],
+  'Zahlenkrone Konfetti': ['#f8d0a0', '#8cc4b8', '#e8a0b8']
 };
 
 /* ---- 2. ZUSTAND ---- */
@@ -2208,7 +2240,9 @@ function renderColorChips(variant) {
   if (!container) return;
   const farben = (VARIANTEN[variant] || {}).farben || [];
   container.innerHTML = farben.map((f, i) => {
-    const dotHtml = `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${f.dot};margin-right:5px;vertical-align:middle;flex-shrink:0"></span>`;
+    const dotHtml = f.pet
+      ? `<span style="margin-right:6px;display:inline-flex">${miniPad(1, f.pet[0], f.pet[1], 18)}</span>`
+      : `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${f.dot};margin-right:5px;vertical-align:middle;flex-shrink:0"></span>`;
     return `<span class="chip ${f.css || ''} ${i === 0 ? 'on' : ''}"
       data-c="${f.label}"
       data-bg="${f.bg}" data-sc="${f.sc}" data-dot="${f.dot}"
@@ -2302,6 +2336,19 @@ function applyMode() {
   }
 }
 
+// Mini-Zahlenpad (Kreis in Padfarbe mit Zahl in Zahlenfarbe)
+function isLightHex(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return false;
+  const n = parseInt(m[1], 16);
+  return ((n >> 16) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 225;
+}
+function padStyle(bg, fg) {
+  return `background:${bg};color:${fg};border-color:${isLightHex(bg) ? 'var(--border2)' : bg}`;
+}
+function miniPad(n, bg, fg, size) {
+  return `<span class="mini-pad" style="${padStyle(bg, fg)};width:${size}px;height:${size}px;font-size:${Math.round(size * 0.5)}px">${n}</span>`;
+}
+
 function petColors() {
   const f = ((VARIANTEN[state.variant] || {}).farben || []).find(x => x.label === state.color);
   return (f && f.pet) || ['#e6eeef', '#263234'];
@@ -2346,7 +2393,7 @@ function renderPets() {
   for (let i = 0; i < state.pets; i++) {
     const n = state.numbers[i];
     html += n !== undefined
-      ? `<button type="button" class="pet-slot" style="background:${bg};color:${fg};border-color:${bg === '#ffffff' || bg === '#f8f4f2' ? 'var(--border2)' : bg}" onclick="removeNumber(${i})" title="Entfernen">${n}</button>`
+      ? `<button type="button" class="pet-slot" style="${padStyle(bg, fg)}" onclick="removeNumber(${i})" title="Entfernen">${n}</button>`
       : `<span class="pet-slot empty ${i === state.numbers.length ? 'next' : ''}">${i + 1}</span>`;
   }
   slots.innerHTML = html;
@@ -2399,14 +2446,14 @@ function updatePreview() {
   });
 
   const pt = el('pt');
-  if (pt) { pt.setAttribute('fill', state.sc); pt.textContent = isZahl() ? (state.numbers.join(' ') || '1 2 3') : (nameAllowed() ? (state.name || 'MILA') : ''); }
+  if (pt) { pt.setAttribute('fill', isZahl() && !isLightHex(petColors()[0]) ? petColors()[0] : state.sc); pt.textContent = isZahl() ? (state.numbers.join(' ') || '1 2 3') : (nameAllowed() ? (state.name || 'MILA') : ''); }
 
   const pvn = el('pvn'); if (pvn) pvn.textContent = state.variant;
-  const pcd = el('pcd'); if (pcd) pcd.style.background = state.dot;
+  const pcd = el('pcd'); if (pcd) pcd.style.background = isZahl() ? petColors()[0] : state.dot;
   const pcl = el('pcl'); if (pcl) pcl.textContent = state.color;
   const pnt = el('pnt');
   if (pnt) {
-    if (isZahl()) { pnt.textContent = state.numbers.join(' · '); pnt.classList.remove('off'); }
+    if (isZahl()) { const [pbg, pfg] = petColors(); pnt.innerHTML = state.numbers.map(n => miniPad(n, pbg, pfg, 26)).join(''); pnt.classList.remove('off'); }
     else { pnt.textContent = nameAllowed() ? state.name : 'ohne Namensaufdruck'; pnt.classList.toggle('off', !nameAllowed()); }
   }
   const tp  = el('totP');
