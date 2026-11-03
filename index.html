@@ -2024,12 +2024,18 @@ const VARIANTEN = {
   }
 };
 
-/* Aufpreis je Anzahl Zahlenpets (Grundpreis in PRICES gilt für 3 Pets) */
+/* Aufpreis je Anzahl Zahlenpets (Grundpreis in PRICES gilt für 3 Pets).
+   Wird über preise.json → "Zahlenpets Aufpreis" im Admin gepflegt; das hier ist nur der Fallback. */
 const PET_AUFPREIS = { 3: 0, 6: 3, 9: 6 };
+function petAufpreis(n) {
+  const a = PRICES['Zahlenpets Aufpreis'];
+  if (n === 3) return 0;
+  return (a && typeof a[n + ' Pets'] === 'number') ? a[n + ' Pets'] : (PET_AUFPREIS[n] || 0);
+}
 const isZahl = (v) => (VARIANTEN[v || state.variant] || {}).typ === 'zahl';
 function currentPrice() {
   const base = (PRICES[state.variant] || {})[state.size] || 15;
-  return base + (isZahl() ? (PET_AUFPREIS[state.pets] || 0) : 0);
+  return base + (isZahl() ? petAufpreis(state.pets) : 0);
 }
 
 /* ---- PRODUKTFOTOS ---- */
@@ -2255,7 +2261,13 @@ function applyMode() {
     const card = document.querySelector(`.szcard[data-s="${sizes[0]}"]`);
     if (card) selectS(card);
   }
-  if (mode === 'zahl') renderPets();
+  if (mode === 'zahl') {
+    document.querySelectorAll('#petCount [data-p]').forEach(c => {
+      const d = c.querySelector('.pet-delta'), a = petAufpreis(+c.dataset.p);
+      if (d) d.textContent = a ? '+' + String(a).replace('.', ',') + ' €' : '';
+    });
+    renderPets();
+  }
 }
 
 function petColors() {
