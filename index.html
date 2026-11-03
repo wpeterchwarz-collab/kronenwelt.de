@@ -1303,7 +1303,7 @@ button { cursor: pointer; font-family: inherit; }
   </div>
   <div class="sec-line" style="margin-top:16px"></div>
 
-  <div class="kg-grid">
+  <div class="kg-grid" id="kg-top">
     <div class="kg-card kg-card-feat">
       <div class="kg-img kg-img-lg" style="background:#e8e4dc">
         <div class="kg-badge kg-badge-gold">★ Foto des Monats</div>
@@ -1359,7 +1359,7 @@ button { cursor: pointer; font-family: inherit; }
     </div>
   </div>
 
-  <div class="kg-grid-bot">
+  <div class="kg-grid-bot" id="kg-bot1">
     <div class="kg-card">
       <div class="kg-img kg-img-sm" style="background:#e8e4dc">
         <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/eddy.jpg" alt="Eddy" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Eddy')">
@@ -1421,7 +1421,7 @@ button { cursor: pointer; font-family: inherit; }
   </div>
 
   <!-- Zweite Reihe zusätzliche Galeriefotos -->
-  <div class="kg-grid-bot" style="margin-top:16px">
+  <div class="kg-grid-bot" id="kg-bot2" style="margin-top:16px">
     <div class="kg-card">
       <div class="kg-img kg-img-sm" style="background:#e8e4dc">
         <img src="https://res.cloudinary.com/dw6amyijc/image/upload/v20551/emma-hoheit.jpg" alt="Emma" style="width:100%;height:100%" onclick="openLightbox(this.src, 'Emma-Hoheit')">
@@ -2415,6 +2415,64 @@ function toggleLike(btn) {
   }
 }
 
+/* ---- 5b. GALERIE AUS galerie.json RENDERN ---- */
+function kgEsc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function kgCard(d, size) {
+  const datei = String(d.datei || '').trim();
+  const name  = String(d.name  || '').trim();
+  const rasse = String(d.rasse || '').trim();
+  const krone = String(d.krone || '').trim();
+  const farbe = /^#[0-9a-f]{3,8}$/i.test(String(d.farbe || '').trim()) ? d.farbe.trim() : '#4a9090';
+  const badge = String(d.badge || '').trim();
+  const likes = parseInt(d.likes) || 0;
+  const src   = CL + CLV + encodeURIComponent(datei) + '.jpg';
+  const srcLc = CL + CLV + encodeURIComponent(datei.toLowerCase()) + '.jpg';
+  const badgeHtml = badge
+    ? '<div class="kg-badge ' + (d.featured ? 'kg-badge-gold' : 'kg-badge-new') + '">' + kgEsc(badge) + '</div>'
+    : '';
+  const el = document.createElement('div');
+  el.className = 'kg-card' + (d.featured ? ' kg-card-feat' : '');
+  el.innerHTML =
+    '<div class="kg-img ' + size + '" style="background:#e8e4dc">' + badgeHtml +
+      '<img alt="' + kgEsc(name) + '" style="width:100%;height:100%" loading="lazy">' +
+    '</div>' +
+    '<div class="kg-body">' +
+      '<div class="kg-dog-name">' + kgEsc(name) + '</div>' +
+      (rasse ? '<div class="kg-meta">' + kgEsc(rasse) + '</div>' : '') +
+      (krone ? '<div class="kg-crown-tag"><span class="kg-cdot" style="background:' + farbe + '"></span>' + kgEsc(krone) + '</div>' : '') +
+      '<div class="kg-like-row">' +
+        '<button class="kg-like-btn" onclick="toggleLike(this)">' +
+          '<svg viewBox="0 0 14 14" fill="none"><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" stroke="#c05060" stroke-width="1.2" class="ho"/><path d="M7 12S1 8 1 4.5A3 3 0 017 3a3 3 0 016 1.5C13 8 7 12 7 12z" fill="#e07080" class="hf" style="display:none"/></svg>' +
+          ' Gefällt mir' +
+        '</button>' +
+        '<span class="kg-like-count"><span class="ln">' + likes + '</span> Likes</span>' +
+      '</div>' +
+    '</div>';
+  const img = el.querySelector('img');
+  // Cloudinary-IDs sind case-sensitiv: erst Dateiname wie im Admin, sonst kleingeschrieben
+  img.onerror = function () { if (this.src !== srcLc) { this.onerror = null; this.src = srcLc; } };
+  img.src = src;
+  img.onclick = () => openLightbox(img.src, name);
+  return el;
+}
+function renderGalerie(list) {
+  const top = document.getElementById('kg-top');
+  const b1  = document.getElementById('kg-bot1');
+  const b2  = document.getElementById('kg-bot2');
+  if (!Array.isArray(list) || !list.length || !top || !b1 || !b2) return; // Fallback: statisches HTML bleibt
+  // "Foto des Monats" immer zuerst
+  const items = list.filter(d => d && d.datei).slice().sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+  const addCard = b1.querySelector('.kg-add-card');
+  top.innerHTML = ''; b1.innerHTML = ''; b2.innerHTML = '';
+  items.slice(0, 3).forEach(d => top.appendChild(kgCard(d, 'kg-img-lg')));
+  items.slice(3, 6).forEach(d => b1.appendChild(kgCard(d, 'kg-img-sm')));
+  if (addCard) b1.appendChild(addCard);
+  items.slice(6).forEach(d => b2.appendChild(kgCard(d, 'kg-img-sm')));
+  b2.style.display = items.length > 6 ? '' : 'none';
+}
+
 /* ---- 6. COOKIE MANAGEMENT ---- */
 // Version erhöhen, wenn sich Dienste ändern -> alle Besucher werden neu gefragt
 const COOKIE_KEY = 'mk_cookie_consent';
@@ -2546,6 +2604,7 @@ Promise.all([
   fetch('galerie.json').then(r => r.json()).catch(() => null)
 ]).then(([preise, galerie]) => {
   if (preise) PRICES = preise;
+  try { renderGalerie(galerie); } catch (e) { console.warn('Galerie:', e); }
   initConfigurator();
   initPayment();
 }).catch(() => {
