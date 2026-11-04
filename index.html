@@ -2346,64 +2346,20 @@ const CL = 'https://res.cloudinary.com/dw6amyijc/image/upload/';
 // Cache-Buster: stündliche Versionsnummer als Fallback
 const CLV = 'v' + Math.floor(Date.now() / 3600000) + '/';
 
-const PRODUCT_IMAGES = {
-  'Party': {
-    '_default':          CL + CLV + 'party-krone.jpg',
-    'Rosa mit Punkten':  CL + CLV + 'party-rosa.jpg',
-    'Grau mit Punkten':  CL + CLV + 'party-grau.jpg',
-    'Mint mit Punkten':  CL + CLV + 'party-mint.jpg',
-    'Lila mit Punkten':  CL + CLV + 'party-lilia.jpg',
-    'Petrol mit Punkten':CL + CLV + 'party-petrol.jpg',
-    'Konfetti':          CL + CLV + 'party-konfetti.jpg',
-    'Weiss/Blau/Grün':   CL + CLV + 'party-weiss-blau-gruen.jpg',
-  },
-  'Einfarbig': {
-    '_default': CL + CLV + 'uni-mint.jpg',
-    'Berry':    CL + CLV + 'uni-berry.jpg',
-    'Blau':     CL + CLV + 'uni-blau.jpg',
-    'Grün':     CL + CLV + 'uni-gruen.jpg',
-    'Orange':   CL + CLV + 'uni-orange.jpg',
-  },
-  'Glitzer': {
-    '_default': CL + CLV + 'glitzer-krone.jpg',
-    'Blau':     CL + CLV + 'glitzer-blau.jpg',
-    'Türkis':   CL + CLV + 'glitzer-krone.jpg',
-    'Rosa':     CL + CLV + 'glitzer-pink.jpg',
-    'Pink':     CL + CLV + 'glitzer-pink.jpg',
-    'Silber':   CL + CLV + 'glitzer-silber.jpg',
-    'Weiss':    CL + CLV + 'glitzer-weiss.jpg',
-    'Gold':     CL + CLV + 'glitzer-gold.jpg',
-  },
-  'Edel & Wild': {
-    '_default':   CL + CLV + 'royal-krone.jpg',
-    'Gold':       CL + CLV + 'edel-gold.jpg',
-    'Schwarz':    CL + CLV + 'edel-schwarz.jpg',
-    'Leo Braun':  CL + CLV + 'wild-leo.jpg',
-    'Leo Weiss':  CL + CLV + 'wild-leo-weiss.jpg',
-    'Leopard':    CL + CLV + 'wild-leopard.jpg',
-  },
-  'Zahlenkrone Klassik': {
-    '_default':           CL + CLV + 'zahl-klassik-krone.jpg',
-    'Rosa':               CL + CLV + 'zahl-klassik-rosa.jpg',
-    'Mint':               CL + CLV + 'zahl-klassik-gruen.jpg',   // Dateiname bleibt (Foto ist schon hochgeladen)
-    'Weiss/bunte Punkte': CL + CLV + 'zahl-klassik-weiss-bunt.jpg',
-  },
-  'Zahlenkrone Leo': {
-    '_default':               CL + CLV + 'zahl-leo-krone.jpg',
-    'Gold / Zahlen schwarz':  CL + CLV + 'zahl-leo-pets-gold.jpg',
-    'Schwarz / Zahlen gold':  CL + CLV + 'zahl-leo-pets-schwarz.jpg',
-  },
-  'Zahlenkrone Glitzer': {
-    '_default':       CL + CLV + 'zahl-glitzer-krone.jpg',
-    'Zahlen schwarz': CL + CLV + 'zahl-glitzer-schwarz.jpg',
-    'Zahlen weiss':   CL + CLV + 'zahl-glitzer-weiss.jpg',
-  },
-  'Zahlenkrone Konfetti': {
-    '_default':        CL + CLV + 'zahl-konfetti-krone.jpg',
-    'Zahlenpads Mint': CL + CLV + 'zahl-konfetti-mint.jpg',
-    'Zahlenpads Rosa': CL + CLV + 'zahl-konfetti-rosa.jpg',
-  }
-};
+/* Hauptfoto je Krone und Farbe kommt aus produktfotos.json (Cloudinary-Namen ohne .jpg).
+   Dieselbe Datei nutzt die Admin-Seite → jede Farbe im Konfigurator ist dort pflegbar.
+   Ein Test (tests/produktfotos.spec.js) prüft, dass Konfigurator und Datei zusammenpassen. */
+let PRODUCT_IMAGES = {};
+function setProduktFotos(json) {
+  const out = {};
+  Object.entries(json || {}).forEach(([v, farben]) => {
+    if (v.startsWith('_') || !farben || typeof farben !== 'object') return;
+    out[v] = {};
+    Object.entries(farben).forEach(([f, id]) => { if (id) out[v][f] = CL + CLV + clId(medienId(id)) + '.jpg'; });
+  });
+  PRODUCT_IMAGES = out;
+  previewKey = '';
+}
 
 /* ---- WEITERE FOTOS + VIDEO (aus medien.json) ----
    Pro Krone und Farbe bis zu 6 Fotos (Hauptfoto oben + bis zu 5 weitere) und 1 Video.
@@ -3171,8 +3127,10 @@ updateCartBadge();
 Promise.all([
   fetch('preise.json').then(r => r.json()).catch(() => null),
   fetch('galerie.json').then(r => r.json()).catch(() => null),
-  fetch('medien.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null)
-]).then(([preise, galerie, medien]) => {
+  fetch('medien.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null),
+  fetch('produktfotos.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null)
+]).then(([preise, galerie, medien, fotos]) => {
+  setProduktFotos(fotos);
   if (preise) PRICES = { ...PRICES, ...preise };
   if (medien && typeof medien === 'object') { MEDIEN = medien; previewKey = ''; }
   try { renderProduktMedien(); } catch (e) { console.warn('Medien:', e); }

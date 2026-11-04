@@ -1,0 +1,58 @@
+{
+  "Party": {
+    "_default": "party-krone",
+    "Rosa mit Punkten": "party-rosa",
+    "Grau mit Punkten": "party-grau",
+    "Mint mit Punkten": "party-mint",
+    "Lila mit Punkten": "party-lilia",
+    "Petrol mit Punkten": "party-petrol",
+    "Konfetti": "party-konfetti",
+    "Weiss/Blau/Grün": "party-weiss-blau-gruen"
+  },
+  "Einfarbig": {
+    "_default": "uni-mint",
+    "Berry": "uni-berry",
+    "Blau": "uni-blau",
+    "Grün": "uni-gruen",
+    "Orange": "uni-orange"
+  },
+  "Glitzer": {
+    "_default": "glitzer-krone",
+    "Blau": "glitzer-blau",
+    "Türkis": "glitzer-tuerkis",
+    "Rosa": "glitzer-pink",
+    "Pink": "glitzer-pink",
+    "Silber": "glitzer-silber",
+    "Weiss": "glitzer-weiss",
+    "Gold": "glitzer-gold"
+  },
+  "Edel & Wild": {
+    "_default": "royal-krone",
+    "Gold": "edel-gold",
+    "Schwarz": "edel-schwarz",
+    "Leo Braun": "wild-leo",
+    "Leo Weiss": "wild-leo-weiss",
+    "Leopard": "wild-leopard"
+  },
+  "Zahlenkrone Klassik": {
+    "_default": "zahl-klassik-krone",
+    "Rosa": "zahl-klassik-rosa",
+    "Mint": "zahl-klassik-gruen",
+    "Weiss/bunte Punkte": "zahl-klassik-weiss-bunt"
+  },
+  "Zahlenkrone Leo": {
+    "_default": "zahl-leo-krone",
+    "Gold / Zahlen schwarz": "zahl-leo-pets-gold",
+    "Schwarz / Zahlen gold": "zahl-leo-pets-schwarz"
+  },
+  "Zahlenkrone Glitzer": {
+    "_default": "zahl-glitzer-krone",
+    "Zahlen schwarz": "zahl-glitzer-schwarz",
+    "Zahlen weiss": "zahl-glitzer-weiss"
+  },
+  "Zahlenkrone Konfetti": {
+    "_default": "zahl-konfetti-krone",
+    "Zahlenpads Mint": "zahl-konfetti-mint",
+    "Zahlenpads Rosa": "zahl-konfetti-rosa"
+  }
+}
