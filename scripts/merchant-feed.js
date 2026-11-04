@@ -1,5 +1,5 @@
 /* Erzeugt merchant-feed.xml (Produktdatei für das Google Merchant Center)
-   aus preise.json. Aufruf: node scripts/merchant-feed.js
+   aus preise.json (+ weitere Fotos aus medien.json). Aufruf: node scripts/merchant-feed.js
    Läuft automatisch per GitHub-Action, sobald preise.json geändert wird. */
 const fs = require('fs');
 const path = require('path');
@@ -62,6 +62,17 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 const slug = s => s.toLowerCase().replace(/&/g, 'und').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 const preise = JSON.parse(fs.readFileSync(path.join(ROOT, 'preise.json'), 'utf8'));
+// Weitere Fotos (bis zu 5 zusätzlich) aus medien.json → additional_image_link
+let medien = {};
+try { medien = JSON.parse(fs.readFileSync(path.join(ROOT, 'medien.json'), 'utf8')); } catch (e) { medien = {}; }
+const zusatzBilder = krone => {
+  const d = ((medien[krone] || {})._default || {}).bilder;
+  return (Array.isArray(d) ? d : [])
+    .map(x => String(x || '').trim().replace(/\.(jpe?g|png|webp)$/i, ''))
+    .filter(Boolean).slice(0, 5)
+    .map(id => `\n    <g:additional_image_link>${esc(IMG + id + '.jpg')}</g:additional_image_link>`).join('');
+};
+
 const items = [];
 for (const [krone, meta] of Object.entries(KRONEN)) {
   const p = preise[krone];
@@ -76,7 +87,7 @@ for (const [krone, meta] of Object.entries(KRONEN)) {
     <g:title>${esc(meta.titel + ' – Größe ' + g.name)}</g:title>
     <g:description>${esc(meta.text + ' Größe ' + g.name + ': ' + g.info + '. Handgemacht in Deutschland, kostenloser Versand.')}</g:description>
     <g:link>${esc(link)}</g:link>
-    <g:image_link>${esc(IMG + meta.bild)}</g:image_link>
+    <g:image_link>${esc(IMG + meta.bild)}</g:image_link>${zusatzBilder(krone)}
     <g:availability>in_stock</g:availability>
     <g:price>${preis.toFixed(2)} EUR</g:price>
     <g:brand>Mila's Kronenwelt</g:brand>

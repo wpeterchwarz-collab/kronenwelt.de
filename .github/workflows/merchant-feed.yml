@@ -1,12 +1,13 @@
 name: Google-Produktdatei aktualisieren
 
-# Erzeugt merchant-feed.xml neu, sobald sich preise.json ändert
+# Erzeugt merchant-feed.xml neu, sobald sich preise.json oder medien.json ändert
 # (z.B. wenn Sara im Admin Preise anpasst).
 on:
   push:
     branches: [main]
     paths:
       - preise.json
+      - medien.json
       - scripts/merchant-feed.js
   workflow_dispatch:
 

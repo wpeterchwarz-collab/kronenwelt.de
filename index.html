@@ -549,6 +549,55 @@ button { cursor: pointer; font-family: inherit; }
   color: #fff; font-size: 13px; letter-spacing: 1px; opacity: 0.7;
   font-family: 'Jost', sans-serif; white-space: nowrap;
 }
+.lightbox-inner video {
+  max-width: 90vw; max-height: 80vh; border-radius: 12px; background: #000;
+  box-shadow: 0 8px 48px rgba(0,0,0,0.6);
+}
+.lightbox-nav {
+  position: fixed; top: 50%; transform: translateY(-50%); z-index: 2;
+  width: 46px; height: 46px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(255,255,255,0.14); color: #fff; font-size: 30px; line-height: 1;
+  display: none; align-items: center; justify-content: center; padding-bottom: 4px;
+  transition: background 0.2s;
+}
+.lightbox-nav:hover { background: rgba(255,255,255,0.28); }
+.lightbox-overlay.multi .lightbox-nav { display: flex; }
+.lb-prev { left: 14px; }
+.lb-next { right: 14px; }
+@media(max-width:600px){ .lightbox-nav { width: 38px; height: 38px; font-size: 24px; } .lb-prev { left: 6px; } .lb-next { right: 6px; } }
+
+/* Mehrere Produktfotos + Video: Vorschau-Thumbnails im Konfigurator */
+.prev-media { flex-shrink: 0; width: 190px; }
+.prev-box.has-photo { cursor: zoom-in; }
+.prev-zoom {
+  position: absolute; right: 7px; bottom: 7px; z-index: 2;
+  background: rgba(255,255,255,0.9); color: var(--brown); border-radius: 20px;
+  font-size: 10px; font-weight: 700; padding: 3px 8px; letter-spacing: 0.5px;
+  pointer-events: none; display: none; box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+.prev-box.has-photo .prev-zoom { display: block; }
+.prev-thumbs { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 5px; margin-top: 6px; }
+.prev-thumbs:empty { display: none; }
+.prev-thumb {
+  position: relative; aspect-ratio: 1; border-radius: 7px; overflow: hidden; cursor: pointer;
+  border: 1.5px solid transparent; padding: 0; background: var(--beige3);
+}
+.prev-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.prev-thumb.on { border-color: var(--teal); }
+.prev-thumb .play {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 13px; background: rgba(30,18,10,0.28); text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+/* Produktkarten: Knopf "weitere Fotos / Video" */
+.prod-media-btn {
+  position: absolute; top: 10px; right: 10px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,0.92); color: var(--brown); border: none; border-radius: 20px;
+  font-size: 11px; font-weight: 700; padding: 5px 10px; cursor: pointer; letter-spacing: 0.3px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.15); font-family: inherit;
+}
+.prod-media-btn:hover { background: #fff; }
+.prod-media-btn svg { width: 14px; height: 14px; }
 /* Kundenfotos: Ersetze Hintergrund durch <img src="fotos/kunde1.jpg"> */
 .kg-badge { position: absolute; top: 10px; left: 10px; font-size: 10px; padding: 3px 9px; border-radius: 20px; letter-spacing: 1px; z-index: 2; }
 .kg-badge-gold { background: #faf0d8; color: #8a6820; border: 0.5px solid var(--gold); }
@@ -801,6 +850,7 @@ button { cursor: pointer; font-family: inherit; }
   .order-body { flex-direction: column; align-items: center; }
   .preview-col { width: 100%; display: flex; gap: 16px; }
   .prev-box { width: 150px; height: 150px; flex-shrink: 0; }
+  .prev-media { width: 150px; }
   .prev-info { flex: 1; }
   .kg-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .kg-grid-bot { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -856,6 +906,8 @@ button { cursor: pointer; font-family: inherit; }
   .order-body { padding: 16px; flex-direction: column; }
   .preview-col { width: 100%; flex-direction: row; gap: 12px; }
   .prev-box { width: 120px; height: 120px; flex-shrink: 0; }
+  .prev-media { width: 120px; }
+  .prev-thumbs { grid-template-columns: repeat(3, minmax(0,1fr)); }
   .prev-info { flex: 1; margin-top: 0; }
   .steps-col { width: 100%; }
   .slbl { font-size: 13px; }
@@ -1332,7 +1384,9 @@ button { cursor: pointer; font-family: inherit; }
     <div class="order-body">
       <!-- VORSCHAU -->
       <div class="preview-col">
-        <div class="prev-box" id="pBox" style="background:#e6eeef;position:relative;overflow:hidden">
+        <div class="prev-media">
+        <div class="prev-box" id="pBox" style="background:#e6eeef;position:relative;overflow:hidden" onclick="openPreviewLightbox()">
+          <span class="prev-zoom" id="pZoom">⤢ Vergrößern</span>
           <img id="pImg" src="" alt="Kronenvorschau"
             style="width:100%;height:100%;object-fit:cover;object-position:50% 20%;
                    position:absolute;inset:0;opacity:0;transition:opacity 0.35s ease;border-radius:inherit">
@@ -1346,6 +1400,8 @@ button { cursor: pointer; font-family: inherit; }
             <circle cx="32" cy="12" r="3" id="pb3" fill="#d4d4d4" stroke="#4d6d71" stroke-width="0.8"/>
             <text id="pt" x="22" y="34" text-anchor="middle" font-size="5.5" fill="#4d6d71" font-family="Georgia" letter-spacing="0.5">MILA</text>
           </svg>
+        </div>
+        <div class="prev-thumbs" id="pThumbs"></div>
         </div>
         <div class="prev-info">
           <div class="prev-vname" id="pvn">Geburtstagskrone</div>
@@ -1712,9 +1768,12 @@ button { cursor: pointer; font-family: inherit; }
      ============================================================ -->
 <div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox(event)">
   <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+  <button class="lightbox-nav lb-prev" onclick="lightboxStep(-1)" aria-label="Vorheriges Foto">&#8249;</button>
   <div class="lightbox-inner">
     <img id="lightboxImg" src="" alt="">
+    <video id="lightboxVideo" controls playsinline muted loop preload="none" style="display:none"></video>
   </div>
+  <button class="lightbox-nav lb-next" onclick="lightboxStep(1)" aria-label="Nächstes Foto">&#8250;</button>
   <div class="lightbox-caption" id="lightboxCaption"></div>
 </div>
 
@@ -1766,7 +1825,7 @@ button { cursor: pointer; font-family: inherit; }
           </table>
         </details>
       </div>
-      <p class="ck-note">Ohne Cookies und nur zur Bereitstellung des Shops: Produktbilder kommen von Cloudinary, beim Bestellen nutzen wir EmailJS (Bestätigungs-Mails) und Google Sheets (Bestellverwaltung). Details in der <a href="datenschutz.html" style="color:inherit">Datenschutzerklärung</a>.</p>
+      <p class="ck-note">Ohne Cookies und nur zur Bereitstellung des Shops: Produktbilder und -videos kommen von Cloudinary, beim Bestellen nutzen wir EmailJS (Bestätigungs-Mails) und Google Sheets (Bestellverwaltung). Details in der <a href="datenschutz.html" style="color:inherit">Datenschutzerklärung</a>.</p>
     </div>
     <div class="ck-btns ck-btns-1">
       <button type="button" class="ck-btn ck-btn-primary" onclick="ckSave()">Verstanden</button>
@@ -2114,20 +2173,81 @@ function selectS(el) {
   updatePreview();
 }
 
-/* ---- LIGHTBOX ---- */
+/* ---- LIGHTBOX (Fotos + Video, mit Blättern) ---- */
+let lbItems = [], lbIdx = 0, lbCaption = '';
 function openLightbox(src, caption) {
-  document.getElementById('lightboxImg').src = src;
-  document.getElementById('lightboxCaption').textContent = caption || '';
-  document.getElementById('lightboxOverlay').classList.add('open');
+  openMediaLightbox([{ typ: 'bild', src }], 0, caption);
+}
+function openMediaLightbox(items, idx, caption) {
+  lbItems = (items || []).filter(it => it && !it.kaputt);
+  if (!lbItems.length) return;
+  lbIdx = Math.max(0, Math.min(idx || 0, lbItems.length - 1));
+  lbCaption = caption || '';
+  const ov = document.getElementById('lightboxOverlay');
+  ov.classList.toggle('multi', lbItems.length > 1);
+  showLightboxItem();
+  ov.classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+function showLightboxItem() {
+  const it  = lbItems[lbIdx];
+  const img = document.getElementById('lightboxImg');
+  const vid = document.getElementById('lightboxVideo');
+  if (it.typ === 'video') {
+    img.style.display = 'none';
+    vid.style.display = '';
+    vid.poster = it.poster || '';
+    vid.src = it.src;
+    vid.muted = true;
+    const p = vid.play(); if (p && p.catch) p.catch(() => {});
+  } else {
+    stopLightboxVideo();
+    vid.style.display = 'none';
+    img.style.display = '';
+    img.src = it.src;
+    img.alt = lbCaption;
+  }
+  const zaehler = lbItems.length > 1 ? (lbIdx + 1) + ' / ' + lbItems.length : '';
+  document.getElementById('lightboxCaption').textContent =
+    [lbCaption, it.typ === 'video' ? 'Video' : '', zaehler].filter(Boolean).join(' · ');
+}
+function lightboxStep(d) {
+  if (lbItems.length < 2) return;
+  lbIdx = (lbIdx + d + lbItems.length) % lbItems.length;
+  showLightboxItem();
+}
+function stopLightboxVideo() {
+  const vid = document.getElementById('lightboxVideo');
+  if (!vid || !vid.getAttribute('src')) return;
+  vid.pause(); vid.removeAttribute('src'); vid.load();
+}
+function hideLightbox() {
+  stopLightboxVideo();
+  document.getElementById('lightboxOverlay').classList.remove('open');
+  document.body.style.overflow = '';
 }
 function closeLightbox(e) {
   if (e && e.target !== document.getElementById('lightboxOverlay') &&
       !e.target.classList.contains('lightbox-close')) return;
-  document.getElementById('lightboxOverlay').classList.remove('open');
-  document.body.style.overflow = '';
+  hideLightbox();
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.getElementById('lightboxOverlay').classList.remove('open'); document.body.style.overflow = ''; }});
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightboxOverlay').classList.contains('open')) return;
+  if (e.key === 'Escape') hideLightbox();
+  else if (e.key === 'ArrowLeft') lightboxStep(-1);
+  else if (e.key === 'ArrowRight') lightboxStep(1);
+});
+(function () {
+  // Wischen auf dem Handy
+  const ov = document.getElementById('lightboxOverlay');
+  let x0 = null;
+  ov.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+  ov.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if (Math.abs(dx) > 50) lightboxStep(dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
 
 /* ---- 0. STRUKTURBAUM ---- */
 const VARIANTEN = {
@@ -2287,41 +2407,153 @@ const PRODUCT_IMAGES = {
   }
 };
 
+/* ---- WEITERE FOTOS + VIDEO (aus medien.json) ----
+   Pro Krone und Farbe bis zu 6 Fotos (Hauptfoto oben + bis zu 5 weitere) und 1 Video.
+   medien.json: { "Party": { "_default": { "bilder": ["id", …], "video": "id" },
+                             "Rosa mit Punkten": { "bilder": […] } } }
+   Die IDs sind die Cloudinary-Namen ohne Endung. Farbe ohne eigenen Eintrag → _default. */
+const MAX_FOTOS = 6;
+const CLVID = 'https://res.cloudinary.com/dw6amyijc/video/upload/';
+let MEDIEN = {};
+function medienId(x) {
+  return String(x == null ? '' : x).trim().replace(/\.(jpe?g|png|webp|mp4|mov|m4v|webm)$/i, '');
+}
+function clId(id) { return id.split('/').map(encodeURIComponent).join('/'); }
+const clBild   = id => CL + CLV + clId(id) + '.jpg';
+const clThumb  = id => CL + 'c_fill,w_160,h_160,q_auto/' + CLV + clId(id) + '.jpg';
+const clVideo  = id => CLVID + 'q_auto,w_1280,c_limit/' + CLV + clId(id) + '.mp4';
+const clPoster = (id, w) => CLVID + 'so_0,' + (w <= 200 ? 'c_fill,w_' + w + ',h_' + w : 'w_' + w + ',c_limit') + ',q_auto/' + CLV + clId(id) + '.jpg';
+
+function medienEintrag(v, c) {
+  const m   = (MEDIEN && MEDIEN[v]) || {};
+  const own = (c && m[c]) || {};
+  const def = m._default || {};
+  const bilder = Array.isArray(own.bilder) && own.bilder.length ? own.bilder
+               : Array.isArray(def.bilder) ? def.bilder : [];
+  return { bilder: bilder.map(medienId).filter(Boolean), video: medienId(own.video || def.video) };
+}
+function medienListe(v, c) {
+  const map   = PRODUCT_IMAGES[v] || {};
+  const haupt = (c && map[c]) || map['_default'] || '';
+  const e     = medienEintrag(v, c);
+  const items = [];
+  if (haupt) items.push({ typ: 'bild', src: haupt, thumb: haupt, haupt: true });
+  e.bilder.forEach(id => {
+    const src = clBild(id);
+    if (items.length < MAX_FOTOS && !items.some(it => it.src === src)) items.push({ typ: 'bild', src, thumb: clThumb(id) });
+  });
+  if (e.video) items.push({ typ: 'video', src: clVideo(e.video), poster: clPoster(e.video, 1280), thumb: clPoster(e.video, 160) });
+  return items;
+}
+
+let previewKey = '', previewItems = [], previewIdx = 0;
+
 function updatePreviewImage() {
   const imgEl  = document.getElementById('pImg');
-  const svgEl  = document.getElementById('pSvg');
   if (!imgEl) return;
+  const key = state.variant + '|' + state.color;
+  if (key !== previewKey) {
+    previewKey   = key;
+    previewItems = medienListe(state.variant, state.color);
+    previewIdx   = 0;
+    renderPreviewThumbs();
+    showPreviewPhoto(0);
+  }
+}
 
-  const variantMap = PRODUCT_IMAGES[state.variant] || {};
-  const path = variantMap[state.color] || variantMap['_default'] || '';
-
-  if (!path) {
-    // Kein Foto → SVG-Platzhalter zeigen
+function showPreviewPhoto(idx) {
+  const imgEl = document.getElementById('pImg');
+  const svgEl = document.getElementById('pSvg');
+  const box   = document.getElementById('pBox');
+  const map   = PRODUCT_IMAGES[state.variant] || {};
+  const it    = previewItems[idx];
+  const zeigeSvg = () => {
     imgEl.style.opacity = '0';
     if (svgEl) svgEl.style.opacity = '1';
-    return;
-  }
-
-  // Foto laden und mit Fade einblenden
-  const tmp = new Image();
-  tmp.onload = () => {
-    imgEl.src = path;
+    if (box) box.classList.remove('has-photo');
+  };
+  const zeige = src => {
+    imgEl.src = src;
     imgEl.style.opacity = '1';
     if (svgEl) svgEl.style.opacity = '0';
+    if (box) box.classList.add('has-photo');
   };
+  if (!it || it.typ !== 'bild') { zeigeSvg(); return; }
+  previewIdx = idx;
+  document.querySelectorAll('#pThumbs .prev-thumb').forEach(t => t.classList.toggle('on', +t.dataset.i === idx));
+  const key = previewKey;
+  // Foto vorladen und mit Fade einblenden
+  const tmp = new Image();
+  tmp.onload = () => { if (key === previewKey) zeige(it.src); };
   tmp.onerror = () => {
-    // Foto nicht gefunden → Fallback auf _default
-    const fallback = variantMap['_default'] || '';
-    if (fallback && fallback !== path) {
-      imgEl.src = fallback;
-      imgEl.style.opacity = '1';
-      if (svgEl) svgEl.style.opacity = '0';
-    } else {
-      imgEl.style.opacity = '0';
-      if (svgEl) svgEl.style.opacity = '1';
-    }
+    if (key !== previewKey) return;
+    // Hauptfoto nicht gefunden → Fallback auf _default, sonst SVG
+    const fallback = map['_default'] || '';
+    if (it.haupt && fallback && fallback !== it.src) { it.src = it.thumb = fallback; zeige(fallback); }
+    else if (it.haupt) zeigeSvg();
   };
-  tmp.src = path;
+  tmp.src = it.src;
+}
+
+function renderPreviewThumbs() {
+  const wrap = document.getElementById('pThumbs');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  if (previewItems.length < 2) return;
+  previewItems.forEach((it, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'prev-thumb' + (i === 0 ? ' on' : '');
+    b.dataset.i = i;
+    b.setAttribute('aria-label', it.typ === 'video' ? 'Video ansehen' : 'Foto ' + (i + 1));
+    const im = document.createElement('img');
+    im.alt = ''; im.loading = 'lazy';
+    im.onerror = () => { if (!it.haupt) { it.kaputt = true; b.remove(); } };
+    im.src = it.thumb;
+    b.appendChild(im);
+    if (it.typ === 'video') { const pl = document.createElement('span'); pl.className = 'play'; pl.textContent = '▶'; b.appendChild(pl); }
+    b.addEventListener('click', () => {
+      if (it.typ === 'video') openMediaLightbox(previewItems, i, previewCaption());
+      else showPreviewPhoto(i);
+    });
+    wrap.appendChild(b);
+  });
+}
+function previewCaption() { return state.variant + (state.color ? ' – ' + state.color : ''); }
+function openPreviewLightbox() {
+  const box = document.getElementById('pBox');
+  if (!box || !box.classList.contains('has-photo') || !previewItems.length) return;
+  const sichtbar = previewItems.filter(it => !it.kaputt);
+  const idx = Math.max(0, sichtbar.indexOf(previewItems[previewIdx]));
+  openMediaLightbox(sichtbar, idx, previewCaption());
+}
+
+/* Produktkarten: Knopf für weitere Fotos / Video */
+function renderProduktMedien() {
+  document.querySelectorAll('.prod-card[data-variant]').forEach(card => {
+    const v = card.dataset.variant;
+    const holder = card.querySelector('.prod-img');
+    const alt = card.querySelector('.prod-media-btn');
+    if (alt) alt.remove();
+    const items = medienListe(v, null);
+    const fotos = items.filter(it => it.typ === 'bild').length;
+    const video = items.some(it => it.typ === 'video');
+    if (!holder || items.length < 2) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'prod-media-btn';
+    b.setAttribute('aria-label', 'Weitere Fotos' + (video ? ' und Video' : '') + ' von ' + v + ' ansehen');
+    b.innerHTML = (fotos > 1
+        ? '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="3.5" width="13" height="10" rx="2"/><circle cx="8" cy="8.5" r="2.6"/><path d="M5.5 3.5l1-1.8h3l1 1.8"/></svg>' + fotos
+        : '') +
+      (video ? (fotos > 1 ? ' · ' : '') + '▶ Video' : '');
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      const name = (card.querySelector('.prod-name') || {}).textContent || v;
+      openMediaLightbox(items, 0, name.trim());
+    });
+    holder.appendChild(b);
+  });
 }
 
 /* ---- 1. KONFIGURATION ---- */
@@ -2940,9 +3172,12 @@ updateCartBadge();
 // Preise und Galerie dynamisch laden
 Promise.all([
   fetch('preise.json').then(r => r.json()).catch(() => null),
-  fetch('galerie.json').then(r => r.json()).catch(() => null)
-]).then(([preise, galerie]) => {
+  fetch('galerie.json').then(r => r.json()).catch(() => null),
+  fetch('medien.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null)
+]).then(([preise, galerie, medien]) => {
   if (preise) PRICES = { ...PRICES, ...preise };
+  if (medien && typeof medien === 'object') { MEDIEN = medien; previewKey = ''; }
+  try { renderProduktMedien(); } catch (e) { console.warn('Medien:', e); }
   repriceCart();
   updateAbPreise();
   updateProduktSchema();
