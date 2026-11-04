@@ -127,7 +127,7 @@ body { font-family: var(--f-sans); background: var(--paper); color: var(--ink); 
 .prod-card { width: calc(25% - 21px); border-radius: 4px; background: #fff; box-shadow: none; border: 1px solid var(--line); display: flex; flex-direction: column; }
 .prod-card:hover { transform: none; box-shadow: var(--shadow); }
 .prod-img { height: auto; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.prod-img img { height: 320px; }
+.prod-img img { height: auto; aspect-ratio: 1 / 1; object-position: 50% 50%; } /* quadratisch wie die Fotos → Krone immer ganz und mittig */
 .prod-overlay { position: static; flex: 1; background: #fff; padding: 18px 20px 22px; align-items: flex-start; border-top: 4px solid var(--rose-d); }
 .prod-card:nth-child(4n+2) .prod-overlay { border-top-color: var(--petrol); }
 .prod-card:nth-child(4n+3) .prod-overlay { border-top-color: #c9b8d6; }
@@ -290,7 +290,6 @@ body { font-family: var(--f-sans); background: var(--paper); color: var(--ink); 
   .sec-title { font-size: 42px; }
   .prod-grid { gap: 12px; }
   .prod-card { width: calc(50% - 6px); min-width: 0; }
-  .prod-img img { height: 190px; }
   .prod-overlay { padding: 12px 12px 16px; }
   .prod-name { font-size: 22px; }
   .prod-price { font-size: 13.5px; }
