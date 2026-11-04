@@ -233,6 +233,12 @@
     "_default": {
       "bilder": [],
       "video": ""
+    },
+    "Zahlenpads Mint": {
+      "bilder": [
+        "zahl-konfetti-zahlenpads-mint-mw200mox"
+      ],
+      "video": ""
     }
   }
 }
