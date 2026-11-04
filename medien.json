@@ -1,10 +1,56 @@
 {
-  "Party":                { "_default": { "bilder": [], "video": "" } },
-  "Einfarbig":            { "_default": { "bilder": [], "video": "" } },
-  "Glitzer":              { "_default": { "bilder": [], "video": "" } },
-  "Edel & Wild":          { "_default": { "bilder": [], "video": "" } },
-  "Zahlenkrone Klassik":  { "_default": { "bilder": [], "video": "" } },
-  "Zahlenkrone Leo":      { "_default": { "bilder": [], "video": "" } },
-  "Zahlenkrone Glitzer":  { "_default": { "bilder": [], "video": "" } },
-  "Zahlenkrone Konfetti": { "_default": { "bilder": [], "video": "" } }
+  "Party": {
+    "_default": {
+      "bilder": [],
+      "video": ""
+    },
+    "Rosa mit Punkten": {
+      "bilder": [
+        "party-rosa-mit-punkten-mw1vedow"
+      ],
+      "video": ""
+    }
+  },
+  "Einfarbig": {
+    "_default": {
+      "bilder": [],
+      "video": ""
+    }
+  },
+  "Glitzer": {
+    "_default": {
+      "bilder": [],
+      "video": ""
+    }
+  },
+  "Edel & Wild": {
+    "_default": {
+      "bilder": [],
+      "video": ""
+    }
+  },
+  "Zahlenkrone Klassik": {
+    "_default": {
+      "bilder": [],
+      "video": ""
+    }
+  },
+  "Zahlenkrone Leo": {
+    "_default": {
+      "bilder": [],
+      "video": ""
+    }
+  },
+  "Zahlenkrone Glitzer": {
+    "_default": {
+      "bilder": [],
+      "video": ""
+    }
+  },
+  "Zahlenkrone Konfetti": {
+    "_default": {
+      "bilder": [],
+      "video": ""
+    }
+  }
 }
