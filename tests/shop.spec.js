@@ -84,11 +84,11 @@ test.describe('Namenskronen', () => {
     for (const leo of ['Leo Braun', 'Leo Weiss', 'Leopard']) expect(await bg(leo)).toContain('radial-gradient');
   });
 
-  test('Einfarbig: genau die angebotenen Farben (kein Mint)', async ({ page }) => {
+  test('Einfarbig: genau die angebotenen Farben (kein Mint, kein Petrol)', async ({ page }) => {
     await openShop(page);
     await page.click('.chip[data-v="Einfarbig"]');
     const farben = await page.$$eval('#colorChips [data-c]', e => e.map(x => x.dataset.c));
-    expect(farben).toEqual(['Berry', 'Blau', 'Petrol', 'Grün', 'Orange']);
+    expect(farben).toEqual(['Berry', 'Blau', 'Grün', 'Orange']);
   });
 
   test('Leo-Muster ohne Namensaufdruck', async ({ page }) => {
