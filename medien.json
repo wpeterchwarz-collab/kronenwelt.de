@@ -1,7 +1,9 @@
 {
   "Party": {
     "_default": {
-      "bilder": [],
+      "bilder": [
+        "party-mw20m4ip"
+      ],
       "video": ""
     },
     "Rosa mit Punkten": {
