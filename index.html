@@ -2421,7 +2421,7 @@ function medienId(x) {
 function clId(id) { return id.split('/').map(encodeURIComponent).join('/'); }
 const clBild   = id => CL + CLV + clId(id) + '.jpg';
 const clThumb  = id => CL + 'c_fill,w_160,h_160,q_auto/' + CLV + clId(id) + '.jpg';
-const clVideo  = id => CLVID + 'q_auto,w_1280,c_limit/' + CLV + clId(id) + '.mp4';
+const clVideo  = id => CLVID + 'c_limit,q_auto,w_1280/' + CLV + clId(id) + '.mp4';
 const clPoster = (id, w) => CLVID + 'so_0,' + (w <= 200 ? 'c_fill,w_' + w + ',h_' + w : 'w_' + w + ',c_limit') + ',q_auto/' + CLV + clId(id) + '.jpg';
 
 function medienEintrag(v, c) {
