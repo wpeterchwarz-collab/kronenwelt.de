@@ -187,7 +187,9 @@
   },
   "Zahlenkrone Leo": {
     "_default": {
-      "bilder": [],
+      "bilder": [
+        "zahl-leo-mw1y4s5j"
+      ],
       "video": ""
     }
   },
