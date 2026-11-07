@@ -1,0 +1,825 @@
+{
+  "_info": "Produktkatalog: die eine Quelle für Website (Konfigurator, Preise, Fotos), Admin und Google-Produktdatei. Ebenen: Produktgruppe > Produkt > Artikel. Ein Artikel ist ein Produkt in einer Kombination seiner Merkmale (z. B. Farbe + Größe). Artikelnummer = Gruppenkürzel-Produktkürzel-Kürzel je Merkmal, z. B. KR-PARTY-ROSA-GR. Kürzel nie ändern, sie sind die feste Kennung für Lager und Bestellungen. Preis eines Artikels = Summe der Preise seiner Merkmalswerte.",
+  "version": 1,
+  "merkmale": {
+    "farbe": {
+      "name": "Farbe"
+    },
+    "groesse": {
+      "name": "Größe",
+      "werte": [
+        {
+          "wert": "Gross",
+          "name": "Groß",
+          "kuerzel": "GR",
+          "info": "Umfang ca. 37 cm, z. B. für Golden Retriever, Border Collie, Doodle"
+        },
+        {
+          "wert": "Klein",
+          "name": "Klein",
+          "kuerzel": "KL",
+          "info": "Umfang ca. 26 cm, z. B. für Malteser, Französische Bulldogge"
+        },
+        {
+          "wert": "Mini",
+          "name": "Mini",
+          "kuerzel": "MI",
+          "info": "Umfang ca. 22 cm, z. B. für Zwergdackel, Zwergpudel"
+        },
+        {
+          "wert": "Extra Mini",
+          "name": "Extra Mini",
+          "kuerzel": "XM",
+          "info": "Umfang ca. 18 cm, z. B. für Chihuahua"
+        }
+      ]
+    }
+  },
+  "optionen": {
+    "zahlenpets": {
+      "name": "Anzahl Zahlenpets",
+      "werte": [
+        {
+          "wert": 3,
+          "aufpreis": 0
+        },
+        {
+          "wert": 6,
+          "aufpreis": 3
+        },
+        {
+          "wert": 9,
+          "aufpreis": 6
+        }
+      ]
+    }
+  },
+  "gruppen": [
+    {
+      "id": "kronen",
+      "name": "Hundekronen",
+      "kuerzel": "KR",
+      "merkmale": [
+        "farbe",
+        "groesse"
+      ]
+    }
+  ],
+  "produkte": [
+    {
+      "id": "party",
+      "gruppe": "kronen",
+      "name": "Party",
+      "kuerzel": "PARTY",
+      "hauptfoto": "party-krone",
+      "personalisierung": {
+        "maxZeichen": 11
+      },
+      "optionen": [],
+      "texte": {
+        "kurz": "Bunte Geburtstagskrone für Hunde mit Bommeln, personalisiert mit dem Namen deines Hundes.",
+        "googleTitel": "Party Geburtstagskrone für Hunde mit Namen",
+        "googleText": "Bunte Geburtstagskrone für Hunde mit weichen Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen)."
+      },
+      "merkmale": {
+        "farbe": [
+          {
+            "wert": "Rosa mit Punkten",
+            "kuerzel": "ROSA",
+            "foto": "party-rosa",
+            "anzeige": {
+              "bg": "#f7eaed",
+              "sc": "#a05070",
+              "dot": "#c07090",
+              "css": "chip-pink"
+            }
+          },
+          {
+            "wert": "Grau mit Punkten",
+            "kuerzel": "GRAU",
+            "foto": "party-grau",
+            "anzeige": {
+              "bg": "#eeece8",
+              "sc": "#5a5650",
+              "dot": "#807870",
+              "css": ""
+            }
+          },
+          {
+            "wert": "Mint mit Punkten",
+            "kuerzel": "MINT",
+            "foto": "party-mint",
+            "anzeige": {
+              "bg": "#e4f2f0",
+              "sc": "#3d7878",
+              "dot": "#4a9090",
+              "css": "chip-mint"
+            }
+          },
+          {
+            "wert": "Lila mit Punkten",
+            "kuerzel": "LILA",
+            "foto": "party-lilia",
+            "anzeige": {
+              "bg": "#ede8f5",
+              "sc": "#7868a0",
+              "dot": "#9080b8",
+              "css": "chip-lilac"
+            }
+          },
+          {
+            "wert": "Petrol mit Punkten",
+            "kuerzel": "PETROL",
+            "foto": "party-petrol",
+            "anzeige": {
+              "bg": "#ddeeed",
+              "sc": "#2d6868",
+              "dot": "#3d8080",
+              "css": ""
+            }
+          },
+          {
+            "wert": "Konfetti",
+            "kuerzel": "KONFETTI",
+            "foto": "party-konfetti",
+            "anzeige": {
+              "bg": "#fff8f0",
+              "sc": "#c07040",
+              "dot": "#e09060",
+              "css": ""
+            }
+          },
+          {
+            "wert": "Weiss/Blau/Grün",
+            "kuerzel": "WBG",
+            "foto": "party-weiss-blau-gruen",
+            "anzeige": {
+              "bg": "#eef6f4",
+              "sc": "#3a7060",
+              "dot": "#4a8878",
+              "css": ""
+            }
+          }
+        ],
+        "groesse": [
+          {
+            "wert": "Gross",
+            "preis": 15
+          },
+          {
+            "wert": "Klein",
+            "preis": 14
+          },
+          {
+            "wert": "Mini",
+            "preis": 13
+          },
+          {
+            "wert": "Extra Mini",
+            "preis": 12
+          }
+        ]
+      },
+      "konfigurator": {
+        "bommeln": [
+          "#f8d0a0",
+          "#f0b0c8",
+          "#f8d0a0"
+        ]
+      }
+    },
+    {
+      "id": "einfarbig",
+      "gruppe": "kronen",
+      "name": "Einfarbig",
+      "kuerzel": "UNI",
+      "hauptfoto": "uni-mint",
+      "personalisierung": {
+        "maxZeichen": 11
+      },
+      "optionen": [],
+      "texte": {
+        "kurz": "Einfarbige Hundekrone aus weichem Filz mit Bommeln, personalisiert mit dem Namen deines Hundes.",
+        "googleTitel": "Einfarbige Hundekrone mit Namen",
+        "googleText": "Einfarbige Hundekrone aus weichem Filz mit handgefertigten Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen)."
+      },
+      "merkmale": {
+        "farbe": [
+          {
+            "wert": "Berry",
+            "kuerzel": "BERRY",
+            "foto": "uni-berry",
+            "anzeige": {
+              "bg": "#f0e4ec",
+              "sc": "#804060",
+              "dot": "#a06080",
+              "css": ""
+            }
+          },
+          {
+            "wert": "Blau",
+            "kuerzel": "BLAU",
+            "foto": "uni-blau",
+            "anzeige": {
+              "bg": "#e8f0f8",
+              "sc": "#507090",
+              "dot": "#6090b0",
+              "css": "chip-blau"
+            }
+          },
+          {
+            "wert": "Grün",
+            "kuerzel": "GRUEN",
+            "foto": "uni-gruen",
+            "anzeige": {
+              "bg": "#e8f2e4",
+              "sc": "#3a6830",
+              "dot": "#508040",
+              "css": ""
+            }
+          },
+          {
+            "wert": "Orange",
+            "kuerzel": "ORANGE",
+            "foto": "uni-orange",
+            "anzeige": {
+              "bg": "#fdf0e0",
+              "sc": "#b06020",
+              "dot": "#d08030",
+              "css": ""
+            }
+          }
+        ],
+        "groesse": [
+          {
+            "wert": "Gross",
+            "preis": 15
+          },
+          {
+            "wert": "Klein",
+            "preis": 14
+          },
+          {
+            "wert": "Mini",
+            "preis": 13
+          },
+          {
+            "wert": "Extra Mini",
+            "preis": 12
+          }
+        ]
+      },
+      "konfigurator": {
+        "bommeln": [
+          "#d4d4d4",
+          "#b8e0d8",
+          "#d4d4d4"
+        ]
+      }
+    },
+    {
+      "id": "glitzer",
+      "gruppe": "kronen",
+      "name": "Glitzer",
+      "kuerzel": "GLITZER",
+      "hauptfoto": "glitzer-krone",
+      "personalisierung": {
+        "maxZeichen": 11
+      },
+      "optionen": [],
+      "texte": {
+        "kurz": "Glitzernde Geburtstagskrone für Hunde, personalisiert mit dem Namen deines Hundes.",
+        "googleTitel": "Glitzer Geburtstagskrone für Hunde mit Namen",
+        "googleText": "Glitzernde Geburtstagskrone für Hunde mit Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen)."
+      },
+      "merkmale": {
+        "farbe": [
+          {
+            "wert": "Blau",
+            "kuerzel": "BLAU",
+            "foto": "glitzer-blau",
+            "anzeige": {
+              "bg": "#e8f0f8",
+              "sc": "#507090",
+              "dot": "#6090b0",
+              "css": "chip-blau"
+            }
+          },
+          {
+            "wert": "Türkis",
+            "kuerzel": "TUERKIS",
+            "foto": "glitzer-tuerkis",
+            "anzeige": {
+              "bg": "#ddf4f0",
+              "sc": "#2d7878",
+              "dot": "#3d9090",
+              "css": ""
+            }
+          },
+          {
+            "wert": "Rosa",
+            "kuerzel": "ROSA",
+            "foto": "glitzer-pink",
+            "anzeige": {
+              "bg": "#f7eaed",
+              "sc": "#a05070",
+              "dot": "#c07090",
+              "css": "chip-pink"
+            }
+          },
+          {
+            "wert": "Pink",
+            "kuerzel": "PINK",
+            "foto": "glitzer-pink",
+            "anzeige": {
+              "bg": "#fce8f0",
+              "sc": "#b03068",
+              "dot": "#d05080",
+              "css": ""
+            }
+          },
+          {
+            "wert": "Silber",
+            "kuerzel": "SILBER",
+            "foto": "glitzer-silber",
+            "anzeige": {
+              "bg": "#f0f0f0",
+              "sc": "#707080",
+              "dot": "#9090a0",
+              "css": "chip-weiss"
+            }
+          },
+          {
+            "wert": "Weiss",
+            "kuerzel": "WEISS",
+            "foto": "glitzer-weiss",
+            "anzeige": {
+              "bg": "#f8f8f5",
+              "sc": "#909098",
+              "dot": "#b0b0b8",
+              "css": "chip-weiss"
+            }
+          },
+          {
+            "wert": "Gold",
+            "kuerzel": "GOLD",
+            "foto": "glitzer-gold",
+            "anzeige": {
+              "bg": "#faf0d8",
+              "sc": "#9a7010",
+              "dot": "#c09820",
+              "css": "chip-royal"
+            }
+          }
+        ],
+        "groesse": [
+          {
+            "wert": "Gross",
+            "preis": 17
+          },
+          {
+            "wert": "Klein",
+            "preis": 16
+          },
+          {
+            "wert": "Mini",
+            "preis": 15
+          },
+          {
+            "wert": "Extra Mini",
+            "preis": 14
+          }
+        ]
+      },
+      "konfigurator": {
+        "bommeln": [
+          "#e8d8a0",
+          "#e0c8f0",
+          "#e8d8a0"
+        ]
+      }
+    },
+    {
+      "id": "edel-wild",
+      "gruppe": "kronen",
+      "name": "Edel & Wild",
+      "kuerzel": "EDEL",
+      "hauptfoto": "royal-krone",
+      "personalisierung": {
+        "maxZeichen": 11
+      },
+      "optionen": [],
+      "texte": {
+        "kurz": "Edle Hundekrone in Gold, Schwarz oder im Leo-Look – in Gold und Schwarz mit Namen personalisierbar.",
+        "googleTitel": "Hundekrone Edel & Wild",
+        "googleText": "Edle Hundekrone in Gold, Schwarz oder im Leo-Look mit goldenen Bommeln. Gold und Schwarz mit Namen personalisierbar, Leo-Muster ohne Aufdruck."
+      },
+      "merkmale": {
+        "farbe": [
+          {
+            "wert": "Gold",
+            "kuerzel": "GOLD",
+            "foto": "edel-gold",
+            "anzeige": {
+              "bg": "#faf0d8",
+              "sc": "#9a7010",
+              "dot": "#c09820",
+              "css": "chip-royal"
+            }
+          },
+          {
+            "wert": "Schwarz",
+            "kuerzel": "SCHWARZ",
+            "foto": "edel-schwarz",
+            "anzeige": {
+              "bg": "#22202c",
+              "sc": "#d4b840",
+              "dot": "#b89828",
+              "css": "chip-royal"
+            }
+          },
+          {
+            "wert": "Leo Braun",
+            "kuerzel": "LEOBRAUN",
+            "foto": "wild-leo",
+            "personalisierbar": false,
+            "anzeige": {
+              "bg": "#f5e8d0",
+              "sc": "#7a4a10",
+              "dot": "#a06820",
+              "css": ""
+            }
+          },
+          {
+            "wert": "Leo Weiss",
+            "kuerzel": "LEOWEISS",
+            "foto": "wild-leo-weiss",
+            "personalisierbar": false,
+            "anzeige": {
+              "bg": "#f8f4ee",
+              "sc": "#706050",
+              "dot": "#907860",
+              "css": ""
+            }
+          },
+          {
+            "wert": "Leopard",
+            "kuerzel": "LEOPARD",
+            "foto": "wild-leopard",
+            "personalisierbar": false,
+            "anzeige": {
+              "bg": "#ede0cc",
+              "sc": "#604020",
+              "dot": "#805030",
+              "css": ""
+            }
+          }
+        ],
+        "groesse": [
+          {
+            "wert": "Gross",
+            "preis": 17
+          },
+          {
+            "wert": "Klein",
+            "preis": 16
+          },
+          {
+            "wert": "Mini",
+            "preis": 15
+          },
+          {
+            "wert": "Extra Mini",
+            "preis": 14
+          }
+        ]
+      },
+      "konfigurator": {
+        "bommeln": [
+          "#d4b840",
+          "#d4b840",
+          "#d4b840"
+        ]
+      }
+    },
+    {
+      "id": "zahlenkrone-klassik",
+      "gruppe": "kronen",
+      "name": "Zahlenkrone Klassik",
+      "kuerzel": "ZKLASSIK",
+      "hauptfoto": "zahl-klassik-krone",
+      "personalisierung": null,
+      "optionen": [
+        "zahlenpets"
+      ],
+      "texte": {
+        "kurz": "Geburtstagskrone für Hunde mit austauschbaren Zahlenpads – jedes Jahr wieder verwendbar.",
+        "googleTitel": "Zahlenkrone Klassik für Hunde – Geburtstagskrone mit Wechselzahlen",
+        "googleText": "Geburtstagskrone für Hunde mit austauschbaren Zahlenpads – das Alter jedes Jahr neu anpassen und die Krone wieder verwenden. Inklusive 3 Zahlenpads."
+      },
+      "merkmale": {
+        "farbe": [
+          {
+            "wert": "Rosa",
+            "kuerzel": "ROSA",
+            "foto": "zahl-klassik-rosa",
+            "anzeige": {
+              "bg": "#f7eaed",
+              "sc": "#a05070",
+              "dot": "#e8b8c8",
+              "css": "chip-pink",
+              "pet": [
+                "#d48aa4",
+                "#ffffff"
+              ]
+            }
+          },
+          {
+            "wert": "Mint",
+            "kuerzel": "MINT",
+            "foto": "zahl-klassik-gruen",
+            "anzeige": {
+              "bg": "#e4f2f0",
+              "sc": "#3d7878",
+              "dot": "#a8d4cc",
+              "css": "chip-mint",
+              "pet": [
+                "#9a9590",
+                "#ffffff"
+              ]
+            }
+          },
+          {
+            "wert": "Weiss/bunte Punkte",
+            "kuerzel": "WEISSBUNT",
+            "foto": "zahl-klassik-weiss-bunt",
+            "anzeige": {
+              "bg": "#f8f8f5",
+              "sc": "#706870",
+              "dot": "#d8c8e0",
+              "css": "chip-weiss",
+              "pet": [
+                "#3d8080",
+                "#ffffff"
+              ]
+            }
+          }
+        ],
+        "groesse": [
+          {
+            "wert": "Gross",
+            "preis": 21
+          },
+          {
+            "wert": "Klein",
+            "preis": 20
+          },
+          {
+            "wert": "Mini",
+            "preis": 19
+          }
+        ]
+      },
+      "konfigurator": {
+        "bommeln": [
+          "#f0c8d4",
+          "#d8d0e8",
+          "#f0c8d4"
+        ],
+        "typ": "zahl",
+        "naht": true,
+        "farbLabel": "Hauptfarbe wählen"
+      }
+    },
+    {
+      "id": "zahlenkrone-leo",
+      "gruppe": "kronen",
+      "name": "Zahlenkrone Leo",
+      "kuerzel": "ZLEO",
+      "hauptfoto": "zahl-leo-krone",
+      "personalisierung": null,
+      "optionen": [
+        "zahlenpets"
+      ],
+      "texte": {
+        "kurz": "Zahlenkrone im Leo-Look mit austauschbaren Zahlenpads für den Hundegeburtstag.",
+        "googleTitel": "Zahlenkrone Leo für Hunde – Geburtstagskrone mit Wechselzahlen",
+        "googleText": "Geburtstagskrone für Hunde im Leo-Look mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads."
+      },
+      "merkmale": {
+        "farbe": [
+          {
+            "wert": "Gold / Zahlen schwarz",
+            "kuerzel": "GOLD",
+            "foto": "zahl-leo-pets-gold",
+            "anzeige": {
+              "bg": "#f5e8d0",
+              "sc": "#7a4a10",
+              "dot": "#c09820",
+              "css": "chip-royal",
+              "pet": [
+                "#d4b840",
+                "#22202c"
+              ]
+            }
+          },
+          {
+            "wert": "Schwarz / Zahlen gold",
+            "kuerzel": "SCHWARZ",
+            "foto": "zahl-leo-pets-schwarz",
+            "anzeige": {
+              "bg": "#ede0cc",
+              "sc": "#604020",
+              "dot": "#22202c",
+              "css": "",
+              "pet": [
+                "#22202c",
+                "#d4b840"
+              ]
+            }
+          }
+        ],
+        "groesse": [
+          {
+            "wert": "Gross",
+            "preis": 21
+          },
+          {
+            "wert": "Klein",
+            "preis": 20
+          },
+          {
+            "wert": "Mini",
+            "preis": 19
+          },
+          {
+            "wert": "Extra Mini",
+            "preis": 18
+          }
+        ]
+      },
+      "konfigurator": {
+        "bommeln": [
+          "#d4b840",
+          "#d4b840",
+          "#d4b840"
+        ],
+        "typ": "zahl",
+        "naht": false,
+        "farbLabel": "Farbe der Zahlenpets wählen"
+      }
+    },
+    {
+      "id": "zahlenkrone-glitzer",
+      "gruppe": "kronen",
+      "name": "Zahlenkrone Glitzer",
+      "kuerzel": "ZGLITZER",
+      "hauptfoto": "zahl-glitzer-krone",
+      "personalisierung": null,
+      "optionen": [
+        "zahlenpets"
+      ],
+      "texte": {
+        "kurz": "Zahlenkrone Glitzer rosa mit austauschbaren Zahlenpads für den Hundegeburtstag.",
+        "googleTitel": "Zahlenkrone Glitzer rosa für Hunde – Geburtstagskrone mit Wechselzahlen",
+        "googleText": "Glitzernde Geburtstagskrone in Rosa mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads."
+      },
+      "merkmale": {
+        "farbe": [
+          {
+            "wert": "Zahlen schwarz",
+            "kuerzel": "ZSCHWARZ",
+            "foto": "zahl-glitzer-schwarz",
+            "anzeige": {
+              "bg": "#fce8f0",
+              "sc": "#b03068",
+              "dot": "#22202c",
+              "css": "chip-pink",
+              "pet": [
+                "#e396b4",
+                "#22202c"
+              ]
+            }
+          },
+          {
+            "wert": "Zahlen weiss",
+            "kuerzel": "ZWEISS",
+            "foto": "zahl-glitzer-weiss",
+            "anzeige": {
+              "bg": "#fce8f0",
+              "sc": "#b03068",
+              "dot": "#ffffff",
+              "css": "chip-pink",
+              "pet": [
+                "#e396b4",
+                "#ffffff"
+              ]
+            }
+          }
+        ],
+        "groesse": [
+          {
+            "wert": "Gross",
+            "preis": 21
+          },
+          {
+            "wert": "Klein",
+            "preis": 20
+          },
+          {
+            "wert": "Mini",
+            "preis": 19
+          },
+          {
+            "wert": "Extra Mini",
+            "preis": 18
+          }
+        ]
+      },
+      "konfigurator": {
+        "bommeln": [
+          "#f0d8c8",
+          "#f0d8c8",
+          "#f0d8c8"
+        ],
+        "typ": "zahl",
+        "naht": false,
+        "farbLabel": "Schriftfarbe wählen"
+      }
+    },
+    {
+      "id": "zahlenkrone-konfetti",
+      "gruppe": "kronen",
+      "name": "Zahlenkrone Konfetti",
+      "kuerzel": "ZKONFETTI",
+      "hauptfoto": "zahl-konfetti-krone",
+      "personalisierung": null,
+      "optionen": [
+        "zahlenpets"
+      ],
+      "texte": {
+        "kurz": "Zahlenkrone im Konfetti-Look mit austauschbaren Zahlenpads für den Hundegeburtstag.",
+        "googleTitel": "Zahlenkrone Konfetti für Hunde – Geburtstagskrone mit Wechselzahlen",
+        "googleText": "Geburtstagskrone im Konfetti-Look mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Inklusive 3 Zahlenpads."
+      },
+      "merkmale": {
+        "farbe": [
+          {
+            "wert": "Zahlenpads Mint",
+            "kuerzel": "MINT",
+            "foto": "zahl-konfetti-mint",
+            "anzeige": {
+              "bg": "#fff8f0",
+              "sc": "#c07040",
+              "dot": "#8cc4b8",
+              "css": "chip-mint",
+              "pet": [
+                "#8cc4b8",
+                "#22202c"
+              ]
+            }
+          },
+          {
+            "wert": "Zahlenpads Rosa",
+            "kuerzel": "ROSA",
+            "foto": "zahl-konfetti-rosa",
+            "anzeige": {
+              "bg": "#fff8f0",
+              "sc": "#c07040",
+              "dot": "#e8a0b8",
+              "css": "chip-pink",
+              "pet": [
+                "#e8a0b8",
+                "#22202c"
+              ]
+            }
+          }
+        ],
+        "groesse": [
+          {
+            "wert": "Gross",
+            "preis": 21
+          },
+          {
+            "wert": "Klein",
+            "preis": 20
+          },
+          {
+            "wert": "Mini",
+            "preis": 19
+          }
+        ]
+      },
+      "konfigurator": {
+        "bommeln": [
+          "#f8d0a0",
+          "#8cc4b8",
+          "#e8a0b8"
+        ],
+        "typ": "zahl",
+        "naht": false,
+        "farbLabel": "Farbe der Zahlenpads wählen"
+      }
+    }
+  ]
+}

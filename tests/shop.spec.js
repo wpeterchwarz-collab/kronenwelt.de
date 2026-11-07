@@ -296,7 +296,7 @@ test.describe('Rechtliches', () => {
 });
 
 test.describe('Preisliste', () => {
-  test('preise.json ist vollständig', async () => {
+  test('Katalog: jede Krone hat vollständige Preise', async () => {
     for (const v of [...NAMENSKRONEN, ...ZAHLENKRONEN]) {
       expect(preise[v], v).toBeTruthy();
       for (const p of Object.values(preise[v])) expect(p).toBeGreaterThan(0);

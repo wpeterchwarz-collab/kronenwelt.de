@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="Border Collie Mila mit handgemachter Geburtstagskrone">
 <meta name="twitter:card" content="summary_large_image">
 <!-- Strukturierte Daten für Google: Shop/Marke. Die Produktdaten (mit Preisen)
-     werden unten per JS aus preise.json erzeugt, damit sie immer zu den Preisen passen. -->
+     werden unten per JS aus katalog.json erzeugt, damit sie immer zu den Preisen passen. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -2328,7 +2328,7 @@ const VARIANTEN = {
 // pet: [Farbe des Zahlenpads, Farbe der Zahl] – wird in Auswahl, Vorschau und Farb-Chips verwendet
 
 /* Aufpreis je Anzahl Zahlenpets (Grundpreis in PRICES gilt für 3 Pets).
-   Wird über preise.json → "Zahlenpets Aufpreis" im Admin gepflegt; das hier ist nur der Fallback. */
+   Wird in katalog.json → optionen.zahlenpets (Admin: Preise) gepflegt; das hier ist nur der Fallback. */
 const PET_AUFPREIS = { 3: 0, 6: 3, 9: 6 };
 function petAufpreis(n) {
   const a = PRICES['Zahlenpets Aufpreis'];
@@ -2346,9 +2346,8 @@ const CL = 'https://res.cloudinary.com/dw6amyijc/image/upload/';
 // Cache-Buster: stündliche Versionsnummer als Fallback
 const CLV = 'v' + Math.floor(Date.now() / 3600000) + '/';
 
-/* Hauptfoto je Krone und Farbe kommt aus produktfotos.json (Cloudinary-Namen ohne .jpg).
-   Dieselbe Datei nutzt die Admin-Seite → jede Farbe im Konfigurator ist dort pflegbar.
-   Ein Test (tests/produktfotos.spec.js) prüft, dass Konfigurator und Datei zusammenpassen. */
+/* Hauptfoto je Krone und Farbe kommt aus katalog.json (Cloudinary-Namen ohne .jpg).
+   Dieselbe Datei nutzt die Admin-Seite → jede Farbe im Konfigurator ist dort pflegbar. */
 let PRODUCT_IMAGES = {};
 function setProduktFotos(json) {
   const out = {};
@@ -2359,6 +2358,45 @@ function setProduktFotos(json) {
   });
   PRODUCT_IMAGES = out;
   previewKey = '';
+}
+
+/* ---- PRODUKTKATALOG (katalog.json) ----
+   Eine Quelle für Konfigurator, Preise, Hauptfotos und Google-Texte (siehe _info in der Datei).
+   Die fest eingebauten Werte oben (VARIANTEN, PRICES, BOMMELS, SEO_TEXTE) sind nur der Notfall-Stand,
+   falls katalog.json nicht geladen werden kann. Gepflegt wird ausschliesslich katalog.json. */
+let KATALOG = null;
+function applyKatalog(k) {
+  if (!k || !Array.isArray(k.produkte) || !k.produkte.length) return false;
+  const neuV = {}, neuP = {}, fotos = {};
+  k.produkte.forEach(p => {
+    const m = p.merkmale || {}, cfg = p.konfigurator || {};
+    if (!p.name || !Array.isArray(m.farbe) || !Array.isArray(m.groesse)) return;
+    neuV[p.name] = {
+      farben: m.farbe.map(f => Object.assign({ label: f.wert }, f.anzeige || {}, f.personalisierbar === false ? { noName: true } : {})),
+      groessen: m.groesse.map(g => g.wert)
+    };
+    if (cfg.typ) neuV[p.name].typ = cfg.typ;
+    if (cfg.naht != null) neuV[p.name].naht = cfg.naht;
+    if (cfg.farbLabel) neuV[p.name].farbLabel = cfg.farbLabel;
+    if (Array.isArray(cfg.bommeln)) BOMMELS[p.name] = cfg.bommeln;
+    if (p.texte && p.texte.kurz) SEO_TEXTE[p.name] = p.texte.kurz;
+    neuP[p.name] = {};
+    m.groesse.forEach(g => { if (typeof g.preis === 'number') neuP[p.name][g.wert] = g.preis; });
+    fotos[p.name] = { _default: p.hauptfoto };
+    m.farbe.forEach(f => { if (f.foto) fotos[p.name][f.wert] = f.foto; });
+  });
+  if (!Object.keys(neuV).length) return false;
+  Object.keys(VARIANTEN).forEach(v => delete VARIANTEN[v]);    // Reihenfolge wie im Katalog
+  Object.assign(VARIANTEN, neuV);
+  const pets = ((k.optionen || {}).zahlenpets || {}).werte;
+  if (Array.isArray(pets)) {
+    neuP['Zahlenpets Aufpreis'] = {};
+    pets.forEach(o => { if (o.wert !== 3) neuP['Zahlenpets Aufpreis'][o.wert + ' Pets'] = o.aufpreis; });
+  }
+  PRICES = neuP;
+  setProduktFotos(fotos);
+  KATALOG = k;
+  return true;
 }
 
 /* ---- WEITERE FOTOS + VIDEO (aus medien.json) ----
@@ -3068,7 +3106,7 @@ function updateAbPreise() {
 }
 
 /* ---- 8c. PRODUKTDATEN FÜR GOOGLE (JSON-LD) ----
-   Wird aus PRICES (preise.json) erzeugt – Preise bleiben so immer aktuell. */
+   Wird aus PRICES (katalog.json) erzeugt – Preise bleiben so immer aktuell. */
 const SEO_TEXTE = {
   'Party': 'Bunte Geburtstagskrone für Hunde mit Bommeln, personalisiert mit dem Namen deines Hundes.',
   'Einfarbig': 'Einfarbige Hundekrone aus weichem Filz mit Bommeln, personalisiert mit dem Namen deines Hundes.',
@@ -3123,15 +3161,14 @@ initInstagram();
 initCookies();
 updateCartBadge();
 
-// Preise und Galerie dynamisch laden
+// Katalog (Produkte, Preise, Fotos), Galerie und Medien dynamisch laden
 Promise.all([
-  fetch('preise.json').then(r => r.json()).catch(() => null),
+  fetch('katalog.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null),
   fetch('galerie.json').then(r => r.json()).catch(() => null),
-  fetch('medien.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null),
-  fetch('produktfotos.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null)
-]).then(([preise, galerie, medien, fotos]) => {
-  setProduktFotos(fotos);
-  if (preise) PRICES = { ...PRICES, ...preise };
+  fetch('medien.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null)
+]).then(([katalog, galerie, medien]) => {
+  try { if (!applyKatalog(katalog)) console.warn('katalog.json nicht geladen – Notfall-Stand aktiv'); }
+  catch (e) { console.warn('Katalog:', e); }
   if (medien && typeof medien === 'object') { MEDIEN = medien; previewKey = ''; }
   try { renderProduktMedien(); } catch (e) { console.warn('Medien:', e); }
   repriceCart();
