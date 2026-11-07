@@ -252,3 +252,47 @@ test.describe('Schnittstelle: Verkäufe buchen das Lager ab', () => {
     expect(post({ aktion: 'buchen', schluessel: S, buchungen: [{ sku: S_PARTY, kiste: 'Etsy', menge: 1, grund: 'Genäht' }] }).ok).toBe(false);
   });
 });
+
+test.describe('Schnittstelle: Lager – Grenzfälle', () => {
+  test('ungültiger Mindestbestand wird abgelehnt, nichts wird gespeichert', async () => {
+    const { post } = umgebung([]);
+    for (const n of [-1, 1.5, 'viel', 1000]) {
+      expect(post({ aktion: 'mindest', schluessel: S, kiste: 'Etsy', werte: { [S_PARTY]: 2, [S_GLITZER]: n } }).fehler).toBe('ungueltiger_mindestbestand');
+    }
+    expect(post({ aktion: 'mindest', schluessel: S, kiste: 'Etsy', werte: { 'kaputt<': 1 } }).fehler).toBe('ungueltiger_mindestbestand');
+    expect(lager(post).mindest).toEqual({});
+  });
+
+  test('zu viele Buchungen auf einmal werden abgelehnt', async () => {
+    const { post } = umgebung([]);
+    const viele = Array.from({ length: 301 }, () => ({ sku: S_PARTY, kiste: 'Etsy', menge: 1, grund: 'Genäht' }));
+    expect(post({ aktion: 'buchen', schluessel: S, buchungen: viele }).fehler).toBe('ungueltige_buchung');
+    expect(post({ aktion: 'buchen', schluessel: S, buchungen: [] }).fehler).toBe('ungueltige_buchung');
+    expect(lager(post).bewegungen).toEqual([]);
+  });
+
+  test('Kanal ohne eigene Kiste (Sonstiges) bucht nichts ab, außer eine Kiste wird gewählt', async () => {
+    const { post } = umgebung([]);
+    const pos = [{ variante: 'Party', sku: S_PARTY }];
+    expect(post({ aktion: 'anlegen', schluessel: S, kanal: 'Sonstiges', positionen: pos, preis: 15, kunde: 'A' }).bestellung.kiste).toBe('nicht vom Lager');
+    expect(lager(post).bewegungen).toEqual([]);
+    post({ aktion: 'anlegen', schluessel: S, kanal: 'Sonstiges', kiste: 'Werkstatt', positionen: pos, preis: 15, kunde: 'B' });
+    expect(bestand(post, S_PARTY, 'Werkstatt')).toBe(-1);
+  });
+
+  test('alte Bestellungen ohne Artikelnummern: Status ändern oder stornieren bucht nichts', async () => {
+    const { post } = umgebung([ZWEI_KRONEN]);
+    post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Storniert' });
+    post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Neu' });
+    expect(lager(post).bewegungen).toEqual([]);
+  });
+
+  test('Bezeichnung und Notiz landen lesbar im Blatt „Lagerbewegungen“', async () => {
+    const { post, blatt } = umgebung([]);
+    post({ aktion: 'inventur', schluessel: S, kiste: 'Etsy', zaehlung: { [S_PARTY]: 2 }, artikel: { [S_PARTY]: 'Party · Rosa · Gross' }, notiz: 'Jahresinventur' });
+    const kopf = blatt('Lagerbewegungen')[0], z = blatt('Lagerbewegungen')[1];
+    const w = n => z[kopf.indexOf(n)];
+    expect([w('Artikelnr.'), w('Artikel'), w('Kiste'), w('Menge'), w('Grund'), w('Notiz'), w('Datum')])
+      .toEqual([S_PARTY, 'Party · Rosa · Gross', 'Etsy', 2, 'Inventur', 'Jahresinventur', '07.11.2026']);
+  });
+});

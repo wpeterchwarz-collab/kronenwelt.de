@@ -560,3 +560,145 @@ test.describe('Admin: Lager – Kisten', () => {
     if (nav.y > 100) expect(leiste.y + leiste.height).toBeLessThanOrEqual(nav.y + 1);   // Handy: nicht hinter der Navigation
   });
 });
+
+/* ---------------- Lücken aus der Prüfung (Lager und Bestellungen) ---------------- */
+test.describe('Admin: Lager – Buchungen und Sonderfälle', () => {
+  test('+ Buchung „Neu genäht“ startet in der gewählten Kiste und bucht dort ein', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#lager', api: true });
+    await page.click('#lagerKisten [data-kiste="Etsy"]');
+    await page.click('#btnBuchung');
+    await expect(page.locator('#lbArt')).toHaveValue('Genäht');
+    await expect(page.locator('#lbKiste')).toHaveValue('Etsy');
+    const pos = page.locator('#lagerBuchung .bf-pos').first();
+    await pos.locator('select').nth(0).selectOption('Party');
+    await pos.locator('select').nth(1).selectOption(PARTY.merkmale.farbe[0].wert);
+    await pos.locator('select').nth(2).selectOption('Gross');
+    await pos.locator('input').fill('2'); await pos.locator('input').blur();
+    await page.click('#lbSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/2 Kronen eingebucht/);
+    expect(lagerStand(t).bestand).toEqual({ [PARTY_ROSA_GR]: { Etsy: 2 } });
+    expect(lagerStand(t).bewegungen[0]).toMatchObject({ grund: 'Genäht', artikel: 'Party · ' + PARTY.merkmale.farbe[0].wert + ' · Gross' });
+  });
+
+  test('Ausbuchen mit Notiz; mehr als vorhanden wird angezeigt; Umlagern in dieselbe Kiste geht nicht', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#lager', api: true,
+      lager: [['01.11.2026', '10:00', PARTY_ROSA_GR, '', 'Werkstatt', 1, 'Genäht', '', '']] });
+    await page.click('#btnBuchung');
+    await page.selectOption('#lbArt', 'Umlagerung');
+    await page.selectOption('#lbNach', 'Werkstatt');
+    await page.selectOption('#lbKiste', 'Werkstatt');
+    await page.click('#lbSpeichern');
+    await expect(page.locator('#statusText')).toContainText('Von- und Nach-Kiste sind gleich');
+    await page.selectOption('#lbArt', 'Ausgebucht');
+    const pos = page.locator('#lagerBuchung .bf-pos').first();
+    await pos.locator('select').nth(0).selectOption('Party');
+    await pos.locator('select').nth(1).selectOption(PARTY.merkmale.farbe[0].wert);
+    await pos.locator('select').nth(2).selectOption('Gross');
+    await pos.locator('input').fill('2'); await pos.locator('input').blur();
+    await expect(pos).toContainText('mehr als vorhanden');
+    await pos.locator('input').fill('1'); await pos.locator('input').blur();
+    await expect(pos).not.toContainText('mehr als vorhanden');
+    await page.fill('#lbNotiz', 'Geschenk an Oma');
+    await page.click('#lbSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/1 Krone ausgebucht/);
+    expect(lagerStand(t).bewegungen[0]).toMatchObject({ grund: 'Ausgebucht', menge: -1, kiste: 'Werkstatt', notiz: 'Geschenk an Oma' });
+  });
+
+  test('Mindestbestand in der Werkstatt: Nähliste bietet nur „+1 genäht“', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#lager', api: true });
+    t.post({ aktion: 'mindest', schluessel: 'GEHEIM123', kiste: 'Werkstatt', werte: { [PARTY_ROSA_GR]: 2 } });
+    await page.click('#tab-lager button:has-text("Aktualisieren")');
+    const zeile = page.locator(`.naeh-zeile[data-kiste="Werkstatt"]`);
+    await expect(zeile).toContainText('fehlt 2');
+    await expect(zeile.getByRole('button', { name: /aus Werkstatt/ })).toHaveCount(0);
+    await zeile.getByRole('button', { name: '+1 genäht' }).click();
+    await expect(zeile).toContainText('fehlt 1');
+  });
+
+  test('alte Apps-Script-Version: klare Meldung statt leerer Seite', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#produkte/preise', api: true });
+    await page.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: '{"ok":false,"fehler":"unbekannte_aktion"}' }));
+    await page.click('.nav-item[data-nav="lager"]');
+    await expect(page.locator('#lagerInhalt')).toContainText('Das Apps Script ist noch die alte Version');
+    await expect(page.locator('#lagerInhalt button:has-text("Nochmal versuchen")')).toBeVisible();
+  });
+
+  test('Anleitung: eingeklappt bleibt eingeklappt, auch nach dem Neuladen', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#lager', api: true });
+    await expect(page.locator('#lagerAnleitung')).toHaveAttribute('open', '');   // leeres Lager: offen
+    await page.click('#lagerAnleitung summary');
+    await expect(page.locator('#lagerAnleitung')).not.toHaveAttribute('open', '');
+    await page.reload();
+    await expect(page.locator('#lagerAnleitung')).toBeVisible();
+    await expect(page.locator('#lagerAnleitung')).not.toHaveAttribute('open', '');
+  });
+
+  test('Storno im Admin bucht zurück, das Lager zeigt es ohne Neuladen', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    await page.fill('#bfKunde', 'Etsy Kundin');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/gespeichert/);
+    const sku = SKU(P0, P0.merkmale.farbe[0].wert, P0.merkmale.groesse[0].wert);
+    await page.click('.nav-item[data-nav="lager"]');
+    await expect(page.locator(`.naeh-zeile[data-sku="${sku}"]`)).toBeVisible();
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    const k = page.locator('.best[open]');
+    await k.locator('.best-mehr summary').click();
+    page.once('dialog', d => d.accept());
+    await k.locator('select[id^="st-"]').selectOption('Storniert');
+    await expect(page.locator('#statusText')).toHaveText(/Storniert ✓/);
+    expect(lagerStand(t).bestand[sku]).toEqual({ Etsy: 0 });
+    await page.click('.nav-item[data-nav="lager"]');
+    await expect(page.locator('#naehliste')).toHaveCount(0);
+    await expect(page.locator('#lagerBewegungen li').first()).toContainText('Storno');
+  });
+
+  test('Start: Tipp auf die Nähliste öffnet das Lager', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#produkte/preise', api: true });
+    t.post({ aktion: 'mindest', schluessel: 'GEHEIM123', kiste: 'Etsy', werte: { [PARTY_ROSA_GR]: 1 } });
+    await page.click('.nav-item[data-nav="start"]');
+    const punkt = page.locator('.todo').filter({ hasText: 'Nähliste' });
+    await punkt.click();
+    await expect(page).toHaveURL(/#lager$/);
+    await expect(page.locator('#naehliste')).toBeVisible();
+  });
+});
+
+test.describe('Admin: Bestellungen – Markt, Alter, Handy', () => {
+  test('Markt-Verkauf: zwei Schritte, „Übergeben“ erledigt ihn, keine Alters-Warnung', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const nr = t.post({ aktion: 'anlegen', schluessel: 'GEHEIM123', kanal: 'Markt', datum: '01.09.2026', status: 'Neu',
+      positionen: [{ variante: 'Party', farbe: PARTY.merkmale.farbe[0].wert, groesse: 'Gross', pers: 'LUNA' }], preis: 15, kunde: 'Marktstand' }).bestellung.nr;
+    await page.click('button:has-text("Aktualisieren")');
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await expect(k.locator('.best-alter')).not.toHaveClass(/warn/);
+    await k.locator('summary').first().click();
+    await expect(k.locator('.schritte li')).toHaveText(['Bestellt', 'Übergeben']);
+    await expect(k.locator('input[id^="sn-"]')).toHaveCount(0);                  // Markt: kein Versand
+    await k.locator('.best-schritt button:has-text("Übergeben")').click();
+    await expect(page.locator('#statusText')).toHaveText(/Übergeben ✓/);
+    await page.click('#bestFilterLeiste [data-filter="erledigt"]');
+    await expect(k.locator('.schritt-text')).toContainText('Übergeben');
+  });
+
+  test('Alter zählt nur Werktage, rot ab 4 Werktagen', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-09T10:00:00'));               // Montag
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const wt = d => page.evaluate(x => werktageSeit(x), d);
+    expect(await wt('09.11.2026')).toBe(0);   // heute
+    expect(await wt('06.11.2026')).toBe(1);   // Freitag → Montag
+    expect(await wt('07.11.2026')).toBe(1);   // Samstag → Montag
+    expect(await wt('03.11.2026')).toBe(4);   // Dienstag
+    expect(await wt('kein Datum')).toBe(null);
+  });
+
+  test('am Handy passt eine aufgeklappte Bestellung ohne seitliches Scrollen', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const k = page.locator('.best[data-nr="KW-20261001-003"]');
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();
+    await k.locator('.best-mehr summary').click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  });
+});
