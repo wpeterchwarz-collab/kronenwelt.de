@@ -3,13 +3,17 @@
 
    1) Der Shop schickt jede bezahlte Bestellung hierher → neue Zeile im Blatt „Bestellungen“
       (ohne Schlüssel, wie bisher; neu: Status „Neu“, Kanal „Webshop“).
-   2) Die Admin-Seite liest und ändert Bestellungen. Das geht nur mit dem Admin-Schlüssel,
+   2) Die Admin-Seite liest und ändert Bestellungen und das Lager. Das geht nur mit dem Admin-Schlüssel,
       der in den Skript-Eigenschaften steht (nie im Code, nie auf GitHub).
 
    Einrichten (einmalig):  Funktion „einrichten“ ausführen → Schlüssel aus dem Protokoll
    in die Admin-Seite (Einstellungen → Bestellungen) kopieren.
    Nach jeder Code-Änderung: Bereitstellen → Bereitstellungen verwalten → Bearbeiten →
    Neue Version. Die Adresse (…/exec) bleibt dabei gleich.
+
+   3) Lager: Jede Bewegung (genäht, verkauft, umgelagert, gezählt) ist eine Zeile im Blatt
+      „Lagerbewegungen“. Der Bestand ist die Summe dieser Zeilen, je Artikelnummer und Kiste.
+      Verkäufe und Stornos bucht die Schnittstelle selbst (über die Bestellnummer, nie doppelt).
 
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
    werden rechts angehängt, sobald sie gebraucht werden. Nichts wird umbenannt oder gelöscht.
@@ -19,15 +23,27 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.2';
+const SCHNITTSTELLE_VERSION = '1.3';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
   'Preis (€)', 'Zahlung',
   'Kundenname', 'E-Mail', 'Lieferadresse'
 ];
-const ZUSATZ_SPALTEN = ['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz'];
+const ZUSATZ_SPALTEN = ['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste'];
 const STATUS = ['Neu', 'In Arbeit', 'Versendet', 'Übergeben', 'Storniert'];
+
+// Lager: Kisten und aus welcher Kiste jeder Kanal verkauft. Neue Kiste = ein Eintrag hier.
+const KISTEN = ['Markt & Webshop', 'Etsy', 'Amazon', 'Werkstatt'];
+const WERKSTATT = 'Werkstatt';                         // Vorrat zum Nachfüllen der anderen Kisten
+const KANAL_KISTE = { 'Webshop': 'Markt & Webshop', 'Markt': 'Markt & Webshop', 'Etsy': 'Etsy', 'Amazon': 'Amazon' };
+const OHNE_LAGER = 'nicht vom Lager';
+const LAGER_BLATT = 'Lagerbewegungen';
+const LAGER_SPALTEN = ['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz'];
+const MINDEST_BLATT = 'Mindestbestand';
+const MINDEST_SPALTEN = ['Artikelnr.', 'Kiste', 'Mindestbestand'];
+// Gründe, die die Admin-Seite buchen darf („Verkauf“ und „Storno“ bucht nur die Schnittstelle selbst)
+const GRUENDE = ['Genäht', 'Umlagerung', 'Ausgebucht', 'Korrektur'];
 
 // Absender der Versandmail (Antworten gehen an die Shop-Adresse)
 const SHOP_NAME  = "Mila's Kronenwelt";
@@ -74,8 +90,11 @@ function bestellungSpeichern(data) {
       'E-Mail': data.kunde_email || '',
       'Lieferadresse': data.lieferadresse || '',
       'Status': 'Neu',
-      'Kanal': 'Webshop'
+      'Kanal': 'Webshop',
+      'Artikelnr.': artikelListe(String(data.artikel || '').split(',')),
+      'Kiste': KANAL_KISTE['Webshop']
     });
+    lagerAbgleichSicher(nr);
     return antwort({ success: true, bestellnr: nr });
   } catch (err) {
     return antwort({ success: false, error: err.message });
@@ -90,7 +109,7 @@ function adminAnfrage(data) {
     Utilities.sleep(800);                                   // Ausprobieren von Schlüsseln bremsen
     return antwort({ ok: false, fehler: 'nicht_erlaubt' });
   }
-  const schreibt = ['status', 'versenden', 'anlegen'].indexOf(data.aktion) >= 0;
+  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest'].indexOf(data.aktion) >= 0;
   const lock = LockService.getScriptLock();
   try {
     if (schreibt) lock.waitLock(20000);
@@ -105,6 +124,14 @@ function adminAnfrage(data) {
         return antwort(versenden(data));
       case 'anlegen':
         return antwort(anlegen(data));
+      case 'lager':
+        return antwort(lagerStand());
+      case 'buchen':
+        return antwort(buchen(data));
+      case 'inventur':
+        return antwort(inventur(data));
+      case 'mindest':
+        return antwort(mindestSetzen(data));
       default:
         return antwort({ ok: false, fehler: 'unbekannte_aktion' });
     }
@@ -147,7 +174,8 @@ function bestellungAusZeile(kopf, a, w, zeile) {
     preis: Math.round(preis * 100) / 100, zahlung: feld('Zahlung'),
     kunde: feld('Kundenname'), email: feld('E-Mail'), adresse: feld('Lieferadresse'),
     status: feld('Status') || 'Neu', kanal: feld('Kanal') || 'Webshop',
-    sendungsnummer: feld('Sendungsnummer'), versendetAm: feld('Versendet am'), notiz: feld('Notiz')
+    sendungsnummer: feld('Sendungsnummer'), versendetAm: feld('Versendet am'), notiz: feld('Notiz'),
+    artikel: feld('Artikelnr.'), kiste: feld('Kiste')
   };
 }
 
@@ -158,7 +186,9 @@ function statusSetzen(data) {
   const kopf = spaltenSicherstellen(sheet);
   const zeile = zeileFinden(sheet, kopf, data.zeile, data.nr);
   sheet.getRange(zeile, kopf.indexOf('Status') + 1).setValue(data.status);
-  return { ok: true, bestellung: bestellungLesen(sheet, kopf, zeile) };
+  const b = bestellungLesen(sheet, kopf, zeile);
+  const lager = lagerAbgleichSicher(b.nr, b);              // Storno bucht zurück, Rücknahme des Stornos wieder ab
+  return { ok: true, bestellung: b, lagerFehler: lager < 0 };
 }
 
 // Als versendet markieren, Sendungsnummer speichern, auf Wunsch Versandmail an den Kunden
@@ -192,6 +222,8 @@ function anlegen(data) {
   if (!kanal) throw fehler('kein_kanal', 'Kanal fehlt');
   const preis = Number(data.preis);
   if (!(preis >= 0)) throw fehler('ungueltiger_preis', 'Preis prüfen');
+  // Aus welcher Kiste? Ohne Angabe die Kiste des Kanals; „nicht vom Lager“ = auf Bestellung genäht
+  const kiste = data.kiste === undefined ? (KANAL_KISTE[kanal] || '') : KISTEN.indexOf(data.kiste) >= 0 ? data.kiste : OHNE_LAGER;
   const datum = /^\d{2}\.\d{2}\.\d{4}$/.test(data.datum || '') ? data.datum : Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy');
   const sheet = blatt();
   const kopf = spaltenSicherstellen(sheet);
@@ -212,9 +244,198 @@ function anlegen(data) {
     'Lieferadresse': text(data.adresse, 300),
     'Status': STATUS.indexOf(data.status) >= 0 ? data.status : 'Neu',
     'Kanal': kanal,
-    'Notiz': text(data.notiz, 500)
+    'Notiz': text(data.notiz, 500),
+    'Artikelnr.': artikelListe(pos.map(function (p) { return p.sku; })),
+    'Kiste': kiste || OHNE_LAGER
   });
-  return { ok: true, bestellung: bestellungLesen(sheet, kopf, zeile) };
+  const b = bestellungLesen(sheet, kopf, zeile);
+  const lager = lagerAbgleichSicher(b.nr, b);
+  return { ok: true, bestellung: b, lagerFehler: lager < 0 };
+}
+
+/* ---------------- 3) Lager ---------------- */
+// Artikelnummer wie im Katalog: GRUPPE-PRODUKT-FARBE-GROESSE (z. B. KR-PARTY-ROSA-GR)
+function skuOk(x) { return typeof x === 'string' && x.length <= 60 && /^[A-Z0-9]+(-[A-Z0-9]+){1,6}$/.test(x); }
+// Liste für die Spalte „Artikelnr.“ (gleiche Reihenfolge wie die Kronen); unbekannte bleiben leer
+function artikelListe(liste) {
+  const l = (liste || []).map(function (x) { x = String(x == null ? '' : x).trim(); return skuOk(x) ? x : ''; });
+  return l.some(function (x) { return x; }) ? l.join(', ') : '';
+}
+
+function lagerBlatt(name, spalten) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    sheet.getRange(1, 1, 1, spalten.length).setValues([spalten]);
+    kopfFormat(sheet.getRange(1, 1, 1, spalten.length));
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function zeilenLesen(sheet) {
+  const n = sheet.getLastRow();
+  if (n < 2) return { kopf: kopfzeile(sheet), zeilen: [] };
+  const kopf = kopfzeile(sheet);
+  const w = sheet.getRange(2, 1, n - 1, kopf.length).getDisplayValues();   // Anzeige: Datum und Uhrzeit wie im Blatt
+  return { kopf: kopf, zeilen: w.map(function (z) { const o = {}; kopf.forEach(function (k, i) { o[k] = z[i]; }); return o; }) };
+}
+
+// Alle Bewegungen (älteste zuerst)
+function bewegungenLesen() {
+  return zeilenLesen(lagerBlatt(LAGER_BLATT, LAGER_SPALTEN)).zeilen
+    .map(function (z) {
+      return { datum: String(z['Datum'] || ''), uhrzeit: String(z['Uhrzeit'] || ''), sku: String(z['Artikelnr.'] || '').trim(),
+        artikel: String(z['Artikel'] || ''), kiste: String(z['Kiste'] || '').trim(), menge: parseInt(z['Menge'], 10) || 0,
+        grund: String(z['Grund'] || ''), nr: String(z['Bestellnr.'] || '').trim(), notiz: String(z['Notiz'] || '') };
+    })
+    .filter(function (b) { return b.sku && b.kiste && b.menge; });
+}
+
+
+// { sku: { kiste: menge } }
+function bestandAus(bewegungen) {
+  const b = {};
+  bewegungen.forEach(function (x) {
+    b[x.sku] = b[x.sku] || {};
+    b[x.sku][x.kiste] = (b[x.sku][x.kiste] || 0) + x.menge;
+  });
+  return b;
+}
+
+function mindestLesen() {
+  const m = {};
+  zeilenLesen(lagerBlatt(MINDEST_BLATT, MINDEST_SPALTEN)).zeilen.forEach(function (z) {
+    const sku = String(z['Artikelnr.'] || '').trim(), kiste = String(z['Kiste'] || '').trim(), n = parseInt(z['Mindestbestand'], 10);
+    if (sku && kiste && n > 0) { m[sku] = m[sku] || {}; m[sku][kiste] = n; }
+  });
+  return m;
+}
+
+function lagerStand() {
+  const bew = bewegungenLesen();
+  return { ok: true, kisten: KISTEN, werkstatt: WERKSTATT, kanalKiste: KANAL_KISTE, ohneLager: OHNE_LAGER,
+    bestand: bestandAus(bew), mindest: mindestLesen(), bewegungen: bew.slice(-40).reverse() };
+}
+
+function bewegungAnhaengen(sheet, kopf, b) {
+  const jetzt = new Date();
+  zeileAnhaengenRoh(sheet, kopf, {
+    'Datum': Utilities.formatDate(jetzt, 'Europe/Berlin', 'dd.MM.yyyy'),
+    'Uhrzeit': Utilities.formatDate(jetzt, 'Europe/Berlin', 'HH:mm'),
+    'Artikelnr.': b.sku, 'Artikel': String(b.artikel || '').slice(0, 120), 'Kiste': b.kiste, 'Menge': b.menge,
+    'Grund': b.grund, 'Bestellnr.': b.nr || '', 'Notiz': String(b.notiz || '').slice(0, 300)
+  });
+}
+
+// Bucht für eine Bestellung genau so viel, dass das Lager zur Bestellung passt.
+// Soll: je Krone −1 aus der Kiste der Bestellung (storniert oder „nicht vom Lager“: 0).
+// Ist: alle Bewegungen mit dieser Bestellnummer. Mehrfaches Aufrufen bucht nie doppelt.
+// Fehler im Lager dürfen nie eine Bestellung verhindern: dann nur protokollieren
+function lagerAbgleichSicher(nr, b) {
+  try { return lagerAbgleich(nr, b); } catch (err) { Logger.log('Lager-Abgleich ' + nr + ': ' + err.message); return -1; }
+}
+
+function lagerAbgleich(nr, b) {
+  if (!b) {
+    const sheet = blatt(), kopf = kopfzeile(sheet);
+    b = bestellungLesen(sheet, kopf, zeileFinden(sheet, kopf, null, nr));
+  }
+  const skus = String(b.artikel || '').split(',').map(function (x) { return x.trim(); });
+  const namen = positionenText(b);
+  const soll = {}, text = {};
+  if (b.status !== 'Storniert' && KISTEN.indexOf(b.kiste) >= 0) {
+    skus.forEach(function (sku, i) {
+      if (!skuOk(sku)) return;
+      const k = sku + '|' + b.kiste;
+      soll[k] = (soll[k] || 0) - 1;
+      text[k] = namen.length === skus.length ? namen[i].replace(/ „.*“$/, '') : '';
+    });
+  }
+  const lager = lagerBlatt(LAGER_BLATT, LAGER_SPALTEN);
+  const ist = {};
+  bewegungenLesen().forEach(function (x) { if (x.nr === b.nr) { const k = x.sku + '|' + x.kiste; ist[k] = (ist[k] || 0) + x.menge; } });
+  const kopf = kopfzeile(lager);
+  let gebucht = 0;
+  Object.keys(soll).concat(Object.keys(ist)).forEach(function (k, i, alle) {
+    if (alle.indexOf(k) !== i) return;
+    const diff = (soll[k] || 0) - (ist[k] || 0);
+    if (!diff) return;
+    const t = k.split('|');
+    bewegungAnhaengen(lager, kopf, { sku: t[0], kiste: t[1], menge: diff, grund: diff < 0 ? 'Verkauf' : 'Storno', nr: b.nr, artikel: text[k] || '' });
+    gebucht++;
+  });
+  return gebucht;
+}
+
+// Buchungen der Admin-Seite: genäht (+), umgelagert (−/+), ausgebucht (−), Korrektur (±)
+function buchen(data) {
+  const liste = Array.isArray(data.buchungen) ? data.buchungen : [];
+  if (!liste.length || liste.length > 300) throw fehler('ungueltige_buchung', 'Keine Buchung');
+  liste.forEach(function (b) {
+    const m = Number(b && b.menge);
+    if (!b || !skuOk(b.sku) || KISTEN.indexOf(b.kiste) < 0 || GRUENDE.indexOf(b.grund) < 0 || !(m === Math.round(m)) || !m || Math.abs(m) > 500) {
+      throw fehler('ungueltige_buchung', 'Buchung prüfen');
+    }
+  });
+  const sheet = lagerBlatt(LAGER_BLATT, LAGER_SPALTEN), kopf = kopfzeile(sheet);
+  liste.forEach(function (b) { bewegungAnhaengen(sheet, kopf, { sku: b.sku, kiste: b.kiste, menge: Number(b.menge), grund: b.grund, artikel: b.artikel, notiz: b.notiz }); });
+  const r = lagerStand();
+  r.gebucht = liste.length;
+  return r;
+}
+
+// Inventur einer Kiste: gezählte Stückzahl je Artikel → Korrekturbuchung für den Unterschied
+function inventur(data) {
+  if (KISTEN.indexOf(data.kiste) < 0) throw fehler('ungueltige_kiste', 'Kiste prüfen');
+  const z = data.zaehlung && typeof data.zaehlung === 'object' ? data.zaehlung : {};
+  const skus = Object.keys(z);
+  if (!skus.length || skus.length > 1000) throw fehler('ungueltige_zaehlung', 'Keine Zählung');
+  skus.forEach(function (sku) { const n = Number(z[sku]); if (!skuOk(sku) || !(n >= 0) || n !== Math.round(n) || n > 9999) throw fehler('ungueltige_zaehlung', 'Zählung prüfen'); });
+  const bestand = bestandAus(bewegungenLesen());
+  const sheet = lagerBlatt(LAGER_BLATT, LAGER_SPALTEN), kopf = kopfzeile(sheet);
+  const namen = data.artikel && typeof data.artikel === 'object' ? data.artikel : {};
+  let korrigiert = 0;
+  skus.forEach(function (sku) {
+    const diff = Number(z[sku]) - ((bestand[sku] || {})[data.kiste] || 0);
+    if (!diff) return;
+    bewegungAnhaengen(sheet, kopf, { sku: sku, kiste: data.kiste, menge: diff, grund: 'Inventur', artikel: namen[sku], notiz: data.notiz });
+    korrigiert++;
+  });
+  const r = lagerStand();
+  r.korrigiert = korrigiert;
+  return r;
+}
+
+// Mindestbestand einer Kiste setzen (0 = kein Mindestbestand)
+function mindestSetzen(data) {
+  if (KISTEN.indexOf(data.kiste) < 0) throw fehler('ungueltige_kiste', 'Kiste prüfen');
+  const w = data.werte && typeof data.werte === 'object' ? data.werte : {};
+  const skus = Object.keys(w);
+  skus.forEach(function (sku) { const n = Number(w[sku]); if (!skuOk(sku) || !(n >= 0) || n !== Math.round(n) || n > 999) throw fehler('ungueltiger_mindestbestand', 'Mindestbestand prüfen'); });
+  const sheet = lagerBlatt(MINDEST_BLATT, MINDEST_SPALTEN);
+  const kopf = kopfzeile(sheet);
+  const iSku = kopf.indexOf('Artikelnr.'), iKiste = kopf.indexOf('Kiste'), iMin = kopf.indexOf('Mindestbestand');
+  const n = sheet.getLastRow();
+  const zeilen = n > 1 ? sheet.getRange(2, 1, n - 1, kopf.length).getDisplayValues() : [];
+  const rest = {};
+  skus.forEach(function (s) { rest[s] = true; });
+  zeilen.forEach(function (z, i) {
+    const sku = String(z[iSku]).trim();
+    if (String(z[iKiste]).trim() !== data.kiste || !rest[sku]) return;
+    sheet.getRange(i + 2, iMin + 1).setValue(Number(w[sku]));
+    delete rest[sku];
+  });
+  Object.keys(rest).forEach(function (sku) {
+    if (Number(w[sku]) > 0) zeileAnhaengenRoh(sheet, kopf, { 'Artikelnr.': sku, 'Kiste': data.kiste, 'Mindestbestand': Number(w[sku]) });
+  });
+  return lagerStand();
+}
+
+function zeileAnhaengenRoh(sheet, kopf, werte) {
+  sheet.appendRow(kopf.map(function (name) { return werte[name] !== undefined ? werte[name] : ''; }));
+  return sheet.getLastRow();
 }
 
 /* ---------------- Versandmail ---------------- */
@@ -387,9 +608,12 @@ function einrichten() {
 }
 
 /* Einmalig nach dem Update auf 1.2 ausführen: Google fragt nach der Erlaubnis, Mails zu senden
-   (für die Versandmail) und legt die neuen Spalten an. Der Admin-Schlüssel bleibt unverändert. */
+   (für die Versandmail) und legt die neuen Spalten an. Der Admin-Schlüssel bleibt unverändert.
+   Ab 1.3 legt es auch die Blätter „Lagerbewegungen“ und „Mindestbestand“ an. */
 function berechtigen() {
   spaltenSicherstellen(blatt());
+  lagerBlatt(LAGER_BLATT, LAGER_SPALTEN);
+  lagerBlatt(MINDEST_BLATT, MINDEST_SPALTEN);
   Logger.log('Spalten geprüft. Heute noch möglich: ' + MailApp.getRemainingDailyQuota() + ' Mails.');
 }
 

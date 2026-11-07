@@ -79,6 +79,18 @@ test.describe('Katalog: Aufbau', () => {
 });
 
 test.describe('Katalog ⇔ Website', () => {
+  test('die Website bildet für jede Krone dieselbe Artikelnummer wie der Katalog (für das Lager)', async ({ page }) => {
+    await openShop(page);
+    const kombis = [];
+    for (const p of katalog.produkte) for (const f of p.merkmale.farbe) for (const g of p.merkmale.groesse) kombis.push([p.name, f.wert, g.wert]);
+    const vomShop = await page.evaluate(l => l.map(x => artikelnummer(...x)), kombis);
+    expect(vomShop).toEqual(artikelnummern());
+    const zahl = katalog.produkte.find(p => (p.optionen || []).includes('zahlenpets'));
+    expect(await page.evaluate(([n, f]) => artikelnummer(n, f, 'Gross + 6 Pets'), [zahl.name, zahl.merkmale.farbe[0].wert]))
+      .toBe(['KR', zahl.kuerzel, zahl.merkmale.farbe[0].kuerzel, 'GR'].join('-'));
+    expect(await page.evaluate(() => artikelnummer('Gibt es nicht', 'Rosa', 'Gross'))).toBe('');
+  });
+
   // Alle Kronen und Farben so auslesen, wie ein Kunde sie im Konfigurator sieht
   async function konfiguratorAuswahl(page) {
     await openShop(page);

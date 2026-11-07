@@ -8,18 +8,17 @@ const CODE = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.gs'
 const KOPF = ['Datum', 'Uhrzeit', 'Bestellnr.', 'Variante', 'Farbe', 'Grösse', 'Personalisierung',
   'Preis (€)', 'Zahlung', 'Kundenname', 'E-Mail', 'Lieferadresse'];
 
-// zeilen = Werte wie in der Tabelle (Preis als Zahl); kopf = Kopfzeile (Standard: die 12 alten Spalten)
-function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF } = {}) {
-  const daten = [kopf.slice(), ...zeilen.map(z => z.slice())];
-  const mails = [];
-  const anzeige = x => typeof x === 'number' ? x.toFixed(2).replace('.', ',') + ' €' : String(x == null ? '' : x);
+// Ein nachgestelltes Tabellenblatt. geld = Zahlen werden wie Preise angezeigt ("17,00 €")
+function blattAttrappe(daten, geld, kaputt) {
+  const anzeige = x => typeof x === 'number' ? (geld ? x.toFixed(2).replace('.', ',') + ' €' : String(x)) : String(x == null ? '' : x);
   const zelle = (r, c) => (daten[r - 1] || [])[c - 1];
   const setze = (r, c, v) => { while (daten.length < r) daten.push([]); const z = daten[r - 1]; while (z.length < c) z.push(''); z[c - 1] = v; };
   const block = (r, c, h, w, f) => Array.from({ length: h }, (_, i) => Array.from({ length: w }, (_, j) => f(zelle(r + i, c + j))));
-  const sheet = {
+  return {
     getLastRow: () => daten.length,
-    getLastColumn: () => Math.max(...daten.map(z => { let n = z.length; while (n && (z[n - 1] === '' || z[n - 1] == null)) n--; return n; })),
-    appendRow: r => daten.push(r.slice()),
+    getLastColumn: () => Math.max(0, ...daten.map(z => { let n = z.length; while (n && (z[n - 1] === '' || z[n - 1] == null)) n--; return n; })),
+    appendRow: r => { if (kaputt) throw new Error('Blatt gesperrt'); daten.push(r.slice()); },
+    setFrozenRows() {},
     getRange: (r, c, h = 1, w = 1) => ({
       getDisplayValues: () => block(r, c, h, w, anzeige),
       getValues: () => block(r, c, h, w, x => x == null ? '' : x),
@@ -29,8 +28,24 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF } = {}) {
       setBackground() {}, setNumberFormat() {}, setFontColor() {}, setFontWeight() {}
     })
   };
+}
+
+// zeilen = Werte wie in der Tabelle (Preis als Zahl); kopf = Kopfzeile (Standard: die 12 alten Spalten)
+// blaetter = weitere Blätter { Name: [Zeilen inkl. Kopf] }, z. B. Lagerbewegungen; kaputt = Blätter, in die nicht geschrieben werden kann
+function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [] } = {}) {
+  const daten = [kopf.slice(), ...zeilen.map(z => z.slice())];
+  const mails = [];
+  const tabellen = { Bestellungen: daten };
+  Object.keys(blaetter).forEach(n => { tabellen[n] = blaetter[n].map(z => z.slice()); });
+  const sheets = {};
+  const holen = n => tabellen[n] ? (sheets[n] = sheets[n] || blattAttrappe(tabellen[n], n === 'Bestellungen', kaputt.includes(n))) : null;
+  const ss = {
+    getSheetByName: holen,
+    insertSheet: n => { tabellen[n] = []; return holen(n); },
+    getName: () => 'Kronenwelt Bestellungen'
+  };
   const ctx = {
-    SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => sheet, getName: () => 'Kronenwelt Bestellungen' }) },
+    SpreadsheetApp: { getActiveSpreadsheet: () => ss },
     PropertiesService: { getScriptProperties: () => ({ getProperty: () => schluessel, setProperty() {} }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: t => ({ setMimeType: () => ({ text: t }) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
@@ -44,7 +59,8 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF } = {}) {
   vm.createContext(ctx);
   vm.runInContext(CODE, ctx);
   const post = body => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(body) } }).text);
-  return { post, daten, mails };
+  // blatt('Lagerbewegungen') = Zeilen des Blatts (inkl. Kopf) oder undefined, wenn es (noch) nicht existiert
+  return { post, daten, mails, blatt: n => tabellen[n] };
 }
 
 module.exports = { umgebung, KOPF };
