@@ -61,6 +61,7 @@ async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', f
   if (api) await page.reload();
   await expect(page.locator('#adminScreen')).toBeVisible();
   await expect(page.locator('#statusText')).toHaveText(/Daten geladen/);
+  return tabelle;
 }
 
 test('Admin: jedes Produkt aus dem Katalog hat eine Karte unter „Fotos & Video“ mit allen Farben', async ({ page }) => {
@@ -203,7 +204,7 @@ test.describe('Admin: Bestellungen', () => {
     await openAdmin(page, [], { seite: '#bestellungen', api: true });
     const karten = page.locator('#bestListe .best');
     await expect(karten).toHaveCount(2);
-    await expect(karten.nth(0).locator('.best-kunde')).toHaveText('Kim Muster');
+    await expect(karten.nth(0).locator('.best-kunde')).toHaveText(/^Kim Muster/);
     await expect(karten.nth(0).locator('.best-betrag')).toContainText('29,00 €');
     await expect(karten.nth(0).locator('.best-betrag small')).toHaveText('2 Kronen');
     await karten.nth(0).locator('summary').click();
@@ -219,7 +220,7 @@ test.describe('Admin: Bestellungen', () => {
     await page.fill('#bestSuche', 'dannau');
     await expect(page.locator('#bestListe .best')).toHaveCount(1);
     await page.fill('#bestSuche', 'party');
-    await expect(page.locator('#bestListe .best .best-kunde')).toHaveText('Peter Schwarz');
+    await expect(page.locator('#bestListe .best .best-kunde')).toHaveText(/^Peter Schwarz/);
     await page.fill('#bestSuche', 'gibtsnicht');
     await expect(page.locator('#bestListe')).toContainText('Keine Bestellung passt');
   });
@@ -249,5 +250,115 @@ test.describe('Admin: Bestellungen', () => {
     expect(gespeichert).not.toContain('GEHEIM123');
     await page.click('.nav-item[data-nav="bestellungen"]');
     await expect(page.locator('#bestListe .best')).toHaveCount(2);
+  });
+});
+
+test.describe('Admin: Bestellungen bearbeiten', () => {
+  const karte = (page, nr) => page.locator(`.best[data-nr="${nr}"]`);
+
+  test('Filter: offen ist voreingestellt, Zähler stimmen', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await expect(page.locator('#bestFilterLeiste button.active')).toContainText('Offen');
+    await expect(page.locator('#bestFilterLeiste [data-filter="offen"] span')).toHaveText('2');
+    await expect(page.locator('#bestFilterLeiste [data-filter="erledigt"] span')).toHaveText('0');
+  });
+
+  test('In Arbeit nehmen ändert den Status in der Tabelle', async ({ page }) => {
+    const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await karte(page, 'KW-20261001-003').locator('summary').click();
+    await karte(page, 'KW-20261001-003').locator('button:has-text("In Arbeit nehmen")').click();
+    await expect(karte(page, 'KW-20261001-003').locator('.status')).toHaveText('In Arbeit');
+    const zeile = tabelle.daten.find(z => z[2] === 'KW-20261001-003');
+    expect(zeile[tabelle.daten[0].indexOf('Status')]).toBe('In Arbeit');
+  });
+
+  test('Versenden mit DHL-Nummer schickt die Versandmail und verschiebt nach „Erledigt“', async ({ page }) => {
+    const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const k = karte(page, 'KW-20261001-003');
+    await k.locator('summary').click();
+    await k.locator('input[id^="sn-"]').fill('0034 0434 1234 5678 90');
+    await expect(k.locator('input[id^="mail-"]')).toBeChecked();             // Webshop: Mail ist vorausgewählt
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    await expect(page.locator('#statusText')).toContainText('Versandmail an k@example.de');
+    expect(tabelle.mails).toHaveLength(1);
+    expect(tabelle.mails[0].htmlBody).toContain('piececode=003404341234567890');
+    await expect(page.locator('#bestFilterLeiste [data-filter="erledigt"] span')).toHaveText('1');
+    await expect(k).toHaveCount(0);                                            // nicht mehr unter „Offen“
+    await page.click('#bestFilterLeiste [data-filter="erledigt"]');
+    await expect(k.locator('.status')).toHaveText('Versendet');
+    await expect(k.locator('a[href*="piececode=003404341234567890"]')).toBeVisible();
+  });
+
+  test('Versenden ohne Mail: Haken abwählen, es geht keine Mail raus', async ({ page }) => {
+    const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const k = karte(page, 'KW-20261001-003');
+    await k.locator('summary').click();
+    await k.locator('input[id^="sn-"]').fill('123456789012');
+    await k.locator('input[id^="mail-"]').uncheck();
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    await expect(page.locator('#statusText')).toHaveText(/Als versendet markiert/);
+    expect(tabelle.mails).toHaveLength(0);
+  });
+
+  test('falsche Sendungsnummer wird vor dem Senden abgefangen', async ({ page }) => {
+    const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const k = karte(page, 'KW-20261001-003');
+    await k.locator('summary').click();
+    await k.locator('input[id^="sn-"]').fill('12-34');
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    await expect(page.locator('#statusText')).toContainText('Sendungsnummer');
+    expect(tabelle.mails).toHaveLength(0);
+    await expect(k.locator('.status')).toHaveText('Neu');
+  });
+
+  test('Markt-Verkauf von Hand anlegen: zwei Kronen, Preise aus der Preisliste, Status Übergeben', async ({ page }) => {
+    const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    await page.selectOption('#bfKanal', 'Markt');
+    await expect(page.locator('#bfStatus')).toHaveValue('Übergeben');
+    await expect(page.locator('#bfZahlung')).toHaveValue('Bar');
+    const pos = page.locator('.bf-pos');
+    await pos.nth(0).locator('select').nth(0).selectOption('Glitzer');
+    await pos.nth(0).locator('select').nth(1).selectOption('Gold');
+    await pos.nth(0).locator('select').nth(2).selectOption('Klein');
+    await pos.nth(0).locator('input[type=text]').fill('BELLA');
+    await page.click('button:has-text("+ weitere Krone")');
+    await pos.nth(1).locator('select').nth(0).selectOption('Zahlenkrone Leo');
+    await pos.nth(1).locator('select').nth(2).selectOption('Mini');
+    await pos.nth(1).locator('select').nth(3).selectOption('6');
+    const p = (v, g) => katalog.produkte.find(x => x.name === v).merkmale.groesse.find(x => x.wert === g).preis;
+    const auf6 = katalog.optionen.zahlenpets.werte.find(o => o.wert === 6).aufpreis;
+    const summe = p('Glitzer', 'Klein') + p('Zahlenkrone Leo', 'Mini') + auf6;
+    await expect(page.locator('#bfSumme')).toHaveText(summe.toFixed(2).replace('.', ',') + ' €');
+    await page.fill('#bfNotiz', 'Weihnachtsmarkt');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/Bestellung KW-\d{8}-\d{3} gespeichert/);
+    const z = tabelle.daten.at(-1), sp = n => tabelle.daten[0].indexOf(n);
+    expect(z[sp('Kanal')]).toBe('Markt');
+    expect(z[sp('Status')]).toBe('Übergeben');
+    expect(z[sp('Variante')]).toBe('Glitzer, Zahlenkrone Leo');
+    expect(z[sp('Grösse')]).toBe('Klein, Mini + 6 Pets');
+    expect(z[sp('Personalisierung')]).toBe('BELLA | ohne Namen');
+    expect(z[sp('Preis (€)')]).toBe(summe);
+    await expect(page.locator('#bestFormular')).toBeEmpty();
+    await expect(page.locator('#bestListe .best').first().locator('.best-kanal')).toHaveText('Markt');
+  });
+
+  test('Etsy-Bestellung ohne Kundenname wird nicht gespeichert', async ({ page }) => {
+    const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const vorher = tabelle.daten.length;
+    await page.click('#btnNeueBestellung');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toContainText('Kundennamen');
+    expect(tabelle.daten.length).toBe(vorher);
+  });
+
+  test('Startseite meldet neue Bestellungen unter „Zu tun“', async ({ page }) => {
+    await openAdmin(page, [], { seite: '', api: true });
+    const punkt = page.locator('.todo').filter({ hasText: '2 neue Bestellungen' });
+    await expect(punkt).toBeVisible();
+    await punkt.click();
+    await expect(page).toHaveURL(/#bestellungen$/);
+    await expect(page.locator('#bestFilterLeiste button.active')).toContainText('Offen');
   });
 });
