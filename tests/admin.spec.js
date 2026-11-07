@@ -209,7 +209,7 @@ test.describe('Admin: Bestellungen', () => {
     await expect(karten.nth(0).locator('.best-kunde')).toHaveText(/^Kim Muster/);
     await expect(karten.nth(0).locator('.best-betrag')).toContainText('29,00 €');
     await expect(karten.nth(0).locator('.best-betrag small')).toHaveText('2 Kronen');
-    await karten.nth(0).locator('summary').click();
+    await karten.nth(0).locator('summary').first().click();
     await expect(karten.nth(0).locator('.best-artikel li')).toHaveText([
       'Einfarbig · Grün · Extra Mini · „FRIDOLIN“', 'Glitzer · Blau · Gross · ohne Namen']);
     await expect(karten.nth(0).locator('a[href^="mailto:k@example.de"]')).toBeVisible();
@@ -267,7 +267,7 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
 
   test('In Arbeit nehmen ändert den Status in der Tabelle', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
-    await karte(page, 'KW-20261001-003').locator('summary').click();
+    await karte(page, 'KW-20261001-003').locator('summary').first().click();
     await karte(page, 'KW-20261001-003').locator('button:has-text("In Arbeit nehmen")').click();
     await expect(karte(page, 'KW-20261001-003').locator('.status')).toHaveText('In Arbeit');
     const zeile = tabelle.daten.find(z => z[2] === 'KW-20261001-003');
@@ -277,7 +277,8 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
   test('Versenden mit DHL-Nummer schickt die Versandmail und verschiebt nach „Erledigt“', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
     const k = karte(page, 'KW-20261001-003');
-    await k.locator('summary').click();
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();          // neue Bestellung: direkt versenden
     await k.locator('input[id^="sn-"]').fill('0034 0434 1234 5678 90');
     await expect(k.locator('input[id^="mail-"]')).toBeChecked();             // Webshop: Mail ist vorausgewählt
     await k.locator('button:has-text("Als versendet markieren")').click();
@@ -294,7 +295,8 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
   test('Versenden ohne Mail: Haken abwählen, es geht keine Mail raus', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
     const k = karte(page, 'KW-20261001-003');
-    await k.locator('summary').click();
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();          // neue Bestellung: direkt versenden
     await k.locator('input[id^="sn-"]').fill('123456789012');
     await k.locator('input[id^="mail-"]').uncheck();
     await k.locator('button:has-text("Als versendet markieren")').click();
@@ -305,7 +307,8 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
   test('falsche Sendungsnummer wird vor dem Senden abgefangen', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
     const k = karte(page, 'KW-20261001-003');
-    await k.locator('summary').click();
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();          // neue Bestellung: direkt versenden
     await k.locator('input[id^="sn-"]').fill('12-34');
     await k.locator('button:has-text("Als versendet markieren")').click();
     await expect(page.locator('#statusText')).toContainText('Sendungsnummer');
@@ -355,6 +358,34 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     expect(tabelle.daten.length).toBe(vorher);
   });
 
+  test('Übersicht: gruppiert nach Neu / In Arbeit, Name zum Nähen und Alter schon in der Liste', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await expect(page.locator('.best-gruppe')).toHaveText([/Neu\s+2/]);
+    const k = karte(page, 'KW-20261001-003');
+    await expect(k.locator('.best-pos em')).toHaveText('„FRIDOLIN“');
+    await expect(k.locator('.best-alter')).toHaveClass(/warn/);               // seit Oktober offen
+    await expect(k.locator('.best-kanal')).toHaveText('Webshop');
+    await k.locator('summary').first().click();
+    await expect(k.locator('.schritte li')).toHaveText(['Bestellt', 'In Arbeit', 'Versendet']);
+    await expect(k.locator('.schritte li.jetzt')).toHaveText('In Arbeit');
+    await expect(k.locator('input[id^="sn-"]')).toHaveCount(0);               // Versand erst auf Wunsch
+    await k.locator('button:has-text("In Arbeit nehmen")').click();
+    await expect(page.locator('.best-gruppe')).toHaveText([/Neu\s+1/, /In Arbeit\s+1/]);
+    await expect(k.locator('.schritte li.jetzt')).toHaveText('Versendet');
+    await expect(k.locator('input[id^="sn-"]')).toBeVisible();                // jetzt ist Versenden dran
+    await expect(k.locator('.best-mehr')).not.toHaveAttribute('open', '');     // Status von Hand ist versteckt
+  });
+
+  test('Adresse kopieren legt Name und Adresse zeilenweise in die Zwischenablage', async ({ page, context, browserName }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const k = karte(page, 'KW-20261001-003');
+    await k.locator('summary').first().click();
+    await k.locator('.kopier-knopf').click();
+    await expect(page.locator('#statusText')).toHaveText(/Adresse kopiert/);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Kim Muster\nMoorblick 4\n24329 Dannau\nDE');
+  });
+
   test('Startseite meldet neue Bestellungen unter „Zu tun“', async ({ page }) => {
     await openAdmin(page, [], { seite: '', api: true });
     const punkt = page.locator('.todo').filter({ hasText: '2 neue Bestellungen' });
@@ -377,7 +408,7 @@ const zelle = (page, sku) => page.locator(`input[data-sku="${sku}"]`);
 test.describe('Admin: Lager', () => {
   test('leeres Lager: Anleitung, alle Kisten, jedes Produkt mit Farben × Größen', async ({ page }) => {
     await openAdmin(page, [], { seite: '#lager', api: true });
-    await expect(page.locator('#lagerInhalt')).toContainText('So fängst du an');
+    await expect(page.locator('#lagerInhalt')).toContainText('So funktioniert das Lager');
     await expect(page.locator('#lagerKisten button')).toHaveText([/^\s*Alle Kisten/, /^\s*Markt & Webshop/, /^\s*Etsy/, /^\s*Amazon/, /^\s*Werkstatt/]);
     await expect(page.locator('.lg-produkt')).toHaveCount(katalog.produkte.length);
     const karte = page.locator('.lg-produkt').first();
