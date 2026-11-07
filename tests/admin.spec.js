@@ -5,6 +5,7 @@ const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
 const { katalog, fotos } = require('./helpers');
+const { umgebung } = require('./schnittstelle-attrappe');
 
 const ROOT  = path.join(__dirname, '..');
 const ADMIN = path.join(ROOT, 'admin.html');
@@ -12,10 +13,22 @@ const KRONEN = katalog.produkte.map(p => p.name);
 
 test.skip(!fs.existsSync(ADMIN), 'admin.html liegt nicht im Projektordner');
 
-async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [] } = {}) {
+// Bestellungen in der nachgestellten Tabelle (Anzeige-Werte, Preis als Zahl)
+const BESTELLUNGEN = [
+  ['08.04.2026', '21:49', 'KW-20260408-000', 'Party', 'Rosa mit Punkten', 'Gross', 'TEST', 0.01, 'PayPal', 'Peter Schwarz', 'p@example.de', 'Weg 8, 75045 Walzbachtal, DE'],
+  ['', '', '', '', '', '', '', 0.01, '', '', '', ''],
+  ['01.10.2026', '12:12', 'KW-20261001-003', 'Einfarbig, Glitzer', 'Grün, Blau', 'Extra Mini, Gross', 'FRIDOLIN | ohne Namen', 29, 'PayPal', 'Kim Muster', 'k@example.de', 'Moorblick 4, 24329 Dannau, DE']
+];
+
+// api: true → Admin-Schlüssel ist eingetragen, die Schnittstelle (echter Apps-Script-Code) antwortet
+async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123' } = {}) {
   await page.addInitScript(() => { localStorage.setItem('mkw_admin_pw', 'test'); localStorage.setItem('mkw_github_token', 'test'); });
+  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123');
   await page.route(/^https?:\/\/(?!localhost)/, route => {
     const u = route.request().url();
+    if (u.includes('script.google.com')) {
+      return route.fulfill({ json: tabelle.post(JSON.parse(route.request().postData())) });
+    }
     // Cloudinary-Vorschaubilder: vorhanden, außer den absichtlich fehlenden
     if (u.includes('res.cloudinary.com')) {
       if (fehlendeFotos.some(id => u.includes('/' + id + '.'))) return route.fulfill({ status: 404, body: '' });
@@ -37,7 +50,15 @@ async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', f
     if (!fs.existsSync(pfad)) return route.fulfill({ status: 404, json: {} });
     route.fulfill({ json: { sha: 'x', content: fs.readFileSync(pfad).toString('base64') } });
   });
+  if (api) {
+    // Schlüssel so speichern, wie die Admin-Seite es tut (verschlüsselt mit dem Admin-Passwort)
+    await page.goto('/admin.html#einstellungen');
+    await expect(page.locator('#adminScreen')).toBeVisible();
+    const enc = await page.evaluate(k => encryptToken(k, 'test'), apiSchluessel);
+    await page.addInitScript(e => localStorage.setItem('mkw_api_schluessel_enc', e), enc);
+  }
   await page.goto('/admin.html' + seite);
+  if (api) await page.reload();
   await expect(page.locator('#adminScreen')).toBeVisible();
   await expect(page.locator('#statusText')).toHaveText(/Daten geladen/);
 }
@@ -116,7 +137,7 @@ test.describe('Admin: Navigation und Start', () => {
   test('ohne Adresse öffnet die Startseite, die Navigation zeigt alle Bereiche', async ({ page }) => {
     await openAdmin(page, [], { seite: '' });
     await expect(page.locator('#tab-start')).toBeVisible();
-    await expect(page.locator('.nav-item')).toHaveText(['Start', 'Produkte', 'Galerie', 'Einstellungen']);
+    await expect(page.locator('.nav-item')).toHaveText(['Start', 'Bestellungen', 'Produkte', 'Galerie', 'Einstellungen']);
     await expect(page.locator('.nav-item.active')).toHaveText('Start');
   });
 
@@ -165,5 +186,68 @@ test.describe('Admin: Navigation und Start', () => {
     const karte = page.locator('#medienList .fv-krone[open]');
     await expect(karte.locator('.fv-sum-name')).toHaveText('Glitzer');
     await expect(karte.locator('select')).toHaveValue('Türkis');
+  });
+});
+
+test.describe('Admin: Bestellungen', () => {
+  test('ohne Admin-Schlüssel: Hinweis zum Einrichten statt Bestellungen', async ({ page }) => {
+    await openAdmin(page, [], { seite: '' });
+    await expect(page.locator('#startBestellungen')).toContainText('Noch nicht verbunden');
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    await expect(page.locator('#bestInhalt')).toContainText('Bestellungen verbinden');
+    await page.click('#bestInhalt button:has-text("Zu den Einstellungen")');
+    await expect(page.locator('#karteSchnittstelle')).toBeVisible();
+  });
+
+  test('Liste: neueste zuerst, Summenzeile übersprungen, zwei Kronen als zwei Positionen', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const karten = page.locator('#bestListe .best');
+    await expect(karten).toHaveCount(2);
+    await expect(karten.nth(0).locator('.best-kunde')).toHaveText('Kim Muster');
+    await expect(karten.nth(0).locator('.best-betrag')).toContainText('29,00 €');
+    await expect(karten.nth(0).locator('.best-betrag small')).toHaveText('2 Kronen');
+    await karten.nth(0).locator('summary').click();
+    await expect(karten.nth(0).locator('.best-artikel li')).toHaveText([
+      'Einfarbig · Grün · Extra Mini · „FRIDOLIN“', 'Glitzer · Blau · Gross · ohne Namen']);
+    await expect(karten.nth(0).locator('a[href^="mailto:k@example.de"]')).toBeVisible();
+    await expect(page.locator('#bestSumme')).toContainText('2 Bestellungen');
+  });
+
+  test('Suche findet Name, Ort und Krone', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await expect(page.locator('#bestListe .best')).toHaveCount(2);
+    await page.fill('#bestSuche', 'dannau');
+    await expect(page.locator('#bestListe .best')).toHaveCount(1);
+    await page.fill('#bestSuche', 'party');
+    await expect(page.locator('#bestListe .best .best-kunde')).toHaveText('Peter Schwarz');
+    await page.fill('#bestSuche', 'gibtsnicht');
+    await expect(page.locator('#bestListe')).toContainText('Keine Bestellung passt');
+  });
+
+  test('Startseite zeigt die neuesten Bestellungen, ein Tipp öffnet die Bestellung', async ({ page }) => {
+    await openAdmin(page, [], { seite: '', api: true });
+    const zeilen = page.locator('#startBestellungen .start-best');
+    await expect(zeilen).toHaveCount(2);
+    await expect(zeilen.first()).toContainText('Kim Muster');
+    await zeilen.first().click();
+    await expect(page.locator('.best[data-nr="KW-20261001-003"]')).toHaveAttribute('open', '');
+  });
+
+  test('falscher Schlüssel: verständliche Meldung, keine Daten', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#bestellungen', api: true, apiSchluessel: 'FALSCH' });
+    await expect(page.locator('#bestInhalt')).toContainText('Der Admin-Schlüssel stimmt nicht');
+    await expect(page.locator('#bestListe .best')).toHaveCount(0);
+  });
+
+  test('Einstellungen: Schlüssel eintragen, Verbindung wird getestet und verschlüsselt gespeichert', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#einstellungen' });
+    await page.fill('#settingsApiSchluessel', 'GEHEIM123');
+    await page.click('#karteSchnittstelle button:has-text("Speichern")');
+    await expect(page.locator('#schnittstelleStatus')).toContainText('Verbunden mit „Kronenwelt Bestellungen“');
+    const gespeichert = await page.evaluate(() => localStorage.getItem('mkw_api_schluessel_enc'));
+    expect(gespeichert).toBeTruthy();
+    expect(gespeichert).not.toContain('GEHEIM123');
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    await expect(page.locator('#bestListe .best')).toHaveCount(2);
   });
 });
