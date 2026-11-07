@@ -2120,7 +2120,8 @@ function startCartCheckout(method) {
       onApprove: (data, actions) => actions.order.capture().then(details => {
         closePayPalModal();
         const orderData = sendOrderEmails(details, total);
-        saveToSheets(orderData, 'PayPal');
+        // Artikelnummern (gleiche Reihenfolge wie die Kronen), damit das Lager automatisch abbucht
+        saveToSheets({ ...orderData, artikel: cart.map(i => artikelnummer(i.variant, i.color, i.size)).join(', ') }, 'PayPal');
         clearCartAfterPayment(details.payer.name.given_name);
       }),
       onError:  () => alert('❌ PayPal Fehler. Bitte nochmal versuchen.'),
@@ -2397,6 +2398,26 @@ function applyKatalog(k) {
   setProduktFotos(fotos);
   KATALOG = k;
   return true;
+}
+
+// Artikelnummer aus dem Katalog: Gruppe-Produkt-Merkmal-… (z. B. KR-PARTY-ROSA-GR).
+// Die Reihenfolge der Merkmale steht bei der Gruppe; Kürzel am Produkt (Farbe) oder global (Größe).
+// Zusätze wie „ + 6 Pets“ gehören nicht zur Artikelnummer. Unbekannt → ''.
+function artikelnummer(name, farbe, groesse) {
+  const k = KATALOG;
+  const p = k && (k.produkte || []).find(x => x.name === name);
+  const g = p && (k.gruppen || []).find(x => x.id === p.gruppe);
+  if (!g) return '';
+  const werte = { farbe, groesse: String(groesse || '').replace(/\s*\+.*$/, '') };
+  const teile = [g.kuerzel, p.kuerzel];
+  for (const m of g.merkmale || []) {
+    const am = ((p.merkmale || {})[m] || []).find(x => x.wert === werte[m]);
+    const glob = (((k.merkmale || {})[m] || {}).werte || []).find(x => x.wert === werte[m]);
+    const kz = (am && am.kuerzel) || (glob && glob.kuerzel);
+    if (!am || !kz) return '';
+    teile.push(kz);
+  }
+  return teile.join('-');
 }
 
 /* ---- WEITERE FOTOS + VIDEO (aus medien.json) ----

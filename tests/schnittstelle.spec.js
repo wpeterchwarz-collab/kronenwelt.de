@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.2', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.3', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -50,7 +50,7 @@ test.describe('Schnittstelle: Shop-Bestellung', () => {
       kunde_name: 'A B', kunde_email: 'a@b.de', lieferadresse: 'X 1' });
     expect(r.success).toBe(true);
     expect(daten[0].slice(0, 12)).toEqual(KOPF);                                  // alte Spalten unverändert
-    expect(daten[0].slice(12)).toEqual(['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz']);
+    expect(daten[0].slice(12)).toEqual(['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste']);
     const z = daten.at(-1);
     expect(z.slice(3, 9)).toEqual(['Glitzer', 'Blau', 'Gross', 'LUNA', 17, 'PayPal']);
     expect(z[spalte(daten, 'Status')]).toBe('Neu');
@@ -124,5 +124,131 @@ test.describe('Schnittstelle: Bestellung von Hand', () => {
     expect(post({ aktion: 'anlegen', schluessel: S, kanal: '', positionen: [{ variante: 'Party' }], preis: 15 }).fehler).toBe('kein_kanal');
     expect(post({ aktion: 'anlegen', schluessel: S, kanal: 'Etsy', positionen: [{ variante: 'Party' }], preis: 'abc' }).fehler).toBe('ungueltiger_preis');
     expect(daten.length).toBe(vorher);
+  });
+});
+
+/* ---------------- Lager ---------------- */
+const S_PARTY = 'KR-PARTY-ROSA-GR', S_GLITZER = 'KR-GLITZER-GOLD-MI';
+const lager = post => post({ aktion: 'lager', schluessel: S });
+const bestand = (post, sku, kiste) => ((lager(post).bestand[sku] || {})[kiste] || 0);
+
+test.describe('Schnittstelle: Lager', () => {
+  test('leeres Lager: Blätter entstehen beim ersten Zugriff, Kisten kommen mit', async () => {
+    const { post, blatt } = umgebung([BESTELLUNG]);
+    const r = lager(post);
+    expect(r).toMatchObject({ ok: true, kisten: ['Markt & Webshop', 'Etsy', 'Amazon', 'Werkstatt'], werkstatt: 'Werkstatt', bestand: {}, mindest: {}, bewegungen: [] });
+    expect(r.kanalKiste).toMatchObject({ Webshop: 'Markt & Webshop', Markt: 'Markt & Webshop', Etsy: 'Etsy' });
+    expect(blatt('Lagerbewegungen')[0]).toEqual(['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz']);
+    expect(lager(post).bewegungen).toEqual([]);                     // Lesen allein bucht nichts
+  });
+
+  test('genäht, umgelagert, ausgebucht: Bestand ist die Summe der Bewegungen', async () => {
+    const { post, blatt } = umgebung([]);
+    let r = post({ aktion: 'buchen', schluessel: S, buchungen: [
+      { sku: S_PARTY, kiste: 'Werkstatt', menge: 5, grund: 'Genäht', artikel: 'Party · Rosa · Gross' },
+      { sku: S_GLITZER, kiste: 'Etsy', menge: 2, grund: 'Genäht' }] });
+    expect(r).toMatchObject({ ok: true, gebucht: 2 });
+    post({ aktion: 'buchen', schluessel: S, buchungen: [
+      { sku: S_PARTY, kiste: 'Werkstatt', menge: -3, grund: 'Umlagerung' },
+      { sku: S_PARTY, kiste: 'Markt & Webshop', menge: 3, grund: 'Umlagerung' },
+      { sku: S_GLITZER, kiste: 'Etsy', menge: -1, grund: 'Ausgebucht', notiz: 'Geschenk' }] });
+    r = lager(post);
+    expect(r.bestand).toEqual({ [S_PARTY]: { Werkstatt: 2, 'Markt & Webshop': 3 }, [S_GLITZER]: { Etsy: 1 } });
+    expect(r.bewegungen[0]).toMatchObject({ sku: S_GLITZER, menge: -1, grund: 'Ausgebucht', notiz: 'Geschenk', datum: '07.11.2026' });
+    expect(blatt('Lagerbewegungen')).toHaveLength(6);
+  });
+
+  test('ungültige Buchungen werden ganz abgelehnt, auch Verkauf/Storno von Hand', async () => {
+    const { post } = umgebung([]);
+    const falsch = [
+      { sku: 'party rosa', kiste: 'Etsy', menge: 1, grund: 'Genäht' },
+      { sku: S_PARTY, kiste: 'Keller', menge: 1, grund: 'Genäht' },
+      { sku: S_PARTY, kiste: 'Etsy', menge: 1.5, grund: 'Genäht' },
+      { sku: S_PARTY, kiste: 'Etsy', menge: 0, grund: 'Genäht' },
+      { sku: S_PARTY, kiste: 'Etsy', menge: -1, grund: 'Verkauf' }];
+    for (const b of falsch) {
+      expect(post({ aktion: 'buchen', schluessel: S, buchungen: [{ sku: S_GLITZER, kiste: 'Etsy', menge: 1, grund: 'Genäht' }, b] }).fehler).toBe('ungueltige_buchung');
+    }
+    expect(lager(post).bewegungen).toEqual([]);
+    expect(post({ aktion: 'buchen', schluessel: 'FALSCH', buchungen: [{ sku: S_PARTY, kiste: 'Etsy', menge: 1, grund: 'Genäht' }] }).fehler).toBe('nicht_erlaubt');
+  });
+
+  test('Inventur bucht nur den Unterschied zur Zählung', async () => {
+    const { post } = umgebung([]);
+    post({ aktion: 'buchen', schluessel: S, buchungen: [{ sku: S_PARTY, kiste: 'Etsy', menge: 4, grund: 'Genäht' }] });
+    const r = post({ aktion: 'inventur', schluessel: S, kiste: 'Etsy', zaehlung: { [S_PARTY]: 3, [S_GLITZER]: 2, 'KR-UNI-BLAU-KL': 0 } });
+    expect(r).toMatchObject({ ok: true, korrigiert: 2 });
+    expect(r.bestand[S_PARTY].Etsy).toBe(3);
+    expect(r.bestand[S_GLITZER].Etsy).toBe(2);
+    expect(r.bewegungen.filter(b => b.grund === 'Inventur').map(b => b.menge).sort()).toEqual([-1, 2]);
+    expect(post({ aktion: 'inventur', schluessel: S, kiste: 'Etsy', zaehlung: { [S_PARTY]: 3 } }).korrigiert).toBe(0);
+    expect(post({ aktion: 'inventur', schluessel: S, kiste: 'Etsy', zaehlung: { [S_PARTY]: -1 } }).fehler).toBe('ungueltige_zaehlung');
+    expect(post({ aktion: 'inventur', schluessel: S, kiste: 'Dachboden', zaehlung: { [S_PARTY]: 1 } }).fehler).toBe('ungueltige_kiste');
+  });
+
+  test('Mindestbestand je Kiste setzen, ändern und mit 0 entfernen', async () => {
+    const { post } = umgebung([]);
+    post({ aktion: 'mindest', schluessel: S, kiste: 'Markt & Webshop', werte: { [S_PARTY]: 2, [S_GLITZER]: 1 } });
+    post({ aktion: 'mindest', schluessel: S, kiste: 'Etsy', werte: { [S_PARTY]: 1 } });
+    let r = post({ aktion: 'mindest', schluessel: S, kiste: 'Markt & Webshop', werte: { [S_PARTY]: 3, [S_GLITZER]: 0 } });
+    expect(r.mindest).toEqual({ [S_PARTY]: { 'Markt & Webshop': 3, Etsy: 1 } });
+  });
+});
+
+test.describe('Schnittstelle: Verkäufe buchen das Lager ab', () => {
+  test('Shop-Bestellung mit Artikelnummern bucht je Krone 1 aus „Markt & Webshop“ ab', async () => {
+    const { post, daten } = umgebung([]);
+    const r = post({ variante: 'Party, Glitzer', farbe: 'Rosa mit Punkten, Gold', groesse: 'Gross, Mini', hundename: 'MILA | ohne Namen',
+      preis: '32,00', artikel: S_PARTY + ', ' + S_GLITZER });
+    expect(daten.at(-1)[spalte(daten, 'Artikelnr.')]).toBe(S_PARTY + ', ' + S_GLITZER);
+    expect(daten.at(-1)[spalte(daten, 'Kiste')]).toBe('Markt & Webshop');
+    const l = lager(post);
+    expect(l.bestand).toEqual({ [S_PARTY]: { 'Markt & Webshop': -1 }, [S_GLITZER]: { 'Markt & Webshop': -1 } });
+    expect(l.bewegungen.map(b => [b.grund, b.nr, b.artikel])).toContainEqual(['Verkauf', r.bestellnr, 'Party, Rosa mit Punkten, Gross']);
+  });
+
+  test('alte Shop-Seite ohne Artikelnummern: Bestellung wie bisher, Lager bleibt unberührt', async () => {
+    const { post } = umgebung([]);
+    expect(post({ variante: 'Party', farbe: 'Rosa', groesse: 'Gross', preis: '15' }).success).toBe(true);
+    expect(lager(post).bewegungen).toEqual([]);
+  });
+
+  test('Storno bucht zurück, Rücknahme des Stornos bucht wieder ab, nie doppelt', async () => {
+    const { post } = umgebung([]);
+    const nr = post({ variante: 'Party', farbe: 'Rosa', groesse: 'Gross', preis: '15', artikel: S_PARTY }).bestellnr;
+    expect(bestand(post, S_PARTY, 'Markt & Webshop')).toBe(-1);
+    post({ aktion: 'status', schluessel: S, nr, status: 'In Arbeit' });
+    post({ aktion: 'status', schluessel: S, nr, status: 'Versendet' });
+    expect(bestand(post, S_PARTY, 'Markt & Webshop')).toBe(-1);            // Statuswechsel bucht nicht erneut
+    post({ aktion: 'status', schluessel: S, nr, status: 'Storniert' });
+    expect(bestand(post, S_PARTY, 'Markt & Webshop')).toBe(0);
+    expect(lager(post).bewegungen[0]).toMatchObject({ grund: 'Storno', menge: 1, nr });
+    post({ aktion: 'status', schluessel: S, nr, status: 'Neu' });
+    expect(bestand(post, S_PARTY, 'Markt & Webshop')).toBe(-1);
+  });
+
+  test('Bestellung von Hand: Kiste des Kanals, eigene Kiste oder „nicht vom Lager“', async () => {
+    const { post, daten } = umgebung([]);
+    const pos = [{ variante: 'Party', farbe: 'Rosa', groesse: 'Gross', sku: S_PARTY }];
+    post({ aktion: 'anlegen', schluessel: S, kanal: 'Etsy', positionen: pos, preis: 15, kunde: 'A' });
+    expect(bestand(post, S_PARTY, 'Etsy')).toBe(-1);
+    post({ aktion: 'anlegen', schluessel: S, kanal: 'Markt', kiste: 'Werkstatt', positionen: pos, preis: 15 });
+    expect(bestand(post, S_PARTY, 'Werkstatt')).toBe(-1);
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Amazon', kiste: '', positionen: pos, preis: 15, kunde: 'B' });
+    expect(r.bestellung).toMatchObject({ kiste: 'nicht vom Lager', artikel: S_PARTY });
+    expect(lager(post).bestand[S_PARTY].Amazon).toBeUndefined();
+    const ohne = post({ aktion: 'anlegen', schluessel: S, kanal: 'Etsy', positionen: [{ variante: 'Party', sku: 'quatsch<' }], preis: 15, kunde: 'C' });
+    expect(ohne.bestellung.artikel).toBe('');
+    expect(daten.length).toBe(5);
+  });
+
+  test('Fehler im Lager verhindern keine Bestellung', async () => {
+    const { post, daten } = umgebung([], 'GEHEIM123', { kaputt: ['Lagerbewegungen'] });
+    expect(post({ variante: 'Party', preis: '15', artikel: S_PARTY }).success).toBe(true);
+    expect(daten).toHaveLength(2);
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Etsy', positionen: [{ variante: 'Party', sku: S_PARTY }], preis: 15, kunde: 'A' });
+    expect(r).toMatchObject({ ok: true, lagerFehler: true });
+    expect(daten).toHaveLength(3);
+    expect(post({ aktion: 'buchen', schluessel: S, buchungen: [{ sku: S_PARTY, kiste: 'Etsy', menge: 1, grund: 'Genäht' }] }).ok).toBe(false);
   });
 });

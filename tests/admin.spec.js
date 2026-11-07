@@ -21,9 +21,11 @@ const BESTELLUNGEN = [
 ];
 
 // api: true → Admin-Schlüssel ist eingetragen, die Schnittstelle (echter Apps-Script-Code) antwortet
-async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123' } = {}) {
+// lager: Zeilen für das Blatt „Lagerbewegungen“ (ohne Kopf), z. B. [['01.11.2026', '', 'KR-…', '', 'Werkstatt', 2, 'Genäht', '', '']]
+async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null } = {}) {
   await page.addInitScript(() => { localStorage.setItem('mkw_admin_pw', 'test'); localStorage.setItem('mkw_github_token', 'test'); });
-  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123');
+  const blaetter = lager ? { Lagerbewegungen: [['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz'], ...lager] } : {};
+  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter });
   await page.route(/^https?:\/\/(?!localhost)/, route => {
     const u = route.request().url();
     if (u.includes('script.google.com')) {
@@ -138,7 +140,7 @@ test.describe('Admin: Navigation und Start', () => {
   test('ohne Adresse öffnet die Startseite, die Navigation zeigt alle Bereiche', async ({ page }) => {
     await openAdmin(page, [], { seite: '' });
     await expect(page.locator('#tab-start')).toBeVisible();
-    await expect(page.locator('.nav-item')).toHaveText(['Start', 'Bestellungen', 'Produkte', 'Galerie', 'Einstellungen']);
+    await expect(page.locator('.nav-item')).toHaveText(['Start', 'Bestellungen', 'Lager', 'Produkte', 'Galerie', 'Einstellungen']);
     await expect(page.locator('.nav-item.active')).toHaveText('Start');
   });
 
@@ -360,5 +362,135 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     await punkt.click();
     await expect(page).toHaveURL(/#bestellungen$/);
     await expect(page.locator('#bestFilterLeiste button.active')).toContainText('Offen');
+  });
+});
+
+/* ---------------- Lager ---------------- */
+const P0 = katalog.produkte[0];
+const SKU = (p, f, g) => ['KR', p.kuerzel, p.merkmale.farbe.find(x => x.wert === f).kuerzel, katalog.merkmale.groesse.werte.find(x => x.wert === g).kuerzel].join('-');
+const PARTY = katalog.produkte.find(p => p.name === 'Party');
+const PARTY_ROSA_GR = SKU(PARTY, PARTY.merkmale.farbe[0].wert, 'Gross');
+const partyPreis = PARTY.merkmale.groesse.find(g => g.wert === 'Gross').preis;
+const lagerStand = t => t.post({ aktion: 'lager', schluessel: 'GEHEIM123' });
+const zelle = (page, sku) => page.locator(`input[data-sku="${sku}"]`);
+
+test.describe('Admin: Lager', () => {
+  test('leeres Lager: Anleitung, alle Kisten, jedes Produkt mit Farben × Größen', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#lager', api: true });
+    await expect(page.locator('#lagerInhalt')).toContainText('So fängst du an');
+    await expect(page.locator('#lagerKisten button')).toHaveText([/^Alle Kisten/, /^Markt & Webshop/, /^Etsy/, /^Amazon/, /^Werkstatt/]);
+    await expect(page.locator('.lg-produkt')).toHaveCount(katalog.produkte.length);
+    const karte = page.locator('.lg-produkt').first();
+    await karte.locator('summary').click();
+    await expect(karte.locator('tbody tr')).toHaveCount(P0.merkmale.farbe.length);
+    await expect(karte.locator('thead th')).toHaveText(['Farbe', ...P0.merkmale.groesse.map(g => g.wert)]);
+  });
+
+  test('Zählen: nur Änderungen werden als Inventur gebucht, Bestand und Lagerwert stimmen', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#lager', api: true });
+    await page.click('.lg-modus [data-modus="zaehlen"]');
+    await page.click('#lagerKisten [data-kiste="Etsy"]');
+    await expect(page.locator('#lagerLeiste')).toBeEmpty();
+    await zelle(page, PARTY_ROSA_GR).fill('3');
+    await expect(page.locator('#lagerLeiste')).toContainText('1 Änderung in Etsy');
+    await page.click('#lgSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/Zählung gespeichert.*1 Korrektur/);
+    expect(lagerStand(t).bestand).toEqual({ [PARTY_ROSA_GR]: { Etsy: 3 } });
+    await page.click('.lg-modus [data-modus="bestand"]');
+    await expect(page.locator('.lg-wert')).toContainText('3 Kronen');
+    await expect(page.locator('.lg-wert')).toContainText((3 * partyPreis).toFixed(2).replace('.', ',') + ' €');
+    await expect(page.locator('#lagerBewegungen li').first()).toContainText('Inventur · Etsy');
+  });
+
+  test('Mindestbestand → Nähliste: erst aus der Werkstatt nachfüllen, dann nähen', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#lager', api: true,
+      lager: [['01.11.2026', '10:00', PARTY_ROSA_GR, '', 'Werkstatt', 1, 'Genäht', '', '']] });
+    await page.click('.lg-modus [data-modus="mindest"]');
+    await expect(page.locator('#lagerKisten .active')).toHaveText(/Markt & Webshop/);
+    await zelle(page, PARTY_ROSA_GR).fill('2');
+    await page.click('#lgSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/Mindestbestand gespeichert/);
+    await page.click('.lg-modus [data-modus="bestand"]');
+    const zeile = page.locator(`.naeh-zeile[data-sku="${PARTY_ROSA_GR}"][data-kiste="Markt & Webshop"]`);
+    await expect(zeile).toContainText('0 da, 2 sollen · fehlt 2');
+    await zeile.getByRole('button', { name: '1 aus Werkstatt' }).click();
+    await expect(page.locator('#statusText')).toHaveText(/nach Markt & Webshop ✓/);
+    await expect(zeile).toContainText('1 da, 2 sollen · fehlt 1');
+    await expect(zeile.getByRole('button', { name: /aus Werkstatt/ })).toHaveCount(0);
+    await zeile.getByRole('button', { name: '+1 genäht' }).click();
+    await expect(page.locator('#naehliste')).toHaveCount(0);
+    expect(lagerStand(t).bestand[PARTY_ROSA_GR]).toEqual({ Werkstatt: 0, 'Markt & Webshop': 2 });
+  });
+
+  test('Mindestbestand für alle Artikel einer Kiste auf einmal', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#lager', api: true });
+    await page.click('.lg-modus [data-modus="mindest"]');
+    await page.click('#lagerKisten [data-kiste="Etsy"]');
+    await page.click('.lg-alle button');
+    const anzahl = katalog.produkte.reduce((n, p) => n + p.merkmale.farbe.length * p.merkmale.groesse.length, 0);
+    await expect(page.locator('#lagerLeiste')).toContainText(anzahl + ' Änderungen in Etsy');
+    await page.click('#lgSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/Mindestbestand gespeichert/);
+    expect(Object.keys(lagerStand(t).mindest)).toHaveLength(anzahl);
+  });
+
+  test('+ Buchung: Umlagern bucht aus der einen Kiste ab und in die andere ein', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#lager', api: true,
+      lager: [['01.11.2026', '10:00', PARTY_ROSA_GR, '', 'Werkstatt', 4, 'Genäht', '', '']] });
+    await page.click('#btnBuchung');
+    await page.selectOption('#lbArt', 'Umlagerung');
+    await page.selectOption('#lbKiste', 'Werkstatt');
+    await page.selectOption('#lbNach', 'Etsy');
+    const pos = page.locator('#lagerBuchung .bf-pos').first();
+    await pos.locator('select').nth(0).selectOption('Party');
+    await pos.locator('select').nth(1).selectOption(PARTY.merkmale.farbe[0].wert);
+    await pos.locator('select').nth(2).selectOption('Gross');
+    await expect(pos).toContainText('Werkstatt: 4 da');
+    await pos.locator('input').fill('3');
+    await pos.locator('input').blur();
+    await page.click('#lbSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/3 Kronen umgelagert/);
+    await expect(page.locator('#lagerBuchung')).toBeEmpty();
+    expect(lagerStand(t).bestand[PARTY_ROSA_GR]).toEqual({ Werkstatt: 1, Etsy: 3 });
+  });
+
+  test('Etsy-Verkauf von Hand bucht aus der Etsy-Kiste ab; fehlt die Krone, steht sie auf der Nähliste', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    await expect(page.locator('#bfKiste')).toHaveValue('Etsy');
+    await page.selectOption('#bfKanal', 'Markt');
+    await expect(page.locator('#bfKiste')).toHaveValue('Markt & Webshop');
+    await page.selectOption('#bfKanal', 'Etsy');
+    await page.fill('#bfKunde', 'Etsy Kundin');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/Bestellung KW-\d{8}-\d{3} gespeichert/);
+    const sku = SKU(P0, P0.merkmale.farbe[0].wert, P0.merkmale.groesse[0].wert);
+    expect(lagerStand(t).bestand).toEqual({ [sku]: { Etsy: -1 } });
+    await expect(page.locator('.best[open] .best-details')).toContainText('Lager: aus Kiste Etsy');
+    await page.click('.nav-item[data-nav="lager"]');
+    await expect(page.locator(`.naeh-zeile[data-sku="${sku}"]`)).toContainText('1 verkauft, nicht auf Lager');
+    await page.click('.nav-item[data-nav="start"]');
+    await expect(page.locator('#startTodo')).toContainText('Nähliste: 1 Krone nähen');
+    await expect(page.locator('#startZahlen')).toContainText('auf Lager');
+  });
+
+  test('„nicht vom Lager“ bucht nichts ab', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    await page.selectOption('#bfKiste', '');
+    await page.fill('#bfKunde', 'Auftrag');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/gespeichert/);
+    expect(lagerStand(t).bewegungen).toEqual([]);
+  });
+
+  test('am Handy passt die Lagertabelle ohne seitliches Scrollen', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#lager', api: true });
+    await page.click('.lg-modus [data-modus="zaehlen"]');
+    await expect(page.locator('.lg-produkt[open]').first()).toBeVisible();
+    const breit = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(breit).toBeLessThanOrEqual(0);
+    const rahmen = await page.locator('.lg-tabelle-rahmen').evaluateAll(l => l.map(r => r.scrollWidth - r.clientWidth));
+    expect(Math.max(...rahmen)).toBeLessThanOrEqual(1);
   });
 });
