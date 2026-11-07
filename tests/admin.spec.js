@@ -378,7 +378,7 @@ test.describe('Admin: Lager', () => {
   test('leeres Lager: Anleitung, alle Kisten, jedes Produkt mit Farben × Größen', async ({ page }) => {
     await openAdmin(page, [], { seite: '#lager', api: true });
     await expect(page.locator('#lagerInhalt')).toContainText('So fängst du an');
-    await expect(page.locator('#lagerKisten button')).toHaveText([/^Alle Kisten/, /^Markt & Webshop/, /^Etsy/, /^Amazon/, /^Werkstatt/]);
+    await expect(page.locator('#lagerKisten button')).toHaveText([/^\s*Alle Kisten/, /^\s*Markt & Webshop/, /^\s*Etsy/, /^\s*Amazon/, /^\s*Werkstatt/]);
     await expect(page.locator('.lg-produkt')).toHaveCount(katalog.produkte.length);
     const karte = page.locator('.lg-produkt').first();
     await karte.locator('summary').click();
@@ -389,10 +389,15 @@ test.describe('Admin: Lager', () => {
   test('Zählen: nur Änderungen werden als Inventur gebucht, Bestand und Lagerwert stimmen', async ({ page }) => {
     const t = await openAdmin(page, [], { seite: '#lager', api: true });
     await page.click('.lg-modus [data-modus="zaehlen"]');
+    // ohne gewählte Kiste wird nichts gezählt, sondern nach der Kiste gefragt
+    await expect(page.locator('#kisteBanner')).toContainText('Welche Kiste?');
+    await expect(page.locator('#lagerListe input')).toHaveCount(0);
     await page.click('#lagerKisten [data-kiste="Etsy"]');
-    await expect(page.locator('#lagerLeiste')).toBeEmpty();
+    await expect(page.locator('#kisteBanner')).toHaveText(/Du arbeitest in der Kiste\s+Etsy/);
+    await expect(page.locator('#lagerKisten .active')).toHaveAttribute('data-kiste', 'Etsy');
+    await expect(page.locator('#lagerLeiste')).toContainText('Zählen in Etsy · noch nichts geändert');
     await zelle(page, PARTY_ROSA_GR).fill('3');
-    await expect(page.locator('#lagerLeiste')).toContainText('1 Änderung in Etsy');
+    await expect(page.locator('#lagerLeiste')).toContainText('Zählen in Etsy · 1 Änderung');
     await page.click('#lgSpeichern');
     await expect(page.locator('#statusText')).toHaveText(/Zählung gespeichert.*1 Korrektur/);
     expect(lagerStand(t).bestand).toEqual({ [PARTY_ROSA_GR]: { Etsy: 3 } });
@@ -406,6 +411,7 @@ test.describe('Admin: Lager', () => {
     const t = await openAdmin(page, [], { seite: '#lager', api: true,
       lager: [['01.11.2026', '10:00', PARTY_ROSA_GR, '', 'Werkstatt', 1, 'Genäht', '', '']] });
     await page.click('.lg-modus [data-modus="mindest"]');
+    await page.click('#lagerKisten [data-kiste="Markt & Webshop"]');
     await expect(page.locator('#lagerKisten .active')).toHaveText(/Markt & Webshop/);
     await zelle(page, PARTY_ROSA_GR).fill('2');
     await page.click('#lgSpeichern');
@@ -428,7 +434,7 @@ test.describe('Admin: Lager', () => {
     await page.click('#lagerKisten [data-kiste="Etsy"]');
     await page.click('.lg-alle button');
     const anzahl = katalog.produkte.reduce((n, p) => n + p.merkmale.farbe.length * p.merkmale.groesse.length, 0);
-    await expect(page.locator('#lagerLeiste')).toContainText(anzahl + ' Änderungen in Etsy');
+    await expect(page.locator('#lagerLeiste')).toContainText('Mindestbestand in Etsy · ' + anzahl + ' Änderungen');
     await page.click('#lgSpeichern');
     await expect(page.locator('#statusText')).toHaveText(/Mindestbestand gespeichert/);
     expect(Object.keys(lagerStand(t).mindest)).toHaveLength(anzahl);
@@ -487,10 +493,39 @@ test.describe('Admin: Lager', () => {
   test('am Handy passt die Lagertabelle ohne seitliches Scrollen', async ({ page }) => {
     await openAdmin(page, [], { seite: '#lager', api: true });
     await page.click('.lg-modus [data-modus="zaehlen"]');
+    await page.click('#lagerKisten [data-kiste="Amazon"]');
     await expect(page.locator('.lg-produkt[open]').first()).toBeVisible();
     const breit = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(breit).toBeLessThanOrEqual(0);
     const rahmen = await page.locator('.lg-tabelle-rahmen').evaluateAll(l => l.map(r => r.scrollWidth - r.clientWidth));
     expect(Math.max(...rahmen)).toBeLessThanOrEqual(1);
+  });
+});
+
+test.describe('Admin: Lager – Kisten', () => {
+  test('Kiste wechseln mit ungespeicherten Eingaben fragt nach; „Alle Kisten“ führt zurück zum Bestand', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#lager', api: true });
+    await page.click('#lagerKisten [data-kiste="Werkstatt"]');
+    await page.click('.lg-modus [data-modus="zaehlen"]');
+    await zelle(page, PARTY_ROSA_GR).fill('2');
+    page.once('dialog', d => { expect(d.message()).toContain('Werkstatt'); d.dismiss(); });
+    await page.click('#lagerKisten [data-kiste="Etsy"]');
+    await expect(page.locator('#kisteBanner')).toContainText('Werkstatt');           // bleibt in der Werkstatt
+    page.once('dialog', d => d.accept());
+    await page.click('#lagerKisten .kiste-kachel.alle');
+    await expect(page.locator('#kisteBanner')).toContainText('Alle Kisten');
+    await expect(page.locator('.lg-modus .active')).toHaveText('Bestand');
+    await expect(page.locator('#lagerLeiste')).toBeEmpty();
+  });
+
+  test('der Kisten-Balken bleibt beim Scrollen im Zählmodus sichtbar', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#lager', api: true });
+    await page.click('#lagerKisten [data-kiste="Etsy"]');
+    await page.click('.lg-modus [data-modus="zaehlen"]');
+    await page.locator('.lg-produkt').last().scrollIntoViewIfNeeded();
+    await expect(page.locator('#kisteBanner')).toBeInViewport();
+    await expect(page.locator('.lg-leiste')).toBeInViewport();
+    const nav = await page.locator('#hauptNav').boundingBox(), leiste = await page.locator('.lg-leiste').boundingBox();
+    if (nav.y > 100) expect(leiste.y + leiste.height).toBeLessThanOrEqual(nav.y + 1);   // Handy: nicht hinter der Navigation
   });
 });
