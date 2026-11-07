@@ -1,5 +1,5 @@
 // Nachbau der Kronenwelt-Schnittstelle für Tests: echter Code aus apps-script/Code.gs,
-// aber mit nachgestellter Tabelle und nachgestellten Google-Diensten.
+// aber mit nachgestellter Tabelle und nachgestellten Google-Diensten (Sheets, Mail, Sperre).
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -8,31 +8,43 @@ const CODE = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.gs'
 const KOPF = ['Datum', 'Uhrzeit', 'Bestellnr.', 'Variante', 'Farbe', 'Grösse', 'Personalisierung',
   'Preis (€)', 'Zahlung', 'Kundenname', 'E-Mail', 'Lieferadresse'];
 
-// Nachgestellte Tabelle: zeilen = Anzeige-Werte, Preis zusätzlich als Zahl
-function umgebung(zeilen, schluessel = 'GEHEIM123') {
-  const daten = [KOPF.slice(), ...zeilen.map(z => z.slice())];
+// zeilen = Werte wie in der Tabelle (Preis als Zahl); kopf = Kopfzeile (Standard: die 12 alten Spalten)
+function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF } = {}) {
+  const daten = [kopf.slice(), ...zeilen.map(z => z.slice())];
+  const mails = [];
+  const anzeige = x => typeof x === 'number' ? x.toFixed(2).replace('.', ',') + ' €' : String(x == null ? '' : x);
+  const zelle = (r, c) => (daten[r - 1] || [])[c - 1];
+  const setze = (r, c, v) => { while (daten.length < r) daten.push([]); const z = daten[r - 1]; while (z.length < c) z.push(''); z[c - 1] = v; };
+  const block = (r, c, h, w, f) => Array.from({ length: h }, (_, i) => Array.from({ length: w }, (_, j) => f(zelle(r + i, c + j))));
   const sheet = {
     getLastRow: () => daten.length,
-    getLastColumn: () => KOPF.length,
-    appendRow: r => daten.push(r.map(x => x)),
+    getLastColumn: () => Math.max(...daten.map(z => { let n = z.length; while (n && (z[n - 1] === '' || z[n - 1] == null)) n--; return n; })),
+    appendRow: r => daten.push(r.slice()),
     getRange: (r, c, h = 1, w = 1) => ({
-      getDisplayValues: () => daten.slice(r - 1, r - 1 + h).map(z => z.slice(c - 1, c - 1 + w).map(x =>
-        typeof x === 'number' ? x.toFixed(2).replace('.', ',') + ' €' : String(x == null ? '' : x))),
-      getValues: () => daten.slice(r - 1, r - 1 + h).map(z => z.slice(c - 1, c - 1 + w)),
-      setBackground() {}, setNumberFormat() {}, setValues() {}, setFontColor() {}, setFontWeight() {}
+      getDisplayValues: () => block(r, c, h, w, anzeige),
+      getValues: () => block(r, c, h, w, x => x == null ? '' : x),
+      getDisplayValue: () => anzeige(zelle(r, c)),
+      setValue: v => setze(r, c, v),
+      setValues: vs => vs.forEach((z, i) => z.forEach((v, j) => setze(r + i, c + j, v))),
+      setBackground() {}, setNumberFormat() {}, setFontColor() {}, setFontWeight() {}
     })
   };
   const ctx = {
     SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => sheet, getName: () => 'Kronenwelt Bestellungen' }) },
     PropertiesService: { getScriptProperties: () => ({ getProperty: () => schluessel, setProperty() {} }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: t => ({ setMimeType: () => ({ text: t }) }) },
-    Utilities: { sleep() {}, formatDate: () => '07.11.2026', getUuid: () => 'x', computeDigest: () => [] },
+    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    MailApp: { sendEmail: m => mails.push(m), getRemainingDailyQuota: () => 100 },
+    Utilities: {
+      sleep() {}, getUuid: () => 'x', computeDigest: () => [],
+      formatDate: (d, tz, f) => f === 'HH:mm' ? '10:15' : f === 'yyyyMMdd' ? '20261107' : '07.11.2026'
+    },
     Logger: { log() {} }
   };
   vm.createContext(ctx);
   vm.runInContext(CODE, ctx);
   const post = body => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(body) } }).text);
-  return { post, daten };
+  return { post, daten, mails };
 }
 
 module.exports = { umgebung, KOPF };
