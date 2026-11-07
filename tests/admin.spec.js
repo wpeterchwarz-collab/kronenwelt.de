@@ -49,9 +49,12 @@ test('Admin: Hauptfoto zeigt den festen Namen aus dem Katalog', async ({ page })
   await page.click('.tab:has-text("Fotos & Video")');
   const karte = page.locator('#medienList .fv-krone').filter({ has: page.locator('.fv-sum-name', { hasText: /^Glitzer$/ }) });
   await karte.locator('summary').click();
-  await expect(karte.locator('.fv-warn code')).toHaveText(fotos['Glitzer']._default);
+  await expect(karte.locator('.medien-tile.haupt')).toHaveAttribute('data-id', fotos['Glitzer']._default);
   await karte.locator('select').selectOption('Türkis');
-  await expect(karte.locator('.fv-warn code')).toHaveText(fotos['Glitzer']['Türkis']);
+  await expect(karte.locator('.medien-tile.haupt')).toHaveAttribute('data-id', fotos['Glitzer']['Türkis']);
+  await expect(karte.locator('.fv-teilt')).toHaveCount(0);
+  await karte.locator('select').selectOption('Rosa');                 // Rosa und Pink teilen sich ein Foto
+  await expect(karte.locator('.fv-teilt')).toContainText('Pink');
 });
 
 test('Admin: jedes Produkt hat Preisfelder mit den Größen aus dem Katalog', async ({ page }) => {
@@ -60,8 +63,28 @@ test('Admin: jedes Produkt hat Preisfelder mit den Größen aus dem Katalog', as
   for (const p of katalog.produkte) {
     const b = bloecke.filter({ has: page.locator('h3', { hasText: new RegExp('^' + p.name.replace(/[&]/g, '\\$&') + '$') }) });
     await expect(b, p.name).toHaveCount(1);
-    await expect(b.locator('.price-row label')).toHaveText(p.merkmale.groesse.map(g => g.wert));
+    await expect(b.locator('.price-row label, .zahl-tab label')).toHaveText(p.merkmale.groesse.map(g => g.wert));
   }
+});
+
+test('Admin: Zahlenkronen zeigen die Endpreise für 3, 6 und 9 Pets', async ({ page }) => {
+  await openAdmin(page);
+  const auf = Object.fromEntries(katalog.optionen.zahlenpets.werte.map(o => [o.wert, o.aufpreis]));
+  for (const p of katalog.produkte.filter(p => (p.optionen || []).includes('zahlenpets'))) {
+    const b = page.locator('#priceGrid .price-variant.zahl').filter({ has: page.locator('h3', { hasText: p.name }) });
+    for (const g of p.merkmale.groesse) {
+      for (const n of [6, 9]) {
+        const erwartet = (g.preis + auf[n]).toFixed(2).replace('.', ',') + ' €';
+        await expect(b.locator(`.endpreis[data-g="${g.wert}"][data-p="${n}"]`)).toHaveText(erwartet);
+      }
+    }
+  }
+  // Aufpreis ändern → Endpreise rechnen sofort mit
+  await page.fill('#price_Zahlenpets_Aufpreis_6_Pets', '5');
+  const klassik = katalog.produkte.find(p => p.name === 'Zahlenkrone Klassik');
+  const gross = klassik.merkmale.groesse.find(g => g.wert === 'Gross').preis;
+  await expect(page.locator('#priceGrid .price-variant.zahl').first().locator('.endpreis[data-g="Gross"][data-p="6"]'))
+    .toHaveText((gross + 5).toFixed(2).replace('.', ',') + ' €');
 });
 
 test('Admin: Preise speichern ändert in katalog.json nur die Preise', async ({ page }) => {
