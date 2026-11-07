@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="Border Collie Mila mit handgemachter Geburtstagskrone">
 <meta name="twitter:card" content="summary_large_image">
 <!-- Strukturierte Daten für Google: Shop/Marke. Die Produktdaten (mit Preisen)
-     werden unten per JS aus preise.json erzeugt, damit sie immer zu den Preisen passen. -->
+     werden unten per JS aus katalog.json erzeugt, damit sie immer zu den Preisen passen. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -2328,7 +2328,7 @@ const VARIANTEN = {
 // pet: [Farbe des Zahlenpads, Farbe der Zahl] – wird in Auswahl, Vorschau und Farb-Chips verwendet
 
 /* Aufpreis je Anzahl Zahlenpets (Grundpreis in PRICES gilt für 3 Pets).
-   Wird über preise.json → "Zahlenpets Aufpreis" im Admin gepflegt; das hier ist nur der Fallback. */
+   Wird in katalog.json → optionen.zahlenpets (Admin: Preise) gepflegt; das hier ist nur der Fallback. */
 const PET_AUFPREIS = { 3: 0, 6: 3, 9: 6 };
 function petAufpreis(n) {
   const a = PRICES['Zahlenpets Aufpreis'];
@@ -2346,64 +2346,58 @@ const CL = 'https://res.cloudinary.com/dw6amyijc/image/upload/';
 // Cache-Buster: stündliche Versionsnummer als Fallback
 const CLV = 'v' + Math.floor(Date.now() / 3600000) + '/';
 
-const PRODUCT_IMAGES = {
-  'Party': {
-    '_default':          CL + CLV + 'party-krone.jpg',
-    'Rosa mit Punkten':  CL + CLV + 'party-rosa.jpg',
-    'Grau mit Punkten':  CL + CLV + 'party-grau.jpg',
-    'Mint mit Punkten':  CL + CLV + 'party-mint.jpg',
-    'Lila mit Punkten':  CL + CLV + 'party-lilia.jpg',
-    'Petrol mit Punkten':CL + CLV + 'party-petrol.jpg',
-    'Konfetti':          CL + CLV + 'party-konfetti.jpg',
-    'Weiss/Blau/Grün':   CL + CLV + 'party-weiss-blau-gruen.jpg',
-  },
-  'Einfarbig': {
-    '_default': CL + CLV + 'uni-mint.jpg',
-    'Berry':    CL + CLV + 'uni-berry.jpg',
-    'Blau':     CL + CLV + 'uni-blau.jpg',
-    'Grün':     CL + CLV + 'uni-gruen.jpg',
-    'Orange':   CL + CLV + 'uni-orange.jpg',
-  },
-  'Glitzer': {
-    '_default': CL + CLV + 'glitzer-krone.jpg',
-    'Blau':     CL + CLV + 'glitzer-blau.jpg',
-    'Türkis':   CL + CLV + 'glitzer-krone.jpg',
-    'Rosa':     CL + CLV + 'glitzer-pink.jpg',
-    'Pink':     CL + CLV + 'glitzer-pink.jpg',
-    'Silber':   CL + CLV + 'glitzer-silber.jpg',
-    'Weiss':    CL + CLV + 'glitzer-weiss.jpg',
-    'Gold':     CL + CLV + 'glitzer-gold.jpg',
-  },
-  'Edel & Wild': {
-    '_default':   CL + CLV + 'royal-krone.jpg',
-    'Gold':       CL + CLV + 'edel-gold.jpg',
-    'Schwarz':    CL + CLV + 'edel-schwarz.jpg',
-    'Leo Braun':  CL + CLV + 'wild-leo.jpg',
-    'Leo Weiss':  CL + CLV + 'wild-leo-weiss.jpg',
-    'Leopard':    CL + CLV + 'wild-leopard.jpg',
-  },
-  'Zahlenkrone Klassik': {
-    '_default':           CL + CLV + 'zahl-klassik-krone.jpg',
-    'Rosa':               CL + CLV + 'zahl-klassik-rosa.jpg',
-    'Mint':               CL + CLV + 'zahl-klassik-gruen.jpg',   // Dateiname bleibt (Foto ist schon hochgeladen)
-    'Weiss/bunte Punkte': CL + CLV + 'zahl-klassik-weiss-bunt.jpg',
-  },
-  'Zahlenkrone Leo': {
-    '_default':               CL + CLV + 'zahl-leo-krone.jpg',
-    'Gold / Zahlen schwarz':  CL + CLV + 'zahl-leo-pets-gold.jpg',
-    'Schwarz / Zahlen gold':  CL + CLV + 'zahl-leo-pets-schwarz.jpg',
-  },
-  'Zahlenkrone Glitzer': {
-    '_default':       CL + CLV + 'zahl-glitzer-krone.jpg',
-    'Zahlen schwarz': CL + CLV + 'zahl-glitzer-schwarz.jpg',
-    'Zahlen weiss':   CL + CLV + 'zahl-glitzer-weiss.jpg',
-  },
-  'Zahlenkrone Konfetti': {
-    '_default':        CL + CLV + 'zahl-konfetti-krone.jpg',
-    'Zahlenpads Mint': CL + CLV + 'zahl-konfetti-mint.jpg',
-    'Zahlenpads Rosa': CL + CLV + 'zahl-konfetti-rosa.jpg',
+/* Hauptfoto je Krone und Farbe kommt aus katalog.json (Cloudinary-Namen ohne .jpg).
+   Dieselbe Datei nutzt die Admin-Seite → jede Farbe im Konfigurator ist dort pflegbar. */
+let PRODUCT_IMAGES = {};
+function setProduktFotos(json) {
+  const out = {};
+  Object.entries(json || {}).forEach(([v, farben]) => {
+    if (v.startsWith('_') || !farben || typeof farben !== 'object') return;
+    out[v] = {};
+    Object.entries(farben).forEach(([f, id]) => { if (id) out[v][f] = CL + CLV + clId(medienId(id)) + '.jpg'; });
+  });
+  PRODUCT_IMAGES = out;
+  previewKey = '';
+}
+
+/* ---- PRODUKTKATALOG (katalog.json) ----
+   Eine Quelle für Konfigurator, Preise, Hauptfotos und Google-Texte (siehe _info in der Datei).
+   Die fest eingebauten Werte oben (VARIANTEN, PRICES, BOMMELS, SEO_TEXTE) sind nur der Notfall-Stand,
+   falls katalog.json nicht geladen werden kann. Gepflegt wird ausschliesslich katalog.json. */
+let KATALOG = null;
+function applyKatalog(k) {
+  if (!k || !Array.isArray(k.produkte) || !k.produkte.length) return false;
+  const neuV = {}, neuP = {}, fotos = {};
+  k.produkte.forEach(p => {
+    const m = p.merkmale || {}, cfg = p.konfigurator || {};
+    if (!p.name || !Array.isArray(m.farbe) || !Array.isArray(m.groesse)) return;
+    neuV[p.name] = {
+      farben: m.farbe.map(f => Object.assign({ label: f.wert }, f.anzeige || {}, f.personalisierbar === false ? { noName: true } : {})),
+      groessen: m.groesse.map(g => g.wert)
+    };
+    if (cfg.typ) neuV[p.name].typ = cfg.typ;
+    if (cfg.naht != null) neuV[p.name].naht = cfg.naht;
+    if (cfg.farbLabel) neuV[p.name].farbLabel = cfg.farbLabel;
+    if (Array.isArray(cfg.bommeln)) BOMMELS[p.name] = cfg.bommeln;
+    if (p.texte && p.texte.kurz) SEO_TEXTE[p.name] = p.texte.kurz;
+    neuP[p.name] = {};
+    m.groesse.forEach(g => { if (typeof g.preis === 'number') neuP[p.name][g.wert] = g.preis; });
+    fotos[p.name] = { _default: p.hauptfoto };
+    m.farbe.forEach(f => { if (f.foto) fotos[p.name][f.wert] = f.foto; });
+  });
+  if (!Object.keys(neuV).length) return false;
+  Object.keys(VARIANTEN).forEach(v => delete VARIANTEN[v]);    // Reihenfolge wie im Katalog
+  Object.assign(VARIANTEN, neuV);
+  const pets = ((k.optionen || {}).zahlenpets || {}).werte;
+  if (Array.isArray(pets)) {
+    neuP['Zahlenpets Aufpreis'] = {};
+    pets.forEach(o => { if (o.wert !== 3) neuP['Zahlenpets Aufpreis'][o.wert + ' Pets'] = o.aufpreis; });
   }
-};
+  PRICES = neuP;
+  setProduktFotos(fotos);
+  KATALOG = k;
+  return true;
+}
 
 /* ---- WEITERE FOTOS + VIDEO (aus medien.json) ----
    Pro Krone und Farbe bis zu 6 Fotos (Hauptfoto oben + bis zu 5 weitere) und 1 Video.
@@ -3112,7 +3106,7 @@ function updateAbPreise() {
 }
 
 /* ---- 8c. PRODUKTDATEN FÜR GOOGLE (JSON-LD) ----
-   Wird aus PRICES (preise.json) erzeugt – Preise bleiben so immer aktuell. */
+   Wird aus PRICES (katalog.json) erzeugt – Preise bleiben so immer aktuell. */
 const SEO_TEXTE = {
   'Party': 'Bunte Geburtstagskrone für Hunde mit Bommeln, personalisiert mit dem Namen deines Hundes.',
   'Einfarbig': 'Einfarbige Hundekrone aus weichem Filz mit Bommeln, personalisiert mit dem Namen deines Hundes.',
@@ -3167,13 +3161,14 @@ initInstagram();
 initCookies();
 updateCartBadge();
 
-// Preise und Galerie dynamisch laden
+// Katalog (Produkte, Preise, Fotos), Galerie und Medien dynamisch laden
 Promise.all([
-  fetch('preise.json').then(r => r.json()).catch(() => null),
+  fetch('katalog.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null),
   fetch('galerie.json').then(r => r.json()).catch(() => null),
   fetch('medien.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null)
-]).then(([preise, galerie, medien]) => {
-  if (preise) PRICES = { ...PRICES, ...preise };
+]).then(([katalog, galerie, medien]) => {
+  try { if (!applyKatalog(katalog)) console.warn('katalog.json nicht geladen – Notfall-Stand aktiv'); }
+  catch (e) { console.warn('Katalog:', e); }
   if (medien && typeof medien === 'object') { MEDIEN = medien; previewKey = ''; }
   try { renderProduktMedien(); } catch (e) { console.warn('Medien:', e); }
   repriceCart();

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Automatisch erzeugt aus preise.json – nicht von Hand bearbeiten (scripts/merchant-feed.js) -->
+<!-- Automatisch erzeugt aus katalog.json – nicht von Hand bearbeiten (scripts/merchant-feed.js) -->
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
 <channel>
   <title>Mila's Kronenwelt</title>
