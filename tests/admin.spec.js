@@ -5,7 +5,7 @@ const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
 const { katalog, fotos } = require('./helpers');
-const { umgebung } = require('./schnittstelle-attrappe');
+const { umgebung, paypalZahlung } = require('./schnittstelle-attrappe');
 
 const ROOT  = path.join(__dirname, '..');
 const ADMIN = path.join(ROOT, 'admin.html');
@@ -22,10 +22,10 @@ const BESTELLUNGEN = [
 
 // api: true → Admin-Schlüssel ist eingetragen, die Schnittstelle (echter Apps-Script-Code) antwortet
 // lager: Zeilen für das Blatt „Lagerbewegungen“ (ohne Kopf), z. B. [['01.11.2026', '', 'KR-…', '', 'Werkstatt', 2, 'Genäht', '', '']]
-async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null } = {}) {
+async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null, paypal = null } = {}) {
   await page.addInitScript(() => { localStorage.setItem('mkw_admin_pw', 'test'); localStorage.setItem('mkw_github_token', 'test'); });
   const blaetter = lager ? { Lagerbewegungen: [['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz'], ...lager] } : {};
-  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter });
+  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter, paypal });
   await page.route(/^https?:\/\/(?!localhost)/, route => {
     const u = route.request().url();
     if (u.includes('script.google.com')) {
@@ -700,5 +700,70 @@ test.describe('Admin: Bestellungen – Markt, Alter, Handy', () => {
     await k.locator('button:has-text("Jetzt versenden")').click();
     await k.locator('.best-mehr summary').click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  });
+});
+
+/* ---------------- Zahlung prüfen ---------------- */
+test.describe('Admin: Zahlung prüfen', () => {
+  const shopBestellung = (t, preis, id) => t.post({ variante: 'Party', farbe: PARTY.merkmale.farbe[0].wert, groesse: 'Gross', hundename: 'NALA',
+    preis: String(preis), kunde_name: 'Mona Mogel', kunde_email: 'm@example.de', lieferadresse: 'Weg 1, 76137 Karlsruhe, DE', paypal_id: id }).bestellnr;
+
+  test('1 Cent bezahlt: rot markiert, oben unter „Zu tun“, Versenden nur nach Rückfrage', async ({ page }) => {
+    const paypal = { orders: { BILLIG123456: paypalZahlung(0.01) } };
+    const t = await openAdmin(page, [], { seite: '#produkte/preise', api: true, paypal });
+    const nr = shopBestellung(t, '0,01', 'BILLIG123456');
+    await page.click('.nav-item[data-nav="start"]');
+    await expect(page.locator('#startTodo .todo').first()).toContainText('1 Bestellung: Zahlung prüfen');
+    await page.locator('#startTodo .todo').first().click();
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await expect(k.locator('.badge-pruefen')).toHaveText('Zahlung prüfen');
+    await k.locator('summary').first().click();
+    await expect(k.locator('.zahlung-warnung')).toContainText('bezahlt 0,01 €, laut Preisliste ' + partyPreis.toFixed(2).replace('.', ',') + ' €');
+    await k.locator('button:has-text("Jetzt versenden")').click();
+    await k.locator('input[id^="sn-"]').fill('00340434123456789012');
+    page.once('dialog', d => { expect(d.message()).toContain('nicht bestätigt'); d.dismiss(); });
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0].status).toBe('Neu');   // nichts passiert
+    expect(t.mails).toHaveLength(0);
+  });
+
+  test('„Nochmal prüfen“: sobald PayPal die Zahlung kennt, wird daraus ein OK', async ({ page }) => {
+    const paypal = { orders: {} };
+    const t = await openAdmin(page, [], { seite: '#produkte/preise', api: true, paypal });
+    const nr = shopBestellung(t, partyPreis, 'SPAETER12345');
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await k.locator('summary').first().click();
+    await expect(k.locator('.zahlung-warnung')).toContainText('Zahlung bei PayPal nicht gefunden');
+    paypal.orders.SPAETER12345 = paypalZahlung(partyPreis);
+    await k.locator('button:has-text("Nochmal prüfen")').click();
+    await expect(page.locator('#statusText')).toHaveText(/Zahlung bestätigt/);
+    await expect(k.locator('.zahlung-warnung')).toHaveCount(0);
+    await expect(k.locator('.badge-pruefen')).toHaveCount(0);
+    await expect(k.locator('.zahlung-ok')).toHaveText('✓ bei PayPal bestätigt');
+  });
+
+  test('Zahlung bestätigt: keine Warnung; ohne PayPal-Zugang grauer Hinweis', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#produkte/preise', api: true, paypal: { orders: { GUT123456789: paypalZahlung(partyPreis) } } });
+    const gut = shopBestellung(t, partyPreis, 'GUT123456789');
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    const k = page.locator(`.best[data-nr="${gut}"]`);
+    await k.locator('summary').first().click();
+    await expect(k.locator('.zahlung-warnung')).toHaveCount(0);
+    await expect(k.locator('.zahlung-ok')).toBeVisible();
+    // ohne Zugang
+    const t2 = await openAdmin(page, [], { seite: '#produkte/preise', api: true });
+    const offen = shopBestellung(t2, partyPreis, 'GUT123456789');
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    const k2 = page.locator(`.best[data-nr="${offen}"]`);
+    await k2.locator('summary').first().click();
+    await expect(k2.locator('.zahlung-warnung.grau')).toContainText('Zahlung noch nicht geprüft');
+    await expect(k2.locator('.badge-pruefen')).toHaveCount(0);
+  });
+
+  test('Einstellungen zeigen, ob die PayPal-Prüfung eingerichtet ist', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#einstellungen', api: true, paypal: { orders: {} } });
+    await page.click('button[onclick="saveSchnittstelle()"]');
+    await expect(page.locator('#schnittstelleStatus')).toContainText('PayPal-Prüfung ist eingerichtet');
   });
 });

@@ -2,7 +2,7 @@
 // PayPal und EmailJS sind nachgestellt; die Tabelle ist der echte Code aus apps-script/Code.gs.
 const { test, expect } = require('@playwright/test');
 const { openShop, katalog } = require('./helpers');
-const { umgebung } = require('./schnittstelle-attrappe');
+const { umgebung, paypalZahlung } = require('./schnittstelle-attrappe');
 
 const sku = (name, farbe, groesse) => {
   const p = katalog.produkte.find(x => x.name === name);
@@ -21,6 +21,7 @@ async function bezahlen(page) {
   await page.click('#cartCheckoutBtn');
   await expect(page.locator('#paypalModal')).toBeVisible();
   await page.evaluate(() => window.__paypal.onApprove({}, { order: { capture: () => Promise.resolve({
+    id: '8RU61172JS455403V', status: 'COMPLETED',
     payer: { name: { given_name: 'Kim', surname: 'Muster' }, email_address: 'k@example.de' },
     purchase_units: [{ shipping: { address: { address_line_1: 'Moorblick 4', postal_code: '24329', admin_area_2: 'Dannau', country_code: 'DE' } } }]
   }) } }));
@@ -47,10 +48,15 @@ test('Webshop-Bestellung schickt die Artikelnummern mit, die Tabelle bucht das L
   expect(body.artikel).toBe(erwartet.join(', '));
   expect(body.variante).toBe(korb.map(k => k[0]).join(', '));
 
-  // Was der Shop geschickt hat, geht durch die echte Schnittstelle
-  const t = umgebung([]);
+  expect(body.paypal_id).toBe('8RU61172JS455403V');
+
+  // Was der Shop geschickt hat, geht durch die echte Schnittstelle; PayPal bestätigt den Betrag aus dem Warenkorb
+  const bezahlt = parseFloat(body.preis.replace(',', '.'));
+  const t = umgebung([], 'GEHEIM123', { paypal: { orders: { '8RU61172JS455403V': paypalZahlung(bezahlt) } } });
   const r = t.post(body);
   expect(r.success).toBe(true);
+  expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0].zahlungGeprueft).toBe(
+    'OK: ' + bezahlt.toFixed(2).replace('.', ',') + ' € bei PayPal bezahlt');        // Shop-Preise = Katalog-Preise
   const l = t.post({ aktion: 'lager', schluessel: 'GEHEIM123' });
   for (const s of erwartet) expect(l.bestand[s]['Markt & Webshop']).toBe(-1);
   expect(l.bewegungen.every(b => b.grund === 'Verkauf' && b.nr === r.bestellnr)).toBe(true);
@@ -69,7 +75,8 @@ test('Zahlenkrone mit 6 Pets: Artikelnummer ohne Pets, Lager bucht die Krone ab'
   const [[v, c, g]] = await page.evaluate(() => cart.map(i => [i.variant, i.color, i.size]));
   const body = await bezahlen(page);
   expect(body.artikel).toBe(sku(v, c, g.replace(/\s*\+.*$/, '')));
-  const t = umgebung([]);
+  const t = umgebung([], 'GEHEIM123', { paypal: { orders: { '8RU61172JS455403V': paypalZahlung(parseFloat(body.preis.replace(',', '.'))) } } });
   t.post(body);
   expect(t.post({ aktion: 'lager', schluessel: 'GEHEIM123' }).bestand[body.artikel]).toEqual({ 'Markt & Webshop': -1 });
+  expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0].zahlungGeprueft).toMatch(/^OK/);  // Pets-Aufpreis stimmt
 });
