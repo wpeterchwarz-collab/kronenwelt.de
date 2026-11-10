@@ -1,7 +1,7 @@
 // Kronenwelt-Schnittstelle (apps-script/Code.gs): läuft in Google Apps Script.
 // Hier wird sie mit nachgestellter Tabelle und nachgestellten Google-Diensten geprüft.
 const { test, expect } = require('@playwright/test');
-const { umgebung, KOPF } = require('./schnittstelle-attrappe');
+const { umgebung, KOPF, paypalZahlung } = require('./schnittstelle-attrappe');
 
 const S = 'GEHEIM123';
 const BESTELLUNG = ['08.04.2026', '21:49', 'KW-20260408-000', 'Party', 'Rosa mit Punkten', 'Gross', 'TEST', 0.01, 'PayPal',
@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.3', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.4', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -50,7 +50,7 @@ test.describe('Schnittstelle: Shop-Bestellung', () => {
       kunde_name: 'A B', kunde_email: 'a@b.de', lieferadresse: 'X 1' });
     expect(r.success).toBe(true);
     expect(daten[0].slice(0, 12)).toEqual(KOPF);                                  // alte Spalten unverändert
-    expect(daten[0].slice(12)).toEqual(['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste']);
+    expect(daten[0].slice(12)).toEqual(['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft']);
     const z = daten.at(-1);
     expect(z.slice(3, 9)).toEqual(['Glitzer', 'Blau', 'Gross', 'LUNA', 17, 'PayPal']);
     expect(z[spalte(daten, 'Status')]).toBe('Neu');
@@ -250,5 +250,160 @@ test.describe('Schnittstelle: Verkäufe buchen das Lager ab', () => {
     expect(r).toMatchObject({ ok: true, lagerFehler: true });
     expect(daten).toHaveLength(3);
     expect(post({ aktion: 'buchen', schluessel: S, buchungen: [{ sku: S_PARTY, kiste: 'Etsy', menge: 1, grund: 'Genäht' }] }).ok).toBe(false);
+  });
+});
+
+test.describe('Schnittstelle: Lager – Grenzfälle', () => {
+  test('ungültiger Mindestbestand wird abgelehnt, nichts wird gespeichert', async () => {
+    const { post } = umgebung([]);
+    for (const n of [-1, 1.5, 'viel', 1000]) {
+      expect(post({ aktion: 'mindest', schluessel: S, kiste: 'Etsy', werte: { [S_PARTY]: 2, [S_GLITZER]: n } }).fehler).toBe('ungueltiger_mindestbestand');
+    }
+    expect(post({ aktion: 'mindest', schluessel: S, kiste: 'Etsy', werte: { 'kaputt<': 1 } }).fehler).toBe('ungueltiger_mindestbestand');
+    expect(lager(post).mindest).toEqual({});
+  });
+
+  test('zu viele Buchungen auf einmal werden abgelehnt', async () => {
+    const { post } = umgebung([]);
+    const viele = Array.from({ length: 301 }, () => ({ sku: S_PARTY, kiste: 'Etsy', menge: 1, grund: 'Genäht' }));
+    expect(post({ aktion: 'buchen', schluessel: S, buchungen: viele }).fehler).toBe('ungueltige_buchung');
+    expect(post({ aktion: 'buchen', schluessel: S, buchungen: [] }).fehler).toBe('ungueltige_buchung');
+    expect(lager(post).bewegungen).toEqual([]);
+  });
+
+  test('Kanal ohne eigene Kiste (Sonstiges) bucht nichts ab, außer eine Kiste wird gewählt', async () => {
+    const { post } = umgebung([]);
+    const pos = [{ variante: 'Party', sku: S_PARTY }];
+    expect(post({ aktion: 'anlegen', schluessel: S, kanal: 'Sonstiges', positionen: pos, preis: 15, kunde: 'A' }).bestellung.kiste).toBe('nicht vom Lager');
+    expect(lager(post).bewegungen).toEqual([]);
+    post({ aktion: 'anlegen', schluessel: S, kanal: 'Sonstiges', kiste: 'Werkstatt', positionen: pos, preis: 15, kunde: 'B' });
+    expect(bestand(post, S_PARTY, 'Werkstatt')).toBe(-1);
+  });
+
+  test('alte Bestellungen ohne Artikelnummern: Status ändern oder stornieren bucht nichts', async () => {
+    const { post } = umgebung([ZWEI_KRONEN]);
+    post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Storniert' });
+    post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Neu' });
+    expect(lager(post).bewegungen).toEqual([]);
+  });
+
+  test('Bezeichnung und Notiz landen lesbar im Blatt „Lagerbewegungen“', async () => {
+    const { post, blatt } = umgebung([]);
+    post({ aktion: 'inventur', schluessel: S, kiste: 'Etsy', zaehlung: { [S_PARTY]: 2 }, artikel: { [S_PARTY]: 'Party · Rosa · Gross' }, notiz: 'Jahresinventur' });
+    const kopf = blatt('Lagerbewegungen')[0], z = blatt('Lagerbewegungen')[1];
+    const w = n => z[kopf.indexOf(n)];
+    expect([w('Artikelnr.'), w('Artikel'), w('Kiste'), w('Menge'), w('Grund'), w('Notiz'), w('Datum')])
+      .toEqual([S_PARTY, 'Party · Rosa · Gross', 'Etsy', 2, 'Inventur', 'Jahresinventur', '07.11.2026']);
+  });
+});
+
+/* ---------------- Zahlung prüfen (PayPal) ---------------- */
+const katalogJson = require('../katalog.json');
+const preisVon = (name, groesse) => katalogJson.produkte.find(p => p.name === name).merkmale.groesse.find(g => g.wert === groesse).preis;
+const PARTY_ROSA = katalogJson.produkte.find(p => p.name === 'Party').merkmale.farbe[0].wert;
+const GLITZER_F = katalogJson.produkte.find(p => p.name === 'Glitzer').merkmale.farbe[0].wert;
+const ZAHL = katalogJson.produkte.find(p => (p.optionen || []).includes('zahlenpets'));
+const AUFPREIS6 = katalogJson.optionen.zahlenpets.werte.find(w => w.wert === 6).aufpreis;
+const zwei = { variante: 'Party, Glitzer', farbe: PARTY_ROSA + ', ' + GLITZER_F, groesse: 'Gross, Mini', hundename: 'MILA | ohne Namen',
+  kunde_name: 'Kim', kunde_email: 'k@example.de', lieferadresse: 'X 1' };
+const summeZwei = preisVon('Party', 'Gross') + preisVon('Glitzer', 'Mini');
+const geprueft = daten => daten.at(-1)[spalte(daten, 'Zahlung geprüft')];
+
+test.describe('Schnittstelle: Zahlung prüfen', () => {
+  test('echte Zahlung mit passendem Betrag: OK, PayPal-Nummer steht in der Tabelle', async () => {
+    const { post, daten, abrufe } = umgebung([], S, { paypal: { orders: { '5O190127TN364715T': paypalZahlung(summeZwei) } } });
+    const r = post({ ...zwei, preis: String(summeZwei).replace('.', ','), paypal_id: '5O190127TN364715T' });
+    expect(r.success).toBe(true);
+    expect(geprueft(daten)).toBe('OK: ' + summeZwei.toFixed(2).replace('.', ',') + ' € bei PayPal bezahlt');
+    expect(daten.at(-1)[spalte(daten, 'PayPal-ID')]).toBe('5O190127TN364715T');
+    const tok = abrufe.find(a => /oauth2\/token/.test(a.url));
+    expect(tok.opt.headers.Authorization).toBe('Basic ' + Buffer.from('CID:GEHEIM').toString('base64'));
+    expect(abrufe.some(a => a.url === 'https://api-m.paypal.com/v2/checkout/orders/5O190127TN364715T')).toBe(true);   // Live
+  });
+
+  test('Preis im Browser manipuliert: 1 Cent bezahlt → PRÜFEN, Bestellung ist trotzdem gespeichert', async () => {
+    const { post, daten } = umgebung([], S, { paypal: { orders: { ABCDEFGHIJ12: paypalZahlung(0.01) } } });
+    expect(post({ ...zwei, preis: '0,01', paypal_id: 'ABCDEFGHIJ12' }).success).toBe(true);
+    expect(geprueft(daten)).toBe('PRÜFEN: bezahlt 0,01 €, laut Preisliste ' + summeZwei.toFixed(2).replace('.', ',') + ' €');
+    expect(daten).toHaveLength(2);
+  });
+
+  test('gemeldeter Preis passt nicht zum bezahlten Betrag → PRÜFEN', async () => {
+    const { post, daten } = umgebung([], S, { paypal: { orders: { ABCDEFGHIJ12: paypalZahlung(summeZwei + 10) } } });
+    post({ ...zwei, preis: String(summeZwei), paypal_id: 'ABCDEFGHIJ12' });
+    expect(geprueft(daten)).toMatch(/^PRÜFEN: bezahlt .*, gemeldet /);
+  });
+
+  test('ohne Zahlung bestellt (direkt an die Schnittstelle geschickt) → PRÜFEN', async () => {
+    const { post, daten } = umgebung([], S, { paypal: { orders: {} } });
+    post({ ...zwei, preis: '1' });
+    expect(geprueft(daten)).toBe('PRÜFEN: ohne PayPal-Zahlungsnummer gemeldet');
+    post({ ...zwei, preis: '1', paypal_id: 'GIBTESNICHT123' });
+    expect(geprueft(daten)).toBe('PRÜFEN: Zahlung bei PayPal nicht gefunden');
+    post({ ...zwei, preis: '1', paypal_id: '<script>' });
+    expect(geprueft(daten)).toBe('PRÜFEN: ungültige PayPal-Zahlungsnummer');
+  });
+
+  test('Zahlung nicht abgeschlossen oder in anderer Währung → PRÜFEN', async () => {
+    const { post, daten } = umgebung([], S, { paypal: { orders: {
+      OFFEN1234567: paypalZahlung(summeZwei, { status: 'APPROVED', capture: 'PENDING' }),
+      USD123456789: paypalZahlung(summeZwei, { waehrung: 'USD' }) } } });
+    post({ ...zwei, preis: String(summeZwei), paypal_id: 'OFFEN1234567' });
+    expect(geprueft(daten)).toBe('PRÜFEN: Zahlung nicht abgeschlossen (PENDING)');
+    post({ ...zwei, preis: String(summeZwei), paypal_id: 'USD123456789' });
+    expect(geprueft(daten)).toBe('PRÜFEN: Zahlung nicht in Euro (USD)');
+  });
+
+  test('dieselbe Zahlung ein zweites Mal gemeldet → PRÜFEN mit Verweis auf die erste Bestellung', async () => {
+    const { post, daten } = umgebung([], S, { paypal: { orders: { ABCDEFGHIJ12: paypalZahlung(summeZwei) } } });
+    const erste = post({ ...zwei, preis: String(summeZwei), paypal_id: 'ABCDEFGHIJ12' }).bestellnr;
+    expect(geprueft(daten)).toMatch(/^OK/);
+    post({ ...zwei, preis: String(summeZwei), paypal_id: 'ABCDEFGHIJ12' });
+    expect(geprueft(daten)).toBe('PRÜFEN: diese PayPal-Zahlung gehört schon zu ' + erste);
+  });
+
+  test('Zahlenkrone mit 6 Pets: Aufpreis wird mitgerechnet; unbekannte Krone → PRÜFEN', async () => {
+    const soll = preisVon(ZAHL.name, 'Gross') + AUFPREIS6;
+    const { post, daten } = umgebung([], S, { paypal: { orders: { ZAHL12345678: paypalZahlung(soll), FALSCH123456: paypalZahlung(5) } } });
+    post({ variante: ZAHL.name, farbe: ZAHL.merkmale.farbe[0].wert, groesse: 'Gross + 6 Pets', preis: String(soll), paypal_id: 'ZAHL12345678' });
+    expect(geprueft(daten)).toMatch(/^OK/);
+    post({ variante: 'Fantasiekrone', farbe: 'Lila', groesse: 'Gross', preis: '5', paypal_id: 'FALSCH123456' });
+    expect(geprueft(daten)).toBe('PRÜFEN: bezahlt 5,00 €, Artikel nicht im Katalog: Fantasiekrone Lila Gross');
+  });
+
+  test('ohne PayPal-Zugang oder mit falschem Zugang: NICHT GEPRÜFT, Bestellung gespeichert', async () => {
+    let u = umgebung([], S);
+    expect(u.post({ ...zwei, preis: '1', paypal_id: 'ABCDEFGHIJ12' }).success).toBe(true);
+    expect(geprueft(u.daten)).toBe('NICHT GEPRÜFT: PayPal-Zugang fehlt (Skript-Eigenschaften)');
+    u = umgebung([], S, { paypal: { falsch: true } });
+    expect(u.post({ ...zwei, preis: '1', paypal_id: 'ABCDEFGHIJ12' }).success).toBe(true);
+    expect(geprueft(u.daten)).toBe('NICHT GEPRÜFT: PayPal-Anmeldung fehlgeschlagen (401), Zugangsdaten prüfen');
+  });
+
+  test('Sandbox zum Ausprobieren über die Skript-Eigenschaft PAYPAL_MODUS', async () => {
+    const { post, abrufe } = umgebung([], S, { paypal: { orders: {} }, eigenschaften: { PAYPAL_MODUS: 'sandbox' } });
+    post({ ...zwei, preis: '1', paypal_id: 'ABCDEFGHIJ12' });
+    expect(abrufe.filter(a => /paypal/.test(a.url)).every(a => a.url.startsWith('https://api-m.sandbox.paypal.com/'))).toBe(true);
+  });
+
+  test('ping meldet, ob der PayPal-Zugang eingerichtet ist', async () => {
+    expect(umgebung([], S).post({ aktion: 'ping', schluessel: S }).paypal).toBe('fehlt');
+    expect(umgebung([], S, { paypal: { orders: {} } }).post({ aktion: 'ping', schluessel: S }).paypal).toBe('eingerichtet');
+  });
+
+  test('Admin prüft nach: nach dem Eintragen des Zugangs wird aus NICHT GEPRÜFT ein OK', async () => {
+    const u = umgebung([], S, { eigenschaften: {} });
+    const nr = u.post({ ...zwei, preis: String(summeZwei), paypal_id: 'ABCDEFGHIJ12' }).bestellnr;
+    expect(geprueft(u.daten)).toMatch(/^NICHT GEPRÜFT/);
+    // Zugang nachträglich eintragen: neue Umgebung mit denselben Tabellenzeilen
+    const v = umgebung(u.daten.slice(1), S, { kopf: u.daten[0], paypal: { orders: { ABCDEFGHIJ12: paypalZahlung(summeZwei) } } });
+    const r = v.post({ aktion: 'zahlung', schluessel: S, nr });
+    expect(r).toMatchObject({ ok: true, bestellung: { nr, paypalId: 'ABCDEFGHIJ12', zahlungGeprueft: expect.stringMatching(/^OK/) } });
+    expect(v.post({ aktion: 'zahlung', schluessel: 'FALSCH', nr }).fehler).toBe('nicht_erlaubt');
+  });
+
+  test('alte Bestellungen ohne die neuen Spalten werden weiter gelesen', async () => {
+    const { post } = umgebung([BESTELLUNG], S);
+    expect(post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0]).toMatchObject({ paypalId: '', zahlungGeprueft: '' });
   });
 });

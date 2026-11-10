@@ -5,7 +5,7 @@ const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
 const { katalog, fotos } = require('./helpers');
-const { umgebung } = require('./schnittstelle-attrappe');
+const { umgebung, paypalZahlung } = require('./schnittstelle-attrappe');
 
 const ROOT  = path.join(__dirname, '..');
 const ADMIN = path.join(ROOT, 'admin.html');
@@ -22,10 +22,10 @@ const BESTELLUNGEN = [
 
 // api: true → Admin-Schlüssel ist eingetragen, die Schnittstelle (echter Apps-Script-Code) antwortet
 // lager: Zeilen für das Blatt „Lagerbewegungen“ (ohne Kopf), z. B. [['01.11.2026', '', 'KR-…', '', 'Werkstatt', 2, 'Genäht', '', '']]
-async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null } = {}) {
+async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null, paypal = null } = {}) {
   await page.addInitScript(() => { localStorage.setItem('mkw_admin_pw', 'test'); localStorage.setItem('mkw_github_token', 'test'); });
   const blaetter = lager ? { Lagerbewegungen: [['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz'], ...lager] } : {};
-  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter });
+  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter, paypal });
   await page.route(/^https?:\/\/(?!localhost)/, route => {
     const u = route.request().url();
     if (u.includes('script.google.com')) {
@@ -209,7 +209,7 @@ test.describe('Admin: Bestellungen', () => {
     await expect(karten.nth(0).locator('.best-kunde')).toHaveText(/^Kim Muster/);
     await expect(karten.nth(0).locator('.best-betrag')).toContainText('29,00 €');
     await expect(karten.nth(0).locator('.best-betrag small')).toHaveText('2 Kronen');
-    await karten.nth(0).locator('summary').click();
+    await karten.nth(0).locator('summary').first().click();
     await expect(karten.nth(0).locator('.best-artikel li')).toHaveText([
       'Einfarbig · Grün · Extra Mini · „FRIDOLIN“', 'Glitzer · Blau · Gross · ohne Namen']);
     await expect(karten.nth(0).locator('a[href^="mailto:k@example.de"]')).toBeVisible();
@@ -267,7 +267,7 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
 
   test('In Arbeit nehmen ändert den Status in der Tabelle', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
-    await karte(page, 'KW-20261001-003').locator('summary').click();
+    await karte(page, 'KW-20261001-003').locator('summary').first().click();
     await karte(page, 'KW-20261001-003').locator('button:has-text("In Arbeit nehmen")').click();
     await expect(karte(page, 'KW-20261001-003').locator('.status')).toHaveText('In Arbeit');
     const zeile = tabelle.daten.find(z => z[2] === 'KW-20261001-003');
@@ -277,7 +277,8 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
   test('Versenden mit DHL-Nummer schickt die Versandmail und verschiebt nach „Erledigt“', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
     const k = karte(page, 'KW-20261001-003');
-    await k.locator('summary').click();
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();          // neue Bestellung: direkt versenden
     await k.locator('input[id^="sn-"]').fill('0034 0434 1234 5678 90');
     await expect(k.locator('input[id^="mail-"]')).toBeChecked();             // Webshop: Mail ist vorausgewählt
     await k.locator('button:has-text("Als versendet markieren")').click();
@@ -294,7 +295,8 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
   test('Versenden ohne Mail: Haken abwählen, es geht keine Mail raus', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
     const k = karte(page, 'KW-20261001-003');
-    await k.locator('summary').click();
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();          // neue Bestellung: direkt versenden
     await k.locator('input[id^="sn-"]').fill('123456789012');
     await k.locator('input[id^="mail-"]').uncheck();
     await k.locator('button:has-text("Als versendet markieren")').click();
@@ -305,7 +307,8 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
   test('falsche Sendungsnummer wird vor dem Senden abgefangen', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
     const k = karte(page, 'KW-20261001-003');
-    await k.locator('summary').click();
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();          // neue Bestellung: direkt versenden
     await k.locator('input[id^="sn-"]').fill('12-34');
     await k.locator('button:has-text("Als versendet markieren")').click();
     await expect(page.locator('#statusText')).toContainText('Sendungsnummer');
@@ -355,6 +358,34 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     expect(tabelle.daten.length).toBe(vorher);
   });
 
+  test('Übersicht: gruppiert nach Neu / In Arbeit, Name zum Nähen und Alter schon in der Liste', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await expect(page.locator('.best-gruppe')).toHaveText([/Neu\s+2/]);
+    const k = karte(page, 'KW-20261001-003');
+    await expect(k.locator('.best-pos em')).toHaveText('„FRIDOLIN“');
+    await expect(k.locator('.best-alter')).toHaveClass(/warn/);               // seit Oktober offen
+    await expect(k.locator('.best-kanal')).toHaveText('Webshop');
+    await k.locator('summary').first().click();
+    await expect(k.locator('.schritte li')).toHaveText(['Bestellt', 'In Arbeit', 'Versendet']);
+    await expect(k.locator('.schritte li.jetzt')).toHaveText('In Arbeit');
+    await expect(k.locator('input[id^="sn-"]')).toHaveCount(0);               // Versand erst auf Wunsch
+    await k.locator('button:has-text("In Arbeit nehmen")').click();
+    await expect(page.locator('.best-gruppe')).toHaveText([/Neu\s+1/, /In Arbeit\s+1/]);
+    await expect(k.locator('.schritte li.jetzt')).toHaveText('Versendet');
+    await expect(k.locator('input[id^="sn-"]')).toBeVisible();                // jetzt ist Versenden dran
+    await expect(k.locator('.best-mehr')).not.toHaveAttribute('open', '');     // Status von Hand ist versteckt
+  });
+
+  test('Adresse kopieren legt Name und Adresse zeilenweise in die Zwischenablage', async ({ page, context, browserName }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const k = karte(page, 'KW-20261001-003');
+    await k.locator('summary').first().click();
+    await k.locator('.kopier-knopf').click();
+    await expect(page.locator('#statusText')).toHaveText(/Adresse kopiert/);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Kim Muster\nMoorblick 4\n24329 Dannau\nDE');
+  });
+
   test('Startseite meldet neue Bestellungen unter „Zu tun“', async ({ page }) => {
     await openAdmin(page, [], { seite: '', api: true });
     const punkt = page.locator('.todo').filter({ hasText: '2 neue Bestellungen' });
@@ -377,7 +408,7 @@ const zelle = (page, sku) => page.locator(`input[data-sku="${sku}"]`);
 test.describe('Admin: Lager', () => {
   test('leeres Lager: Anleitung, alle Kisten, jedes Produkt mit Farben × Größen', async ({ page }) => {
     await openAdmin(page, [], { seite: '#lager', api: true });
-    await expect(page.locator('#lagerInhalt')).toContainText('So fängst du an');
+    await expect(page.locator('#lagerInhalt')).toContainText('So funktioniert das Lager');
     await expect(page.locator('#lagerKisten button')).toHaveText([/^\s*Alle Kisten/, /^\s*Markt & Webshop/, /^\s*Etsy/, /^\s*Amazon/, /^\s*Werkstatt/]);
     await expect(page.locator('.lg-produkt')).toHaveCount(katalog.produkte.length);
     const karte = page.locator('.lg-produkt').first();
@@ -527,5 +558,212 @@ test.describe('Admin: Lager – Kisten', () => {
     await expect(page.locator('.lg-leiste')).toBeInViewport();
     const nav = await page.locator('#hauptNav').boundingBox(), leiste = await page.locator('.lg-leiste').boundingBox();
     if (nav.y > 100) expect(leiste.y + leiste.height).toBeLessThanOrEqual(nav.y + 1);   // Handy: nicht hinter der Navigation
+  });
+});
+
+/* ---------------- Lücken aus der Prüfung (Lager und Bestellungen) ---------------- */
+test.describe('Admin: Lager – Buchungen und Sonderfälle', () => {
+  test('+ Buchung „Neu genäht“ startet in der gewählten Kiste und bucht dort ein', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#lager', api: true });
+    await page.click('#lagerKisten [data-kiste="Etsy"]');
+    await page.click('#btnBuchung');
+    await expect(page.locator('#lbArt')).toHaveValue('Genäht');
+    await expect(page.locator('#lbKiste')).toHaveValue('Etsy');
+    const pos = page.locator('#lagerBuchung .bf-pos').first();
+    await pos.locator('select').nth(0).selectOption('Party');
+    await pos.locator('select').nth(1).selectOption(PARTY.merkmale.farbe[0].wert);
+    await pos.locator('select').nth(2).selectOption('Gross');
+    await pos.locator('input').fill('2'); await pos.locator('input').blur();
+    await page.click('#lbSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/2 Kronen eingebucht/);
+    expect(lagerStand(t).bestand).toEqual({ [PARTY_ROSA_GR]: { Etsy: 2 } });
+    expect(lagerStand(t).bewegungen[0]).toMatchObject({ grund: 'Genäht', artikel: 'Party · ' + PARTY.merkmale.farbe[0].wert + ' · Gross' });
+  });
+
+  test('Ausbuchen mit Notiz; mehr als vorhanden wird angezeigt; Umlagern in dieselbe Kiste geht nicht', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#lager', api: true,
+      lager: [['01.11.2026', '10:00', PARTY_ROSA_GR, '', 'Werkstatt', 1, 'Genäht', '', '']] });
+    await page.click('#btnBuchung');
+    await page.selectOption('#lbArt', 'Umlagerung');
+    await page.selectOption('#lbNach', 'Werkstatt');
+    await page.selectOption('#lbKiste', 'Werkstatt');
+    await page.click('#lbSpeichern');
+    await expect(page.locator('#statusText')).toContainText('Von- und Nach-Kiste sind gleich');
+    await page.selectOption('#lbArt', 'Ausgebucht');
+    const pos = page.locator('#lagerBuchung .bf-pos').first();
+    await pos.locator('select').nth(0).selectOption('Party');
+    await pos.locator('select').nth(1).selectOption(PARTY.merkmale.farbe[0].wert);
+    await pos.locator('select').nth(2).selectOption('Gross');
+    await pos.locator('input').fill('2'); await pos.locator('input').blur();
+    await expect(pos).toContainText('mehr als vorhanden');
+    await pos.locator('input').fill('1'); await pos.locator('input').blur();
+    await expect(pos).not.toContainText('mehr als vorhanden');
+    await page.fill('#lbNotiz', 'Geschenk an Oma');
+    await page.click('#lbSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/1 Krone ausgebucht/);
+    expect(lagerStand(t).bewegungen[0]).toMatchObject({ grund: 'Ausgebucht', menge: -1, kiste: 'Werkstatt', notiz: 'Geschenk an Oma' });
+  });
+
+  test('Mindestbestand in der Werkstatt: Nähliste bietet nur „+1 genäht“', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#lager', api: true });
+    t.post({ aktion: 'mindest', schluessel: 'GEHEIM123', kiste: 'Werkstatt', werte: { [PARTY_ROSA_GR]: 2 } });
+    await page.click('#tab-lager button:has-text("Aktualisieren")');
+    const zeile = page.locator(`.naeh-zeile[data-kiste="Werkstatt"]`);
+    await expect(zeile).toContainText('fehlt 2');
+    await expect(zeile.getByRole('button', { name: /aus Werkstatt/ })).toHaveCount(0);
+    await zeile.getByRole('button', { name: '+1 genäht' }).click();
+    await expect(zeile).toContainText('fehlt 1');
+  });
+
+  test('alte Apps-Script-Version: klare Meldung statt leerer Seite', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#produkte/preise', api: true });
+    await page.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: '{"ok":false,"fehler":"unbekannte_aktion"}' }));
+    await page.click('.nav-item[data-nav="lager"]');
+    await expect(page.locator('#lagerInhalt')).toContainText('Das Apps Script ist noch die alte Version');
+    await expect(page.locator('#lagerInhalt button:has-text("Nochmal versuchen")')).toBeVisible();
+  });
+
+  test('Anleitung: eingeklappt bleibt eingeklappt, auch nach dem Neuladen', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#lager', api: true });
+    await expect(page.locator('#lagerAnleitung')).toHaveAttribute('open', '');   // leeres Lager: offen
+    await page.click('#lagerAnleitung summary');
+    await expect(page.locator('#lagerAnleitung')).not.toHaveAttribute('open', '');
+    await page.reload();
+    await expect(page.locator('#lagerAnleitung')).toBeVisible();
+    await expect(page.locator('#lagerAnleitung')).not.toHaveAttribute('open', '');
+  });
+
+  test('Storno im Admin bucht zurück, das Lager zeigt es ohne Neuladen', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    await page.fill('#bfKunde', 'Etsy Kundin');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/gespeichert/);
+    const sku = SKU(P0, P0.merkmale.farbe[0].wert, P0.merkmale.groesse[0].wert);
+    await page.click('.nav-item[data-nav="lager"]');
+    await expect(page.locator(`.naeh-zeile[data-sku="${sku}"]`)).toBeVisible();
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    const k = page.locator('.best[open]');
+    await k.locator('.best-mehr summary').click();
+    page.once('dialog', d => d.accept());
+    await k.locator('select[id^="st-"]').selectOption('Storniert');
+    await expect(page.locator('#statusText')).toHaveText(/Storniert ✓/);
+    expect(lagerStand(t).bestand[sku]).toEqual({ Etsy: 0 });
+    await page.click('.nav-item[data-nav="lager"]');
+    await expect(page.locator('#naehliste')).toHaveCount(0);
+    await expect(page.locator('#lagerBewegungen li').first()).toContainText('Storno');
+  });
+
+  test('Start: Tipp auf die Nähliste öffnet das Lager', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#produkte/preise', api: true });
+    t.post({ aktion: 'mindest', schluessel: 'GEHEIM123', kiste: 'Etsy', werte: { [PARTY_ROSA_GR]: 1 } });
+    await page.click('.nav-item[data-nav="start"]');
+    const punkt = page.locator('.todo').filter({ hasText: 'Nähliste' });
+    await punkt.click();
+    await expect(page).toHaveURL(/#lager$/);
+    await expect(page.locator('#naehliste')).toBeVisible();
+  });
+});
+
+test.describe('Admin: Bestellungen – Markt, Alter, Handy', () => {
+  test('Markt-Verkauf: zwei Schritte, „Übergeben“ erledigt ihn, keine Alters-Warnung', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const nr = t.post({ aktion: 'anlegen', schluessel: 'GEHEIM123', kanal: 'Markt', datum: '01.09.2026', status: 'Neu',
+      positionen: [{ variante: 'Party', farbe: PARTY.merkmale.farbe[0].wert, groesse: 'Gross', pers: 'LUNA' }], preis: 15, kunde: 'Marktstand' }).bestellung.nr;
+    await page.click('button:has-text("Aktualisieren")');
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await expect(k.locator('.best-alter')).not.toHaveClass(/warn/);
+    await k.locator('summary').first().click();
+    await expect(k.locator('.schritte li')).toHaveText(['Bestellt', 'Übergeben']);
+    await expect(k.locator('input[id^="sn-"]')).toHaveCount(0);                  // Markt: kein Versand
+    await k.locator('.best-schritt button:has-text("Übergeben")').click();
+    await expect(page.locator('#statusText')).toHaveText(/Übergeben ✓/);
+    await page.click('#bestFilterLeiste [data-filter="erledigt"]');
+    await expect(k.locator('.schritt-text')).toContainText('Übergeben');
+  });
+
+  test('Alter zählt nur Werktage, rot ab 4 Werktagen', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-09T10:00:00'));               // Montag
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const wt = d => page.evaluate(x => werktageSeit(x), d);
+    expect(await wt('09.11.2026')).toBe(0);   // heute
+    expect(await wt('06.11.2026')).toBe(1);   // Freitag → Montag
+    expect(await wt('07.11.2026')).toBe(1);   // Samstag → Montag
+    expect(await wt('03.11.2026')).toBe(4);   // Dienstag
+    expect(await wt('kein Datum')).toBe(null);
+  });
+
+  test('am Handy passt eine aufgeklappte Bestellung ohne seitliches Scrollen', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const k = page.locator('.best[data-nr="KW-20261001-003"]');
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();
+    await k.locator('.best-mehr summary').click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  });
+});
+
+/* ---------------- Zahlung prüfen ---------------- */
+test.describe('Admin: Zahlung prüfen', () => {
+  const shopBestellung = (t, preis, id) => t.post({ variante: 'Party', farbe: PARTY.merkmale.farbe[0].wert, groesse: 'Gross', hundename: 'NALA',
+    preis: String(preis), kunde_name: 'Mona Mogel', kunde_email: 'm@example.de', lieferadresse: 'Weg 1, 76137 Karlsruhe, DE', paypal_id: id }).bestellnr;
+
+  test('1 Cent bezahlt: rot markiert, oben unter „Zu tun“, Versenden nur nach Rückfrage', async ({ page }) => {
+    const paypal = { orders: { BILLIG123456: paypalZahlung(0.01) } };
+    const t = await openAdmin(page, [], { seite: '#produkte/preise', api: true, paypal });
+    const nr = shopBestellung(t, '0,01', 'BILLIG123456');
+    await page.click('.nav-item[data-nav="start"]');
+    await expect(page.locator('#startTodo .todo').first()).toContainText('1 Bestellung: Zahlung prüfen');
+    await page.locator('#startTodo .todo').first().click();
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await expect(k.locator('.badge-pruefen')).toHaveText('Zahlung prüfen');
+    await k.locator('summary').first().click();
+    await expect(k.locator('.zahlung-warnung')).toContainText('bezahlt 0,01 €, laut Preisliste ' + partyPreis.toFixed(2).replace('.', ',') + ' €');
+    await k.locator('button:has-text("Jetzt versenden")').click();
+    await k.locator('input[id^="sn-"]').fill('00340434123456789012');
+    page.once('dialog', d => { expect(d.message()).toContain('nicht bestätigt'); d.dismiss(); });
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0].status).toBe('Neu');   // nichts passiert
+    expect(t.mails).toHaveLength(0);
+  });
+
+  test('„Nochmal prüfen“: sobald PayPal die Zahlung kennt, wird daraus ein OK', async ({ page }) => {
+    const paypal = { orders: {} };
+    const t = await openAdmin(page, [], { seite: '#produkte/preise', api: true, paypal });
+    const nr = shopBestellung(t, partyPreis, 'SPAETER12345');
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await k.locator('summary').first().click();
+    await expect(k.locator('.zahlung-warnung')).toContainText('Zahlung bei PayPal nicht gefunden');
+    paypal.orders.SPAETER12345 = paypalZahlung(partyPreis);
+    await k.locator('button:has-text("Nochmal prüfen")').click();
+    await expect(page.locator('#statusText')).toHaveText(/Zahlung bestätigt/);
+    await expect(k.locator('.zahlung-warnung')).toHaveCount(0);
+    await expect(k.locator('.badge-pruefen')).toHaveCount(0);
+    await expect(k.locator('.zahlung-ok')).toHaveText('✓ bei PayPal bestätigt');
+  });
+
+  test('Zahlung bestätigt: keine Warnung; ohne PayPal-Zugang grauer Hinweis', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#produkte/preise', api: true, paypal: { orders: { GUT123456789: paypalZahlung(partyPreis) } } });
+    const gut = shopBestellung(t, partyPreis, 'GUT123456789');
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    const k = page.locator(`.best[data-nr="${gut}"]`);
+    await k.locator('summary').first().click();
+    await expect(k.locator('.zahlung-warnung')).toHaveCount(0);
+    await expect(k.locator('.zahlung-ok')).toBeVisible();
+    // ohne Zugang
+    const t2 = await openAdmin(page, [], { seite: '#produkte/preise', api: true });
+    const offen = shopBestellung(t2, partyPreis, 'GUT123456789');
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    const k2 = page.locator(`.best[data-nr="${offen}"]`);
+    await k2.locator('summary').first().click();
+    await expect(k2.locator('.zahlung-warnung.grau')).toContainText('Zahlung noch nicht geprüft');
+    await expect(k2.locator('.badge-pruefen')).toHaveCount(0);
+  });
+
+  test('Einstellungen zeigen, ob die PayPal-Prüfung eingerichtet ist', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#einstellungen', api: true, paypal: { orders: {} } });
+    await page.click('button[onclick="saveSchnittstelle()"]');
+    await expect(page.locator('#schnittstelleStatus')).toContainText('PayPal-Prüfung ist eingerichtet');
   });
 });

@@ -15,6 +15,12 @@
       „Lagerbewegungen“. Der Bestand ist die Summe dieser Zeilen, je Artikelnummer und Kiste.
       Verkäufe und Stornos bucht die Schnittstelle selbst (über die Bestellnummer, nie doppelt).
 
+   4) Zahlung prüfen: Jede Shop-Bestellung bringt die PayPal-Nummer mit. Die Schnittstelle fragt bei
+      PayPal nach, ob genau diese Zahlung abgeschlossen ist, und rechnet den Preis selbst aus katalog.json
+      nach. Ergebnis steht in der Spalte „Zahlung geprüft“ (OK / PRÜFEN / NICHT GEPRÜFT). Gespeichert wird
+      die Bestellung immer; eine verdächtige Bestellung wird nur markiert.
+      Zugang zu PayPal: Skript-Eigenschaften PAYPAL_CLIENT_ID und PAYPAL_SECRET (nie im Code).
+
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
    werden rechts angehängt, sobald sie gebraucht werden. Nichts wird umbenannt oder gelöscht.
 
@@ -23,14 +29,14 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.3';
+const SCHNITTSTELLE_VERSION = '1.4';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
   'Preis (€)', 'Zahlung',
   'Kundenname', 'E-Mail', 'Lieferadresse'
 ];
-const ZUSATZ_SPALTEN = ['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste'];
+const ZUSATZ_SPALTEN = ['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft'];
 const STATUS = ['Neu', 'In Arbeit', 'Versendet', 'Übergeben', 'Storniert'];
 
 // Lager: Kisten und aus welcher Kiste jeder Kanal verkauft. Neue Kiste = ein Eintrag hier.
@@ -44,6 +50,10 @@ const MINDEST_BLATT = 'Mindestbestand';
 const MINDEST_SPALTEN = ['Artikelnr.', 'Kiste', 'Mindestbestand'];
 // Gründe, die die Admin-Seite buchen darf („Verkauf“ und „Storno“ bucht nur die Schnittstelle selbst)
 const GRUENDE = ['Genäht', 'Umlagerung', 'Ausgebucht', 'Korrektur'];
+
+// Zahlung prüfen: PayPal (Live; mit Skript-Eigenschaft PAYPAL_MODUS = sandbox zum Testen) und der Katalog der Website
+const PAYPAL_API = { live: 'https://api-m.paypal.com', sandbox: 'https://api-m.sandbox.paypal.com' };
+const KATALOG_URL = 'https://kronenwelt.de/katalog.json';
 
 // Absender der Versandmail (Antworten gehen an die Shop-Adresse)
 const SHOP_NAME  = "Mila's Kronenwelt";
@@ -76,7 +86,8 @@ function bestellungSpeichern(data) {
     const kopf = spaltenSicherstellen(sheet);
     const now = new Date();
     const nr = neueBestellnr(sheet, kopf, now);
-    zeileAnhaengen(sheet, kopf, {
+    const paypalId = String(data.paypal_id || '').trim().slice(0, 40);
+    const zeile = zeileAnhaengen(sheet, kopf, {
       'Datum': Utilities.formatDate(now, 'Europe/Berlin', 'dd.MM.yyyy'),
       'Uhrzeit': Utilities.formatDate(now, 'Europe/Berlin', 'HH:mm'),
       'Bestellnr.': nr,
@@ -92,8 +103,10 @@ function bestellungSpeichern(data) {
       'Status': 'Neu',
       'Kanal': 'Webshop',
       'Artikelnr.': artikelListe(String(data.artikel || '').split(',')),
-      'Kiste': KANAL_KISTE['Webshop']
+      'Kiste': KANAL_KISTE['Webshop'],
+      'PayPal-ID': paypalId
     });
+    zahlungPruefenSicher(sheet, kopf, zeile);        // nach dem Speichern: eine Bestellung geht nie verloren
     lagerAbgleichSicher(nr);
     return antwort({ success: true, bestellnr: nr });
   } catch (err) {
@@ -109,13 +122,16 @@ function adminAnfrage(data) {
     Utilities.sleep(800);                                   // Ausprobieren von Schlüsseln bremsen
     return antwort({ ok: false, fehler: 'nicht_erlaubt' });
   }
-  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest'].indexOf(data.aktion) >= 0;
+  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung'].indexOf(data.aktion) >= 0;
   const lock = LockService.getScriptLock();
   try {
     if (schreibt) lock.waitLock(20000);
     switch (data.aktion) {
       case 'ping':
-        return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, tabelle: SpreadsheetApp.getActiveSpreadsheet().getName() });
+        return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, tabelle: SpreadsheetApp.getActiveSpreadsheet().getName(),
+          paypal: paypalZugang() ? 'eingerichtet' : 'fehlt' });
+      case 'zahlung':
+        return antwort(zahlungNachpruefen(data));
       case 'bestellungen':
         return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, bestellungen: bestellungenLesen() });
       case 'status':
@@ -175,7 +191,8 @@ function bestellungAusZeile(kopf, a, w, zeile) {
     kunde: feld('Kundenname'), email: feld('E-Mail'), adresse: feld('Lieferadresse'),
     status: feld('Status') || 'Neu', kanal: feld('Kanal') || 'Webshop',
     sendungsnummer: feld('Sendungsnummer'), versendetAm: feld('Versendet am'), notiz: feld('Notiz'),
-    artikel: feld('Artikelnr.'), kiste: feld('Kiste')
+    artikel: feld('Artikelnr.'), kiste: feld('Kiste'),
+    paypalId: feld('PayPal-ID'), zahlungGeprueft: feld('Zahlung geprüft')
   };
 }
 
@@ -438,6 +455,136 @@ function zeileAnhaengenRoh(sheet, kopf, werte) {
   return sheet.getLastRow();
 }
 
+/* ---------------- 4) Zahlung prüfen (PayPal + Preis aus dem Katalog) ---------------- */
+function paypalZugang() {
+  const p = PropertiesService.getScriptProperties();
+  const id = p.getProperty('PAYPAL_CLIENT_ID'), geheim = p.getProperty('PAYPAL_SECRET');
+  if (!id || !geheim) return null;
+  return { id: id, geheim: geheim, api: PAYPAL_API[p.getProperty('PAYPAL_MODUS') === 'sandbox' ? 'sandbox' : 'live'] };
+}
+
+function euroText(n) { return (Math.round(n * 100) / 100).toFixed(2).replace('.', ',') + ' €'; }
+
+// Prüft die Zahlung der Bestellung in dieser Zeile und schreibt das Ergebnis in „Zahlung geprüft“.
+function zahlungPruefenSicher(sheet, kopf, zeile) {
+  let text;
+  try {
+    text = zahlungPruefen(bestellungLesen(sheet, kopf, zeile));
+  } catch (err) {
+    text = 'NICHT GEPRÜFT: ' + String(err.message || err).slice(0, 120);
+  }
+  sheet.getRange(zeile, kopf.indexOf('Zahlung geprüft') + 1).setValue(text);
+  return text;
+}
+
+function zahlungPruefen(b) {
+  const id = b.paypalId;
+  if (!id) return 'PRÜFEN: ohne PayPal-Zahlungsnummer gemeldet';
+  if (!/^[A-Z0-9]{10,30}$/.test(id)) return 'PRÜFEN: ungültige PayPal-Zahlungsnummer';
+  const zugang = paypalZugang();
+  if (!zugang) return 'NICHT GEPRÜFT: PayPal-Zugang fehlt (Skript-Eigenschaften)';
+  const schon = andereBestellungMitPaypal(id, b.nr);
+  if (schon) return 'PRÜFEN: diese PayPal-Zahlung gehört schon zu ' + schon;
+
+  const order = paypalBestellung(zugang, id);
+  if (!order) return 'PRÜFEN: Zahlung bei PayPal nicht gefunden';
+  const pu = (order.purchase_units || [])[0] || {};
+  const cap = (((pu.payments || {}).captures) || [])[0] || {};
+  const st = cap.status || order.status;
+  if (order.status !== 'COMPLETED' || cap.status !== 'COMPLETED') return 'PRÜFEN: Zahlung nicht abgeschlossen (' + st + ')';
+  const betragObj = cap.amount || pu.amount || {};
+  if (betragObj.currency_code !== 'EUR') return 'PRÜFEN: Zahlung nicht in Euro (' + betragObj.currency_code + ')';
+  const bezahlt = Number(betragObj.value);
+
+  const soll = sollPreis(b);
+  if (soll.fehlt.length) return 'PRÜFEN: bezahlt ' + euroText(bezahlt) + ', Artikel nicht im Katalog: ' + soll.fehlt.join(', ');
+  if (bezahlt + 0.005 < soll.summe) return 'PRÜFEN: bezahlt ' + euroText(bezahlt) + ', laut Preisliste ' + euroText(soll.summe);
+  if (Math.abs(bezahlt - b.preis) > 0.005) return 'PRÜFEN: bezahlt ' + euroText(bezahlt) + ', gemeldet ' + euroText(b.preis);
+  return 'OK: ' + euroText(bezahlt) + ' bei PayPal bezahlt';
+}
+
+// Admin: Zahlung einer Bestellung (erneut) prüfen, z. B. nachdem der PayPal-Zugang eingetragen wurde
+function zahlungNachpruefen(data) {
+  const sheet = blatt();
+  const kopf = spaltenSicherstellen(sheet);
+  const zeile = zeileFinden(sheet, kopf, data.zeile, data.nr);
+  zahlungPruefenSicher(sheet, kopf, zeile);
+  return { ok: true, bestellung: bestellungLesen(sheet, kopf, zeile) };
+}
+
+function andereBestellungMitPaypal(id, nr) {
+  const sheet = blatt(), kopf = kopfzeile(sheet), n = sheet.getLastRow();
+  const ip = kopf.indexOf('PayPal-ID'), inr = kopf.indexOf('Bestellnr.');
+  if (ip < 0 || n < 2) return '';
+  const w = sheet.getRange(2, 1, n - 1, kopf.length).getDisplayValues();
+  for (let i = 0; i < w.length; i++) {
+    if (String(w[i][ip]).trim() === id && String(w[i][inr]).trim() !== nr) return String(w[i][inr]).trim();
+  }
+  return '';
+}
+
+function paypalToken(zugang) {
+  const cache = CacheService.getScriptCache(), k = 'paypal_token_' + zugang.api.length;
+  const alt = cache.get(k);
+  if (alt) return alt;
+  const r = UrlFetchApp.fetch(zugang.api + '/v1/oauth2/token', {
+    method: 'post', muteHttpExceptions: true, payload: 'grant_type=client_credentials',
+    contentType: 'application/x-www-form-urlencoded',
+    headers: { Authorization: 'Basic ' + Utilities.base64Encode(zugang.id + ':' + zugang.geheim) }
+  });
+  if (r.getResponseCode() !== 200) throw new Error('PayPal-Anmeldung fehlgeschlagen (' + r.getResponseCode() + '), Zugangsdaten prüfen');
+  const j = JSON.parse(r.getContentText());
+  cache.put(k, j.access_token, Math.max(60, Math.min(21600, (j.expires_in || 3600) - 300)));
+  return j.access_token;
+}
+
+function paypalBestellung(zugang, id) {
+  const r = UrlFetchApp.fetch(zugang.api + '/v2/checkout/orders/' + encodeURIComponent(id), {
+    method: 'get', muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + paypalToken(zugang) }
+  });
+  const c = r.getResponseCode();
+  if (c === 404 || c === 422) return null;
+  if (c !== 200) throw new Error('PayPal antwortet nicht (' + c + ')');
+  return JSON.parse(r.getContentText());
+}
+
+// Katalog der Website (10 Minuten zwischengespeichert)
+function katalogLaden() {
+  const cache = CacheService.getScriptCache();
+  const alt = cache.get('katalog');
+  if (alt) return JSON.parse(alt);
+  const r = UrlFetchApp.fetch(KATALOG_URL, { muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) throw new Error('katalog.json nicht erreichbar (' + r.getResponseCode() + ')');
+  const text = r.getContentText();
+  try { cache.put('katalog', text, 600); } catch (e) { /* zu groß für den Zwischenspeicher: dann eben jedes Mal laden */ }
+  return JSON.parse(text);
+}
+
+// Preis laut Katalog aus dem, was Sara liest und näht (Variante, Farbe, Größe je Krone).
+// Größe „Gross + 6 Pets“ = Preis für Gross + Aufpreis für 6 Pets.
+function sollPreis(b) {
+  const k = katalogLaden();
+  const teil = function (x) { return String(x || '').split(/\s*,\s*/); };
+  const v = teil(b.variante), f = teil(b.farbe), g = teil(b.groesse);
+  let summe = 0;
+  const fehlt = [];
+  v.forEach(function (name, i) {
+    const p = (k.produkte || []).filter(function (x) { return x.name === name; })[0];
+    const groesse = String(g[i] || '').replace(/\s*\+.*$/, '');
+    const pets = (/\+\s*(\d+)\s*Pets/i.exec(g[i] || '') || [])[1];
+    const farbeOk = p && (p.merkmale.farbe || []).some(function (x) { return x.wert === f[i]; });
+    const gr = p && (p.merkmale.groesse || []).filter(function (x) { return x.wert === groesse; })[0];
+    if (!p || !farbeOk || !gr) { fehlt.push([name, f[i], g[i]].join(' ')); return; }
+    summe += Number(gr.preis) || 0;
+    if (pets) {
+      const o = (((k.optionen || {}).zahlenpets || {}).werte || []).filter(function (x) { return String(x.wert) === pets; })[0];
+      if (!o) { fehlt.push(name + ' ' + g[i]); return; }
+      summe += Number(o.aufpreis) || 0;
+    }
+  });
+  return { summe: Math.round(summe * 100) / 100, fehlt: fehlt };
+}
+
 /* ---------------- Versandmail ---------------- */
 function sendeVersandmail(b) {
   const vorname = (b.kunde || '').split(' ')[0] || 'liebe Kundin, lieber Kunde';
@@ -607,11 +754,22 @@ function einrichten() {
   Logger.log(schluessel);
 }
 
+/* Nach dem Update auf 1.4 einmal „paypalTesten“ ausführen: zeigt im Protokoll, ob die Anmeldung bei PayPal klappt. */
+function paypalTesten() {
+  const z = paypalZugang();
+  if (!z) { Logger.log('PayPal-Zugang fehlt: PAYPAL_CLIENT_ID und PAYPAL_SECRET in den Skript-Eigenschaften eintragen.'); return; }
+  paypalToken(z);
+  Logger.log('PayPal-Anmeldung klappt (' + (z.api.indexOf('sandbox') >= 0 ? 'Sandbox' : 'Live') + ').');
+}
+
 /* Einmalig nach dem Update auf 1.2 ausführen: Google fragt nach der Erlaubnis, Mails zu senden
    (für die Versandmail) und legt die neuen Spalten an. Der Admin-Schlüssel bleibt unverändert.
    Ab 1.3 legt es auch die Blätter „Lagerbewegungen“ und „Mindestbestand“ an. */
 function berechtigen() {
   spaltenSicherstellen(blatt());
+  // Ab 1.4: Erlaubnis für Anfragen ins Internet (PayPal, katalog.json)
+  Logger.log('Katalog erreichbar: ' + (katalogLaden().produkte || []).length + ' Produkte.');
+  Logger.log(paypalZugang() ? 'PayPal-Zugang ist eingetragen.' : 'PayPal-Zugang fehlt noch: PAYPAL_CLIENT_ID und PAYPAL_SECRET in den Skript-Eigenschaften eintragen.');
   lagerBlatt(LAGER_BLATT, LAGER_SPALTEN);
   lagerBlatt(MINDEST_BLATT, MINDEST_SPALTEN);
   Logger.log('Spalten geprüft. Heute noch möglich: ' + MailApp.getRemainingDailyQuota() + ' Mails.');

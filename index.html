@@ -2120,8 +2120,9 @@ function startCartCheckout(method) {
       onApprove: (data, actions) => actions.order.capture().then(details => {
         closePayPalModal();
         const orderData = sendOrderEmails(details, total);
-        // Artikelnummern (gleiche Reihenfolge wie die Kronen), damit das Lager automatisch abbucht
-        saveToSheets({ ...orderData, artikel: cart.map(i => artikelnummer(i.variant, i.color, i.size)).join(', ') }, 'PayPal');
+        // Artikelnummern (gleiche Reihenfolge wie die Kronen), damit das Lager automatisch abbucht;
+        // PayPal-Nummer, damit die Tabelle bei PayPal nachprüft, ob genau diese Zahlung angekommen ist
+        saveToSheets({ ...orderData, artikel: cart.map(i => artikelnummer(i.variant, i.color, i.size)).join(', '), paypal_id: details.id || '' }, 'PayPal');
         clearCartAfterPayment(details.payer.name.given_name);
       }),
       onError:  () => alert('❌ PayPal Fehler. Bitte nochmal versuchen.'),

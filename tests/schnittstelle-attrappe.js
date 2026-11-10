@@ -32,7 +32,25 @@ function blattAttrappe(daten, geld, kaputt) {
 
 // zeilen = Werte wie in der Tabelle (Preis als Zahl); kopf = Kopfzeile (Standard: die 12 alten Spalten)
 // blaetter = weitere Blätter { Name: [Zeilen inkl. Kopf] }, z. B. Lagerbewegungen; kaputt = Blätter, in die nicht geschrieben werden kann
-function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [] } = {}) {
+function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [], paypal = null, eigenschaften = {}, katalogText = null } = {}) {
+  // paypal = { orders: { ID: PayPal-Antwort }, falsch: true (Anmeldung scheitert) } → PAYPAL_CLIENT_ID/SECRET sind gesetzt
+  const props = Object.assign({ ADMIN_SCHLUESSEL: schluessel }, paypal ? { PAYPAL_CLIENT_ID: 'CID', PAYPAL_SECRET: 'GEHEIM' } : {}, eigenschaften);
+  const abrufe = [];
+  const KATALOG_TEXT = katalogText || fs.readFileSync(path.join(__dirname, '..', 'katalog.json'), 'utf8');
+  const cache = {};
+  const antwortVon = (code, obj) => ({ getResponseCode: () => code, getContentText: () => typeof obj === 'string' ? obj : JSON.stringify(obj) });
+  const fetchAttrappe = (url, opt = {}) => {
+    abrufe.push({ url, opt });
+    if (url === 'https://kronenwelt.de/katalog.json') return antwortVon(200, KATALOG_TEXT);
+    if (/\/v1\/oauth2\/token$/.test(url)) return paypal && !paypal.falsch ? antwortVon(200, { access_token: 'TOKEN', expires_in: 32400 }) : antwortVon(401, { error: 'invalid_client' });
+    const m = /\/v2\/checkout\/orders\/([^/]+)$/.exec(url);
+    if (m) {
+      if (opt.headers.Authorization !== 'Bearer TOKEN') return antwortVon(401, {});
+      const o = paypal && paypal.orders && paypal.orders[decodeURIComponent(m[1])];
+      return o ? antwortVon(200, o) : antwortVon(404, { name: 'RESOURCE_NOT_FOUND' });
+    }
+    throw new Error('Unerwarteter Abruf: ' + url);
+  };
   const daten = [kopf.slice(), ...zeilen.map(z => z.slice())];
   const mails = [];
   const tabellen = { Bestellungen: daten };
@@ -46,12 +64,14 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
   };
   const ctx = {
     SpreadsheetApp: { getActiveSpreadsheet: () => ss },
-    PropertiesService: { getScriptProperties: () => ({ getProperty: () => schluessel, setProperty() {} }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] == null ? null : props[k], setProperty: (k, v) => { props[k] = v; } }) },
+    UrlFetchApp: { fetch: fetchAttrappe },
+    CacheService: { getScriptCache: () => ({ get: k => cache[k] || null, put: (k, v) => { cache[k] = v; } }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: t => ({ setMimeType: () => ({ text: t }) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     MailApp: { sendEmail: m => mails.push(m), getRemainingDailyQuota: () => 100 },
     Utilities: {
-      sleep() {}, getUuid: () => 'x', computeDigest: () => [],
+      sleep() {}, getUuid: () => 'x', computeDigest: () => [], base64Encode: t => Buffer.from(t).toString('base64'),
       formatDate: (d, tz, f) => f === 'HH:mm' ? '10:15' : f === 'yyyyMMdd' ? '20261107' : '07.11.2026'
     },
     Logger: { log() {} }
@@ -60,7 +80,13 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
   vm.runInContext(CODE, ctx);
   const post = body => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(body) } }).text);
   // blatt('Lagerbewegungen') = Zeilen des Blatts (inkl. Kopf) oder undefined, wenn es (noch) nicht existiert
-  return { post, daten, mails, blatt: n => tabellen[n] };
+  return { post, daten, mails, blatt: n => tabellen[n], abrufe };
 }
 
-module.exports = { umgebung, KOPF };
+// Antwort von PayPal auf GET /v2/checkout/orders/{id} für eine abgeschlossene Zahlung
+function paypalZahlung(betrag, { status = 'COMPLETED', capture = 'COMPLETED', waehrung = 'EUR' } = {}) {
+  const amount = { currency_code: waehrung, value: Number(betrag).toFixed(2) };
+  return { status, purchase_units: [{ amount, payments: { captures: [{ status: capture, amount }] } }] };
+}
+
+module.exports = { umgebung, KOPF, paypalZahlung };
