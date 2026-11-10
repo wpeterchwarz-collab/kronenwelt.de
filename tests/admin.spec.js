@@ -464,7 +464,8 @@ test.describe('Admin: Lager', () => {
     await page.click('.lg-modus [data-modus="mindest"]');
     await page.click('#lagerKisten [data-kiste="Etsy"]');
     await page.click('.lg-alle button');
-    const anzahl = katalog.produkte.reduce((n, p) => n + p.merkmale.farbe.length * p.merkmale.groesse.length, 0);
+    // Lagerartikel: je Farbe und Größe, Zahlenkronen nur je Größe (ohne Pads)
+    const anzahl = katalog.produkte.reduce((n, p) => n + new Set(p.merkmale.farbe.map(f => (f.lager && f.lager.name) || f.wert)).size * p.merkmale.groesse.length, 0);
     await expect(page.locator('#lagerLeiste')).toContainText('Mindestbestand in Etsy · ' + anzahl + ' Änderungen');
     await page.click('#lgSpeichern');
     await expect(page.locator('#statusText')).toHaveText(/Mindestbestand gespeichert/);
@@ -517,7 +518,7 @@ test.describe('Admin: Lager', () => {
     await page.selectOption('#bfKiste', '');
     await page.fill('#bfKunde', 'Auftrag');
     await page.click('#bfSpeichern');
-    await expect(page.locator('#statusText')).toHaveText(/gespeichert/);
+    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert/);
     expect(lagerStand(t).bewegungen).toEqual([]);
   });
 
@@ -638,7 +639,7 @@ test.describe('Admin: Lager – Buchungen und Sonderfälle', () => {
     await page.click('#btnNeueBestellung');
     await page.fill('#bfKunde', 'Etsy Kundin');
     await page.click('#bfSpeichern');
-    await expect(page.locator('#statusText')).toHaveText(/gespeichert/);
+    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert/);
     const sku = SKU(P0, P0.merkmale.farbe[0].wert, P0.merkmale.groesse[0].wert);
     await page.click('.nav-item[data-nav="lager"]');
     await expect(page.locator(`.naeh-zeile[data-sku="${sku}"]`)).toBeVisible();
@@ -845,5 +846,61 @@ test.describe('Admin: Stornieren', () => {
     await oeffnen(page, 'KW-20261001-003');
     await expect(page.locator('#stOk')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  });
+});
+
+/* ---------------- Zahlenkronen: im Lager ohne Pads, Farbe wählt Sara bei der Bestellung ---------------- */
+test.describe('Admin: Lager – Zahlenkronen ohne Pads', () => {
+  const LEO = katalog.produkte.find(p => p.name === 'Zahlenkrone Leo');
+  const BRAUN_XM = 'KR-' + LEO.kuerzel + '-BRAUN-XM';
+  const ZAHLEN = katalog.produkte.filter(p => (p.optionen || []).includes('zahlenpets'));
+
+  test('jede Zahlenkrone hat im Lager nur eine Zeile je Größe, andere Kronen bleiben nach Farbe', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#lager', api: true });
+    const rows = name => page.locator(`.lg-produkt[data-produkt="${name}"] tbody td:first-child`);
+    for (const p of ZAHLEN) {
+      await page.locator(`.lg-produkt[data-produkt="${p.name}"] summary`).click();
+      await expect(rows(p.name)).toHaveText([p.name === 'Zahlenkrone Leo' ? 'Leo braun, ohne Zahlenpads' : 'ohne Zahlenpads']);
+    }
+    await page.locator('.lg-produkt[data-produkt="Party"] summary').click();
+    await expect(rows('Party')).toHaveCount(PARTY.merkmale.farbe.length);
+  });
+
+  test('Verkauf mit egal welcher Zahlenfarbe bucht die Krone ohne Pads ab', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    const pos = page.locator('.bf-pos').first();
+    await pos.locator('select').nth(0).selectOption('Zahlenkrone Leo');
+    await expect(pos.locator('select').nth(1)).toHaveValue(LEO.merkmale.farbe[0].wert);   // Formular ist neu aufgebaut
+    await pos.locator('select').nth(1).selectOption(LEO.merkmale.farbe[1].wert);
+    await expect(pos.locator('select').nth(1)).toHaveValue(LEO.merkmale.farbe[1].wert);
+    await pos.locator('select').nth(2).selectOption('Extra Mini');
+    await expect(pos.locator('select').nth(2)).toHaveValue('Extra Mini');
+    await page.fill('#bfKunde', 'Leo Fan');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/Bestellung KW-\d{8}-\d{3} gespeichert/);
+    expect(lagerStand(t).bestand).toEqual({ [BRAUN_XM]: { Etsy: -1 } });
+    const b = t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0];
+    expect(b.farbe).toBe(LEO.merkmale.farbe[1].wert);                               // Zahlenfarbe bleibt in der Bestellung
+    expect(b.artikel).toBe(BRAUN_XM);
+  });
+
+  test('Zählen und Buchen arbeiten mit der Krone ohne Pads', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#lager', api: true });
+    await page.click('#lagerKisten [data-kiste="Markt & Webshop"]');
+    await page.click('.lg-modus [data-modus="zaehlen"]');
+    await page.locator(`input[data-sku="${BRAUN_XM}"]`).fill('3');
+    await page.click('#lgSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/Zählung gespeichert/);
+    expect(lagerStand(t).bestand[BRAUN_XM]).toEqual({ 'Markt & Webshop': 3 });
+    expect(lagerStand(t).bewegungen[0].artikel).toBe('Zahlenkrone Leo · Leo braun, ohne Zahlenpads · Extra Mini');
+    await page.click('#btnBuchung');
+    const pos = page.locator('#lagerBuchung .bf-pos').first();
+    await pos.locator('select').nth(0).selectOption('Zahlenkrone Leo');
+    await expect(pos.locator('select').nth(1).locator('option')).toHaveText(['Leo braun, ohne Zahlenpads']);
+    await pos.locator('select').nth(2).selectOption('Extra Mini');
+    await page.click('#lbSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/1 Krone eingebucht/);
+    expect(lagerStand(t).bestand[BRAUN_XM]).toEqual({ 'Markt & Webshop': 4 });
   });
 });

@@ -532,6 +532,10 @@
                 "#d48aa4",
                 "#ffffff"
               ]
+            },
+            "lager": {
+              "kuerzel": "BASIS",
+              "name": "ohne Zahlenpads"
             }
           },
           {
@@ -547,6 +551,10 @@
                 "#9a9590",
                 "#ffffff"
               ]
+            },
+            "lager": {
+              "kuerzel": "BASIS",
+              "name": "ohne Zahlenpads"
             }
           },
           {
@@ -562,6 +570,10 @@
                 "#3d8080",
                 "#ffffff"
               ]
+            },
+            "lager": {
+              "kuerzel": "BASIS",
+              "name": "ohne Zahlenpads"
             }
           }
         ],
@@ -621,6 +633,10 @@
                 "#d4b840",
                 "#22202c"
               ]
+            },
+            "lager": {
+              "kuerzel": "BRAUN",
+              "name": "Leo braun, ohne Zahlenpads"
             }
           },
           {
@@ -636,6 +652,10 @@
                 "#22202c",
                 "#d4b840"
               ]
+            },
+            "lager": {
+              "kuerzel": "BRAUN",
+              "name": "Leo braun, ohne Zahlenpads"
             }
           }
         ],
@@ -699,6 +719,10 @@
                 "#e396b4",
                 "#22202c"
               ]
+            },
+            "lager": {
+              "kuerzel": "BASIS",
+              "name": "ohne Zahlenpads"
             }
           },
           {
@@ -714,6 +738,10 @@
                 "#e396b4",
                 "#ffffff"
               ]
+            },
+            "lager": {
+              "kuerzel": "BASIS",
+              "name": "ohne Zahlenpads"
             }
           }
         ],
@@ -777,6 +805,10 @@
                 "#8cc4b8",
                 "#22202c"
               ]
+            },
+            "lager": {
+              "kuerzel": "BASIS",
+              "name": "ohne Zahlenpads"
             }
           },
           {
@@ -792,6 +824,10 @@
                 "#e8a0b8",
                 "#22202c"
               ]
+            },
+            "lager": {
+              "kuerzel": "BASIS",
+              "name": "ohne Zahlenpads"
             }
           }
         ],
