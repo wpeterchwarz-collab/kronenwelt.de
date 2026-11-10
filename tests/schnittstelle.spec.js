@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.4', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.5', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -407,3 +407,61 @@ test.describe('Schnittstelle: Zahlung prüfen', () => {
     expect(post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0]).toMatchObject({ paypalId: '', zahlungGeprueft: '' });
   });
 });
+
+/* ---------------- Mails an Kunden ---------------- */
+test.describe('Schnittstelle: Bestellbestätigung und Versandmail', () => {
+  const bestellung = { variante: 'Party, Glitzer', farbe: PARTY_ROSA + ', ' + GLITZER_F, groesse: 'Extra Mini, Mini', hundename: 'MILA | ohne Namen',
+    preis: String(preisVon('Party', 'Extra Mini') + preisVon('Glitzer', 'Mini')), kunde_name: 'Peter Schwarz', kunde_email: 'p@example.de',
+    lieferadresse: '8 Vogesenweg, 75045 WALZBACHTAL, DE', bestaetigung_per_schnittstelle: true };
+
+  test('Shop bittet darum: Bestätigung mit Bestellnummer, jeder Krone mit Preis, Adresse und Hilfe', async () => {
+    const { post, mails } = umgebung([], S);
+    const r = post(bestellung);
+    expect(r).toMatchObject({ success: true, bestaetigung: true });
+    expect(mails).toHaveLength(1);
+    const m = mails[0];
+    expect(m).toMatchObject({ to: 'p@example.de', name: "Mila's Kronenwelt", replyTo: 'm.kronenwelt@gmail.com' });
+    expect(m.subject).toBe('Danke für deine Bestellung ' + r.bestellnr + ' 👑');
+    for (const t of [r.bestellnr, 'Hallo Peter,', 'Party', 'Extra Mini', '„MILA“', 'Glitzer', euroLaut(preisVon('Party', 'Extra Mini')),
+      euroLaut(preisVon('Glitzer', 'Mini')), 'kostenlos', '8 Vogesenweg<br>75045 WALZBACHTAL<br>Deutschland', 'https://wa.me/4917631242035',
+      'Gemäß § 19 UStG', '/agb.html', '/widerruf.html', 'vom Widerrufsrecht ausgeschlossen', '5–6 Werktage']) expect(m.htmlBody).toContain(t);
+    expect(m.body).toContain('Bestellnummer: ' + r.bestellnr);
+    expect(m.body).toContain('- Party, ' + PARTY_ROSA + ', Extra Mini „MILA“');
+    expect(m.body).toContain('Peter Schwarz\n8 Vogesenweg\n75045 WALZBACHTAL\nDeutschland');
+    for (const x of [m.body, m.htmlBody]) { expect(x).not.toMatch(/[─━]{3,}/); expect(x).not.toContain('freuen uns werden'); expect(x).not.toContain('EmailJS'); }
+    expect(m.htmlBody).toContain('max-width:560px');                     // passt aufs Handy
+  });
+
+  test('ohne Bitte des Shops (alte Shop-Seite) schickt die Tabelle keine Bestätigung', async () => {
+    const { post, mails } = umgebung([], S);
+    const { bestaetigung_per_schnittstelle, ...alt } = bestellung;
+    expect(post(alt)).toMatchObject({ success: true, bestaetigung: false });
+    expect(mails).toHaveLength(0);
+  });
+
+  test('ungültige Mailadresse: keine Bestätigung, Bestellung trotzdem gespeichert', async () => {
+    const { post, mails, daten } = umgebung([], S);
+    expect(post({ ...bestellung, kunde_email: 'kaputt' })).toMatchObject({ success: true, bestaetigung: false });
+    expect(mails).toHaveLength(0);
+    expect(daten).toHaveLength(2);
+  });
+
+  test('unbekannte Krone: Bestätigung kommt trotzdem, nur ohne Einzelpreise', async () => {
+    const { post, mails } = umgebung([], S);
+    post({ ...bestellung, variante: 'Fantasiekrone', farbe: 'Lila', groesse: 'Gross', hundename: 'BOB', preis: '9' });
+    expect(mails).toHaveLength(1);
+    expect(mails[0].htmlBody).toContain('Fantasiekrone');
+    expect(mails[0].htmlBody).toContain('9,00 €');                       // Gesamt steht da
+  });
+
+  test('Versandmail im neuen Layout: Sendungsnummer, Knopf, Kronen, Adresse in Zeilen, Instagram', async () => {
+    const { post, mails } = umgebung([ZWEI_KRONEN], S);
+    post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '00340434123456789012', mail: true });
+    const m = mails[0];
+    for (const t of ['Deine Kronen sind unterwegs!', 'SENDUNG VERFOLGEN', 'piececode=00340434123456789012', '00340434123456789012',
+      'Einfarbig', '„FRIDOLIN“', 'Moorblick 4<br>24329 Dannau<br>Deutschland', '@kronenwelt', 'https://wa.me/4917631242035']) expect(m.htmlBody).toContain(t);
+    expect(m.body).toContain('Kim Muster\nMoorblick 4\n24329 Dannau\nDeutschland');
+    expect(m.body).not.toMatch(/[─━]{3,}/);
+  });
+});
+const euroLaut = n => n.toFixed(2).replace('.', ',') + ' €';

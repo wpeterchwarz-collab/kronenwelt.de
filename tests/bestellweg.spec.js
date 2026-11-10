@@ -9,15 +9,24 @@ const sku = (name, farbe, groesse) => {
   return ['KR', p.kuerzel, p.merkmale.farbe.find(f => f.wert === farbe).kuerzel, katalog.merkmale.groesse.werte.find(g => g.wert === groesse).kuerzel].join('-');
 };
 
-async function bezahlen(page) {
-  // PayPal-Knopf und Mailversand nachstellen, Bestellung an die Tabelle mitschneiden
+// tabelle = nachgestellte Google-Tabelle (echter Code) oder 'fehler' (nicht erreichbar) oder 'alt' (alte Version ohne Bestätigung)
+async function bezahlen(page, { tabelle = null } = {}) {
+  // PayPal-Knopf und EmailJS nachstellen, Bestellung an die Tabelle mitschneiden
   const gesendet = [];
-  await page.route(/script\.google\.com/, async route => { gesendet.push(JSON.parse(route.request().postData())); await route.fulfill({ body: '{}' }); });
+  await page.route(/script\.google\.com/, async route => {
+    const body = JSON.parse(route.request().postData());
+    gesendet.push(body);
+    if (tabelle === 'fehler') return route.abort();
+    const antwort = tabelle === 'alt' ? { success: true, bestellnr: 'KW-ALT-001' } : tabelle ? tabelle.post(body) : {};
+    await route.fulfill({ contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(antwort) });
+  });
   await page.evaluate(() => {
     CONFIG.PAYPAL_ID = 'TEST-CLIENT-ID-123';
-    window.emailjs = { send: () => Promise.resolve() };
+    window.__emailjs = [];
+    window.emailjs = { send: (dienst, vorlage, daten) => { window.__emailjs.push(vorlage); return Promise.resolve(); } };
     window.paypal = { Buttons: cfg => ({ render: () => { window.__paypal = cfg; return Promise.resolve(); } }) };
   });
+  page.on('dialog', d => { throw new Error('Kein Browser-Dialog erwartet: ' + d.message()); });
   await page.click('#cartCheckoutBtn');
   await expect(page.locator('#paypalModal')).toBeVisible();
   await page.evaluate(() => window.__paypal.onApprove({}, { order: { capture: () => Promise.resolve({
@@ -28,6 +37,61 @@ async function bezahlen(page) {
   await expect.poll(() => gesendet.length).toBe(1);
   return gesendet[0];
 }
+
+async function eineKrone(page) {
+  await openShop(page);
+  await page.fill('#nIn', 'MILA');
+  await page.click('.btn-add-cart');
+}
+
+test.describe('Nach der Zahlung', () => {
+  test('Danke-Fenster mit Name, Mailadresse und Bestellnummer, Warenkorb leer, kein Browser-Dialog', async ({ page }) => {
+    await eineKrone(page);
+    const t = umgebung([], 'GEHEIM123');
+    await bezahlen(page, { tabelle: t });
+    const f = page.locator('#dankeFenster');
+    await expect(f).toBeVisible();
+    await expect(f.locator('#dankeTitel')).toHaveText('Vielen Dank, Kim!');
+    await expect(f).toContainText('k@example.de');
+    await expect(f).toContainText('5–6 Werktage');
+    await expect(f.locator('#dankeNrWert')).toHaveText(/^KW-\d{8}-\d{3}$/);
+    await expect(f.locator('#dankeWa')).toHaveAttribute('href', /^https:\/\/wa\.me\/4917631242035/);
+    await expect(f.locator('#dankeEmail')).toHaveAttribute('href', /subject=Bestellung%20KW-/);
+    expect(await page.evaluate(() => cart.length)).toBe(0);
+    await expect(page.locator('#cartPanel')).not.toBeInViewport();             // Warenkorb ist zu und leer
+    await expect(page.locator('#dankeFenster .danke-box')).toBeInViewport({ ratio: 0.9 });
+    await f.getByRole('button', { name: 'Schließen' }).click();
+    await expect(f).toBeHidden();
+  });
+
+  test('Tabelle schickt die Bestätigung: EmailJS nur noch an Sara', async ({ page }) => {
+    await eineKrone(page);
+    const t = umgebung([], 'GEHEIM123');
+    const body = await bezahlen(page, { tabelle: t });
+    expect(body.bestaetigung_per_schnittstelle).toBe(true);
+    await expect(page.locator('#dankeNrWert')).toHaveText(/^KW-/);
+    expect(t.mails).toHaveLength(1);
+    expect(t.mails[0].to).toBe('k@example.de');
+    expect(await page.evaluate(() => window.__emailjs)).toEqual(['template_wihnwzo']);
+  });
+
+  test('alte Apps-Script-Version: Kunde bekommt die Bestätigung wie früher über EmailJS', async ({ page }) => {
+    await eineKrone(page);
+    await bezahlen(page, { tabelle: 'alt' });
+    await expect.poll(() => page.evaluate(() => window.__emailjs)).toEqual(['template_wihnwzo', 'template_kodm23r']);
+    await expect(page.locator('#dankeNrWert')).toHaveText('KW-ALT-001');
+  });
+
+  test('Tabelle nicht erreichbar: Bestätigung über EmailJS, Bestellung wird nicht doppelt geschickt', async ({ page }) => {
+    await eineKrone(page);
+    await bezahlen(page, { tabelle: 'fehler' });
+    await expect.poll(() => page.evaluate(() => window.__emailjs)).toEqual(['template_wihnwzo', 'template_kodm23r']);
+    await expect(page.locator('#dankeFenster')).toBeVisible();
+    await expect(page.locator('#dankeNr')).toBeHidden();
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => window.__emailjs.length)).toBe(2);
+  });
+});
 
 test('Webshop-Bestellung schickt die Artikelnummern mit, die Tabelle bucht das Lager ab', async ({ page }) => {
   await openShop(page);

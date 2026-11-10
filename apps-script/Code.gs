@@ -29,7 +29,7 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.4';
+const SCHNITTSTELLE_VERSION = '1.5';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
@@ -60,6 +60,10 @@ const SHOP_NAME  = "Mila's Kronenwelt";
 const SHOP_EMAIL = 'm.kronenwelt@gmail.com';
 const SHOP_ADRESSE = 'Sternenstaubhandmade · Sara Schwarz · Vogesenweg 8 · 75045 Walzbachtal';
 const DHL_LINK = 'https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=';
+const SHOP_URL = 'https://kronenwelt.de';
+const WHATSAPP = '4917631242035';                     // wie in config.js
+const INSTAGRAM = 'kronenwelt';
+const LIEFERZEIT = '5–6 Werktage';
 
 function doPost(e) {
   let data;
@@ -108,7 +112,15 @@ function bestellungSpeichern(data) {
     });
     zahlungPruefenSicher(sheet, kopf, zeile);        // nach dem Speichern: eine Bestellung geht nie verloren
     lagerAbgleichSicher(nr);
-    return antwort({ success: true, bestellnr: nr });
+    // Bestellbestätigung an den Kunden, wenn der Shop darum bittet (sonst schickt der Shop sie selbst über EmailJS)
+    let bestaetigung = false;
+    if (data.bestaetigung_per_schnittstelle) {
+      try {
+        const b = bestellungLesen(sheet, kopf, zeile);
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email)) { sendeBestellbestaetigung(b); bestaetigung = true; }
+      } catch (err) { Logger.log('Bestellbestätigung ' + nr + ': ' + err.message); }
+    }
+    return antwort({ success: true, bestellnr: nr, bestaetigung: bestaetigung });
   } catch (err) {
     return antwort({ success: false, error: err.message });
   } finally {
@@ -560,6 +572,17 @@ function katalogLaden() {
   return JSON.parse(text);
 }
 
+// Preis je Krone laut Katalog (für die Bestellbestätigung); unbekannte Krone → Fehler
+function einzelpreise(b) {
+  const teil = function (x) { return String(x || '').split(/\s*,\s*/); };
+  const v = teil(b.variante), f = teil(b.farbe), g = teil(b.groesse);
+  return v.map(function (name, i) {
+    const r = sollPreis({ variante: name, farbe: f[i], groesse: g[i] });
+    if (r.fehlt.length) throw new Error('unbekannt');
+    return r.summe;
+  });
+}
+
 // Preis laut Katalog aus dem, was Sara liest und näht (Variante, Farbe, Größe je Krone).
 // Größe „Gross + 6 Pets“ = Preis für Gross + Aufpreis für 6 Pets.
 function sollPreis(b) {
@@ -585,46 +608,160 @@ function sollPreis(b) {
   return { summe: Math.round(summe * 100) / 100, fehlt: fehlt };
 }
 
-/* ---------------- Versandmail ---------------- */
+/* ---------------- Mails an Kunden (Bestellbestätigung, Versand) ----------------
+   Beide Mails haben dasselbe Layout: schlicht, gut lesbar am Handy (Tabellen, feste Breite höchstens 560 px,
+   nur Inline-Styles, keine Bilder nötig). Dazu immer eine Textfassung für Mailprogramme ohne HTML. */
+const M = { tinte: '#263234', grau: '#5f6d6e', hell: '#8a9596', linie: '#e6e2dc', petrol: '#4d6d71', grund: '#f5f3ef', box: '#f8f6f2' };
+
+function vornameVon(b) { return (String(b.kunde || '').trim().split(/\s+/)[0]) || ''; }
+
+// Eine Krone je Zeile: { name, details, pers, preis }
+function positionenListe(b) {
+  const t = function (x, sep) { return String(x || '').split(sep).map(function (y) { return y.trim(); }); };
+  const v = t(b.variante, ', '), f = t(b.farbe, ', '), g = t(b.groesse, ', '), p = t(b.personalisierung, ' | ');
+  const gleich = v.length === f.length && v.length === g.length;
+  let preise = null;
+  try { preise = einzelpreise(b); } catch (e) { preise = null; }       // ohne Katalog: Liste ohne Einzelpreise
+  if (!gleich) return [{ name: b.variante, details: [b.farbe, b.groesse].filter(Boolean).join(' · '), pers: b.personalisierung, preis: null }];
+  return v.map(function (x, i) {
+    const pers = p.length === v.length ? p[i] : (i === 0 ? b.personalisierung : '');
+    return { name: x, details: [f[i], g[i]].filter(Boolean).join(' · '), pers: pers && pers !== 'ohne Namen' ? pers : '',
+      preis: preise && preise.length === v.length ? preise[i] : null };
+  });
+}
+
+// Adresse wie von PayPal („8 Vogesenweg, 75045 WALZBACHTAL, DE“) als Zeilen
+function adresseZeilen(b) {
+  const z = String(b.adresse || '').split(/\s*,\s*/).filter(Boolean).map(function (x) { return x === 'DE' ? 'Deutschland' : x; });
+  return [b.kunde].concat(z).filter(Boolean);
+}
+
+function mailLayout(o) {
+  const e = htmlEsc;
+  return '<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<meta name="color-scheme" content="light"><title>' + e(o.titel) + '</title></head>' +
+    '<body style="margin:0;padding:0;background:' + M.grund + ';">' +
+    '<div style="display:none;max-height:0;overflow:hidden;opacity:0;">' + e(o.vorschau) + '</div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' + M.grund + ';"><tr><td align="center" style="padding:24px 12px;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:6px;font-family:Arial,Helvetica,sans-serif;color:' + M.tinte + ';">' +
+    '<tr><td style="padding:26px 28px 8px;border-bottom:3px solid ' + M.petrol + ';">' +
+      '<div style="font-size:20px;font-weight:bold;letter-spacing:1px;color:' + M.tinte + ';">👑 ' + e(SHOP_NAME.toUpperCase()) + '</div>' +
+      '<div style="font-size:11px;letter-spacing:2px;color:' + M.hell + ';padding:4px 0 14px;">HANDMADE · PERSONALISIERT</div></td></tr>' +
+    '<tr><td style="padding:26px 28px 8px;font-size:15px;line-height:1.6;">' + o.inhalt + '</td></tr>' +
+    '<tr><td style="padding:18px 28px 26px;font-size:12px;line-height:1.6;color:' + M.hell + ';border-top:1px solid ' + M.linie + ';">' +
+      'Sternenstaubhandmade · Inhaberin Sara Schwarz<br>Vogesenweg 8 · 75045 Walzbachtal<br>' +
+      '<a href="mailto:' + SHOP_EMAIL + '" style="color:' + M.grau + ';">' + SHOP_EMAIL + '</a> · <a href="' + SHOP_URL + '" style="color:' + M.grau + ';">kronenwelt.de</a>' +
+      (o.fussRecht ? '<br><br>Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.<br>Es gelten unsere <a href="' + SHOP_URL + '/agb.html" style="color:' + M.grau + ';">AGB</a> und die ' +
+        '<a href="' + SHOP_URL + '/widerruf.html" style="color:' + M.grau + ';">Widerrufsbelehrung</a>. Personalisierte Kronen sind vom Widerrufsrecht ausgeschlossen.' : '') +
+    '</td></tr></table></td></tr></table></body></html>';
+}
+
+function mailTitel(t) { return '<h1 style="margin:0 0 14px;font-size:22px;line-height:1.3;color:' + M.tinte + ';">' + htmlEsc(t) + '</h1>'; }
+function mailAbsatz(t) { return '<p style="margin:0 0 16px;">' + t + '</p>'; }
+function mailZwischen(t) { return '<div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:' + M.hell + ';margin:22px 0 8px;font-weight:bold;">' + htmlEsc(t) + '</div>'; }
+function mailKnopf(text, url) {
+  return '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 18px;"><tr><td style="background:' + M.petrol + ';border-radius:3px;">' +
+    '<a href="' + htmlEsc(url) + '" style="display:inline-block;padding:13px 24px;color:#ffffff;text-decoration:none;font-size:13px;font-weight:bold;letter-spacing:1px;">' + htmlEsc(text) + '</a></td></tr></table>';
+}
+function mailPositionen(liste, mitPreis) {
+  const e = htmlEsc;
+  return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ' + M.linie + ';">' +
+    liste.map(function (x) {
+      return '<tr><td style="padding:12px 0;border-bottom:1px solid ' + M.linie + ';vertical-align:top;">' +
+        '<div style="font-weight:bold;">' + e(x.name) + '</div>' +
+        '<div style="font-size:14px;color:' + M.grau + ';">' + e(x.details) + '</div>' +
+        (x.pers ? '<div style="font-size:14px;margin-top:2px;">Personalisierung: <strong>„' + e(x.pers) + '“</strong></div>' : '') +
+        '</td>' + (mitPreis ? '<td style="padding:12px 0 12px 12px;border-bottom:1px solid ' + M.linie + ';text-align:right;vertical-align:top;white-space:nowrap;">' +
+        (x.preis != null ? euroText(x.preis) : '') + '</td>' : '') + '</tr>';
+    }).join('') + '</table>';
+}
+function mailInfoBox(zeilen) {
+  return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' + M.box + ';border-radius:4px;margin:0 0 6px;">' +
+    zeilen.map(function (z) {
+      return '<tr><td style="padding:8px 14px;font-size:13px;color:' + M.grau + ';white-space:nowrap;">' + htmlEsc(z[0]) + '</td>' +
+        '<td style="padding:8px 14px;font-size:14px;text-align:right;font-weight:bold;">' + z[1] + '</td></tr>';
+    }).join('') + '</table>';
+}
+function mailHilfe() {
+  return mailZwischen('Fragen?') + mailAbsatz('Antworte einfach auf diese Mail oder schreib uns per ' +
+    '<a href="https://wa.me/' + WHATSAPP + '" style="color:' + M.petrol + ';font-weight:bold;">WhatsApp</a>. Wir helfen dir gern.') +
+    mailAbsatz('Liebe Grüße<br>Sara &amp; Mila 🐾');
+}
+
+// Bestellbestätigung: direkt nach der Bestellung im Webshop
+function sendeBestellbestaetigung(b) {
+  const e = htmlEsc, vorname = vornameVon(b), pos = positionenListe(b);
+  const mitPreis = pos.every(function (x) { return x.preis != null; });
+  const betreff = 'Danke für deine Bestellung ' + b.nr + ' 👑';
+  const inhalt =
+    mailTitel('Danke für deine Bestellung!') +
+    mailAbsatz('Hallo ' + e(vorname || 'und herzlich willkommen') + ',') +
+    mailAbsatz('wie schön, dass du dich für eine Krone von uns entschieden hast! Deine Bestellung ist bei uns angekommen und wird jetzt liebevoll von Hand gefertigt.') +
+    mailInfoBox([['Bestellnummer', e(b.nr)], ['Bestellt am', e(b.datum)], ['Bezahlt mit', e(b.zahlung || 'PayPal')]]) +
+    mailZwischen(pos.length > 1 ? 'Deine ' + pos.length + ' Kronen' : 'Deine Krone') + mailPositionen(pos, mitPreis) +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 4px;">' +
+      '<tr><td style="padding:4px 0;font-size:14px;color:' + M.grau + ';">Versand</td><td style="padding:4px 0;font-size:14px;text-align:right;">kostenlos</td></tr>' +
+      '<tr><td style="padding:6px 0;font-size:16px;font-weight:bold;">Gesamt</td><td style="padding:6px 0;font-size:16px;font-weight:bold;text-align:right;">' + euroText(b.preis) + '</td></tr></table>' +
+    mailZwischen('Lieferadresse') + mailAbsatz(adresseZeilen(b).map(e).join('<br>')) +
+    mailZwischen('So geht es weiter') +
+    '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 8px;font-size:14px;line-height:1.5;">' +
+      [['1', 'Sara näht deine Krone von Hand' + (pos.some(function (x) { return x.pers; }) ? ', mit deiner Personalisierung.' : '.')],
+       ['2', 'Sobald sie unterwegs ist, bekommst du eine Mail mit der DHL-Sendungsnummer.'],
+       ['3', 'Die Lieferzeit beträgt ' + LIEFERZEIT + '.']].map(function (z) {
+        return '<tr><td style="padding:4px 10px 4px 0;vertical-align:top;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;border-radius:11px;background:' + M.petrol + ';color:#fff;text-align:center;font-size:12px;font-weight:bold;">' + z[0] + '</span></td>' +
+          '<td style="padding:4px 0;vertical-align:top;">' + e(z[1]) + '</td></tr>';
+      }).join('') + '</table>' +
+    mailHilfe();
+  const text = [
+    'Hallo ' + (vorname || '') + ',', '',
+    'vielen Dank für deine Bestellung! Sie ist bei uns angekommen und wird jetzt von Hand gefertigt.', '',
+    'Bestellnummer: ' + b.nr, 'Bestellt am: ' + b.datum, 'Bezahlt mit: ' + (b.zahlung || 'PayPal'), '',
+    pos.length > 1 ? 'Deine Kronen:' : 'Deine Krone:',
+    pos.map(function (x) { return '- ' + x.name + ', ' + x.details.replace(/ · /g, ', ') + (x.pers ? ' „' + x.pers + '“' : '') + (mitPreis ? ' (' + euroText(x.preis) + ')' : ''); }).join('\n'),
+    'Versand: kostenlos', 'Gesamt: ' + euroText(b.preis), '',
+    'Lieferadresse:', adresseZeilen(b).join('\n'), '',
+    'So geht es weiter: Sara näht deine Krone von Hand. Sobald sie unterwegs ist, bekommst du eine Mail mit der DHL-Sendungsnummer. Die Lieferzeit beträgt ' + LIEFERZEIT + '.', '',
+    'Fragen? Antworte einfach auf diese Mail oder schreib uns per WhatsApp: https://wa.me/' + WHATSAPP, '',
+    'Liebe Grüße', 'Sara & Mila', '', '--',
+    'Sternenstaubhandmade · Inhaberin Sara Schwarz · Vogesenweg 8 · 75045 Walzbachtal · ' + SHOP_EMAIL,
+    'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.',
+    'AGB: ' + SHOP_URL + '/agb.html · Widerrufsbelehrung: ' + SHOP_URL + '/widerruf.html',
+    'Personalisierte Kronen sind vom Widerrufsrecht ausgeschlossen.'
+  ].join('\n');
+  const html = mailLayout({ titel: betreff, vorschau: 'Bestellung ' + b.nr + ' ist angekommen. Wir fertigen deine Krone jetzt von Hand.', inhalt: inhalt, fussRecht: true });
+  MailApp.sendEmail({ to: b.email, subject: betreff, body: text, htmlBody: html, name: SHOP_NAME, replyTo: SHOP_EMAIL });
+}
+
+// Versandmail: wenn Sara die Bestellung als versendet markiert
 function sendeVersandmail(b) {
-  const vorname = (b.kunde || '').split(' ')[0] || 'liebe Kundin, lieber Kunde';
-  const pos = positionenText(b);
+  const e = htmlEsc, vorname = vornameVon(b), pos = positionenListe(b);
   const link = b.sendungsnummer ? DHL_LINK + encodeURIComponent(b.sendungsnummer) : '';
   const betreff = 'Deine Krone ist unterwegs 👑 – Bestellung ' + b.nr;
-  const text = [
-    'Hallo ' + vorname + ',',
-    '',
-    'deine Bestellung ' + b.nr + ' ist heute zu dir unterwegs:',
-    pos.map(function (p) { return '  • ' + p; }).join('\n'),
-    '',
-    b.sendungsnummer ? 'DHL-Sendungsnummer: ' + b.sendungsnummer + '\nSendung verfolgen: ' + link : 'Das Paket ist ohne Sendungsnummer unterwegs.',
-    '',
-    'Lieferadresse: ' + b.kunde + ', ' + b.adresse,
-    '',
-    'Viel Freude mit der Krone! Wir freuen uns über ein Foto von deinem Hund.',
-    'Bei Fragen antworte einfach auf diese Mail.',
-    '',
-    'Liebe Grüße',
-    'Sara von ' + SHOP_NAME,
-    '',
-    '—',
-    SHOP_ADRESSE + ' · ' + SHOP_EMAIL
-  ].join('\n');
-  const e = htmlEsc;
-  const html =
-    '<div style="font-family:Arial,Helvetica,sans-serif;color:#263234;font-size:15px;line-height:1.6;max-width:560px">' +
-    '<p>Hallo ' + e(vorname) + ',</p>' +
-    '<p>deine Bestellung <strong>' + e(b.nr) + '</strong> ist heute zu dir unterwegs:</p>' +
-    '<ul style="padding-left:18px;margin:0 0 16px">' + pos.map(function (p) { return '<li>' + e(p) + '</li>'; }).join('') + '</ul>' +
+  const inhalt =
+    mailTitel(pos.length > 1 ? 'Deine Kronen sind unterwegs!' : 'Deine Krone ist unterwegs!') +
+    mailAbsatz('Hallo ' + e(vorname || '') + ',') +
+    mailAbsatz('deine Bestellung <strong>' + e(b.nr) + '</strong> ist fertig und heute an DHL übergeben worden. In 1–3 Werktagen sollte sie bei dir sein.') +
     (b.sendungsnummer
-      ? '<p style="margin:20px 0"><span style="color:#5f6d6e;font-size:13px">DHL-Sendungsnummer</span><br><strong style="font-size:17px;letter-spacing:.5px">' + e(b.sendungsnummer) + '</strong></p>' +
-        '<p><a href="' + e(link) + '" style="display:inline-block;background:#4d6d71;color:#ffffff;text-decoration:none;padding:12px 22px;font-size:13px;letter-spacing:1px;text-transform:uppercase">Sendung verfolgen</a></p>'
-      : '<p>Das Paket ist ohne Sendungsnummer unterwegs.</p>') +
-    '<p style="color:#5f6d6e;font-size:13px">Lieferadresse: ' + e(b.kunde + ', ' + b.adresse) + '</p>' +
-    '<p>Viel Freude mit der Krone! Wir freuen uns über ein Foto von deinem Hund.<br>Bei Fragen antworte einfach auf diese Mail.</p>' +
-    '<p>Liebe Grüße<br>Sara von ' + e(SHOP_NAME) + '</p>' +
-    '<p style="color:#8a9596;font-size:12px;border-top:1px solid #e6e2dc;padding-top:12px;margin-top:24px">' + e(SHOP_ADRESSE) + ' · ' + e(SHOP_EMAIL) + '</p>' +
-    '</div>';
+      ? mailInfoBox([['DHL-Sendungsnummer', '<span style="letter-spacing:.5px;">' + e(b.sendungsnummer) + '</span>']]) + '<div style="height:12px;"></div>' + mailKnopf('SENDUNG VERFOLGEN', link)
+      : mailAbsatz('Das Paket ist ohne Sendungsnummer unterwegs.')) +
+    mailZwischen('Im Paket') + mailPositionen(pos, false) +
+    mailZwischen('Lieferadresse') + mailAbsatz(adresseZeilen(b).map(e).join('<br>')) +
+    mailZwischen('Viel Freude damit!') +
+    mailAbsatz('Wir freuen uns riesig über ein Foto von deinem Hund mit Krone, gern per Mail oder auf Instagram mit ' +
+      '<a href="https://www.instagram.com/' + INSTAGRAM + '" style="color:' + M.petrol + ';font-weight:bold;">@' + INSTAGRAM + '</a>.') +
+    mailHilfe();
+  const text = [
+    'Hallo ' + (vorname || '') + ',', '',
+    'deine Bestellung ' + b.nr + ' ist heute an DHL übergeben worden:',
+    positionenText(b).map(function (p) { return '- ' + p; }).join('\n'), '',
+    b.sendungsnummer ? 'DHL-Sendungsnummer: ' + b.sendungsnummer + '\nSendung verfolgen: ' + link : 'Das Paket ist ohne Sendungsnummer unterwegs.', '',
+    'Lieferadresse:', adresseZeilen(b).join('\n'), '',
+    'Viel Freude mit der Krone! Wir freuen uns über ein Foto von deinem Hund (Instagram: @' + INSTAGRAM + ').',
+    'Fragen? Antworte einfach auf diese Mail oder schreib uns per WhatsApp: https://wa.me/' + WHATSAPP, '',
+    'Liebe Grüße', 'Sara & Mila', '', '--',
+    'Sternenstaubhandmade · Inhaberin Sara Schwarz · Vogesenweg 8 · 75045 Walzbachtal · ' + SHOP_EMAIL
+  ].join('\n');
+  const html = mailLayout({ titel: betreff, vorschau: 'Bestellung ' + b.nr + ' ist unterwegs' + (b.sendungsnummer ? ', Sendungsnummer ' + b.sendungsnummer : '') + '.', inhalt: inhalt, fussRecht: false });
   MailApp.sendEmail({ to: b.email, subject: betreff, body: text, htmlBody: html, name: SHOP_NAME, replyTo: SHOP_EMAIL });
 }
 

@@ -110,6 +110,23 @@
   --shadow:   0 2px 20px rgba(44,31,20,0.09);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* Danke-Fenster nach der Zahlung */
+#dankeFenster { display: none; position: fixed; inset: 0; background: rgba(38,50,52,.55); z-index: 9998; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+#dankeFenster.offen { display: flex; }
+.danke-box { background: #fff; border-radius: 18px; padding: 30px 26px 24px; max-width: 440px; width: 100%; margin: auto; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.danke-krone { font-size: 44px; line-height: 1; margin-bottom: 8px; }
+.danke-titel { font-family: 'Gaegu', Georgia, serif; font-style: italic; font-size: 34px; color: var(--brown); line-height: 1.1; margin-bottom: 8px; }
+.danke-text { font-size: 15px; color: #5f6d6e; line-height: 1.6; margin-bottom: 16px; }
+.danke-nr { display: inline-block; background: var(--beige); border-radius: 8px; padding: 8px 14px; font-size: 13px; color: #5f6d6e; margin-bottom: 18px; }
+.danke-nr b { color: var(--brown); letter-spacing: .5px; }
+.danke-schritte { text-align: left; background: var(--beige); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; list-style: none; }
+.danke-schritte li { display: flex; gap: 10px; font-size: 14px; color: var(--brown); line-height: 1.5; padding: 4px 0; }
+.danke-schritte li span { flex: 0 0 22px; height: 22px; border-radius: 50%; background: var(--teal2); color: #fff; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
+.danke-hilfe { font-size: 13px; color: #5f6d6e; line-height: 1.6; margin-bottom: 18px; }
+.danke-hilfe a { color: var(--teal2); font-weight: 600; }
+.danke-knoepfe { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.danke-knoepfe button, .danke-knoepfe a { border: 1.5px solid var(--teal2); background: #fff; color: var(--teal2); padding: 12px 20px; font-family: 'Jost', sans-serif; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; text-decoration: none; }
+.danke-knoepfe .haupt { background: var(--teal2); color: #fff; }
 html { scroll-behavior: smooth; }
 body {
   font-family: 'Jost', system-ui, sans-serif;
@@ -1857,6 +1874,26 @@ button { cursor: pointer; font-family: inherit; }
   </div>
 </div>
 
+<!-- Danke-Fenster: erscheint nach erfolgreicher Zahlung (bleibt stehen, bis der Kunde es schließt) -->
+<div id="dankeFenster" role="dialog" aria-modal="true" aria-labelledby="dankeTitel">
+  <div class="danke-box">
+    <div class="danke-krone">👑</div>
+    <div class="danke-titel" id="dankeTitel">Vielen Dank!</div>
+    <p class="danke-text" id="dankeText">Deine Bestellung ist bei uns angekommen.</p>
+    <div class="danke-nr" id="dankeNr" style="display:none">Bestellnummer <b id="dankeNrWert"></b></div>
+    <ul class="danke-schritte">
+      <li><span>1</span><div id="dankeMail">Du bekommst gleich eine Bestätigung per E-Mail. Falls sie nicht ankommt, schau bitte auch im Spam-Ordner nach.</div></li>
+      <li><span>2</span><div>Sara fertigt deine Krone jetzt von Hand. Die Lieferzeit beträgt 5–6 Werktage.</div></li>
+      <li><span>3</span><div>Sobald sie unterwegs ist, schicken wir dir die DHL-Sendungsnummer per E-Mail.</div></li>
+    </ul>
+    <p class="danke-hilfe">Fragen zu deiner Bestellung? Schreib uns an <a id="dankeEmail" href="mailto:m.kronenwelt@gmail.com">m.kronenwelt@gmail.com</a> oder per WhatsApp, unten rechts auf der Seite.</p>
+    <div class="danke-knoepfe">
+      <a id="dankeWa" href="#" target="_blank" rel="noopener">WhatsApp</a>
+      <button class="haupt" onclick="dankeSchliessen()">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============================================================
      WHATSAPP BUTTON
      ============================================================ -->
@@ -2062,26 +2099,61 @@ function sendOrderEmails(details, total) {
     agb_link:      'https://kronenwelt.de/agb.html',
     widerruf_link: 'https://kronenwelt.de/widerruf.html'
   };
-  emailjs.send('service_vwuvctq', 'template_wihnwzo', emailParams)
-    .catch(err => console.warn('EmailJS Sara fehlgeschlagen:', err));
-  emailjs.send('service_vwuvctq', 'template_kodm23r', emailParams)
-    .catch(err => console.warn('EmailJS Kunde fehlgeschlagen:', err));
+  try {
+    emailjs.send('service_vwuvctq', 'template_wihnwzo', emailParams)
+      .catch(err => console.warn('EmailJS Sara fehlgeschlagen:', err));
+  } catch (err) { console.warn('EmailJS nicht geladen:', err); }
   return { ...emailParams, lieferadresse };
 }
 
-function saveToSheets(orderData, zahlung) {
-  if (!CONFIG.SHEETS_URL || CONFIG.SHEETS_URL.length < 10) return;
-  fetch(CONFIG.SHEETS_URL, {
-    method: 'POST',
-    mode:   'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...orderData, zahlung })
-  }).catch(err => console.warn('Google Sheets fehlgeschlagen:', err));
+// Ersatzweg: Bestellbestätigung an den Kunden über EmailJS (wie früher)
+function kundenmailPerEmailjs(emailParams) {
+  try {
+    emailjs.send('service_vwuvctq', 'template_kodm23r', emailParams)
+      .catch(err => console.warn('EmailJS Kunde fehlgeschlagen:', err));
+  } catch (err) { console.warn('EmailJS nicht geladen:', err); }
 }
 
-function clearCartAfterPayment(name) {
+// Bestellung an die Google-Tabelle. Antwort: { success, bestellnr, bestaetigung } oder null (Fehler/zu langsam)
+function saveToSheets(orderData, zahlung) {
+  if (!CONFIG.SHEETS_URL || CONFIG.SHEETS_URL.length < 10) return Promise.resolve(null);
+  const body = JSON.stringify({ ...orderData, zahlung });
+  const zuLangsam = new Promise(ok => setTimeout(() => ok(null), 30000));
+  const anfrage = fetch(CONFIG.SHEETS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body })
+    .then(r => r.json())
+    // Antwort nicht lesbar: nicht nochmal senden (sonst stünde die Bestellung doppelt in der Tabelle),
+    // nur die Kundenmail kommt dann über EmailJS
+    .catch(err => { console.warn('Google Sheets: keine lesbare Antwort', err); return null; });
+  return Promise.race([anfrage, zuLangsam]);
+}
+
+function clearCartAfterPayment() {
   cart = []; saveCart(); updateCartBadge();
-  alert('✅ Zahlung erfolgreich! Danke, ' + name + '! Du bekommst gleich eine Bestätigung per E-Mail. Mila freut sich schon! 🎉');
+  try { renderCart(); closeCart(); } catch (e) { /* Warenkorb war nicht offen */ }
+}
+
+// Danke-Fenster
+function dankeZeigen(vorname, email) {
+  const f = document.getElementById('dankeFenster');
+  if (!f) return;
+  document.getElementById('dankeTitel').textContent = vorname ? 'Vielen Dank, ' + vorname + '!' : 'Vielen Dank!';
+  document.getElementById('dankeText').textContent = 'Deine Bestellung ist bei uns angekommen und deine Zahlung ist bei PayPal eingegangen.';
+  if (email) document.getElementById('dankeMail').textContent = 'Wir schicken dir gleich eine Bestätigung an ' + email + '. Falls sie nicht ankommt, schau bitte auch im Spam-Ordner nach.';
+  const shop = CONFIG.SHOP_EMAIL || 'm.kronenwelt@gmail.com', a = document.getElementById('dankeEmail');
+  a.textContent = shop; a.href = 'mailto:' + shop;
+  document.getElementById('dankeWa').href = 'https://wa.me/' + (CONFIG.WA_NUMBER || '') + '?text=' + encodeURIComponent('Hallo Sara, ich habe gerade eine Krone bestellt und eine Frage:');
+  f.classList.add('offen');
+  document.body.style.overflow = 'hidden';
+}
+function dankeNummer(nr) {
+  document.getElementById('dankeNrWert').textContent = nr;
+  document.getElementById('dankeNr').style.display = '';
+  const a = document.getElementById('dankeEmail');
+  a.href = 'mailto:' + (CONFIG.SHOP_EMAIL || 'm.kronenwelt@gmail.com') + '?subject=' + encodeURIComponent('Bestellung ' + nr);
+}
+function dankeSchliessen() {
+  document.getElementById('dankeFenster').classList.remove('offen');
+  document.body.style.overflow = '';
 }
 
 function startCartCheckout(method) {
@@ -2119,11 +2191,18 @@ function startCartCheckout(method) {
       }),
       onApprove: (data, actions) => actions.order.capture().then(details => {
         closePayPalModal();
-        const orderData = sendOrderEmails(details, total);
+        const orderData = sendOrderEmails(details, total);       // Mail an Sara sofort
         // Artikelnummern (gleiche Reihenfolge wie die Kronen), damit das Lager automatisch abbucht;
         // PayPal-Nummer, damit die Tabelle bei PayPal nachprüft, ob genau diese Zahlung angekommen ist
-        saveToSheets({ ...orderData, artikel: cart.map(i => artikelnummer(i.variant, i.color, i.size)).join(', '), paypal_id: details.id || '' }, 'PayPal');
-        clearCartAfterPayment(details.payer.name.given_name);
+        const zuSpeichern = { ...orderData, artikel: cart.map(i => artikelnummer(i.variant, i.color, i.size)).join(', '),
+          paypal_id: details.id || '', bestaetigung_per_schnittstelle: true };
+        dankeZeigen(details.payer.name.given_name, orderData.kunde_email);
+        clearCartAfterPayment();
+        // Bestätigung an den Kunden schickt die Tabelle (mit Bestellnummer). Klappt das nicht, schickt sie EmailJS wie bisher.
+        saveToSheets(zuSpeichern, 'PayPal').then(r => {
+          if (r && r.bestellnr) dankeNummer(r.bestellnr);
+          if (!(r && r.bestaetigung)) kundenmailPerEmailjs(orderData);
+        });
       }),
       onError:  () => alert('❌ PayPal Fehler. Bitte nochmal versuchen.'),
       onCancel: () => closePayPalModal()
