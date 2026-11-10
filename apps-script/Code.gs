@@ -29,7 +29,7 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.5';
+const SCHNITTSTELLE_VERSION = '1.6';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
@@ -214,10 +214,26 @@ function statusSetzen(data) {
   const sheet = blatt();
   const kopf = spaltenSicherstellen(sheet);
   const zeile = zeileFinden(sheet, kopf, data.zeile, data.nr);
+  // Storno mit Mail an den Kunden: erst prüfen, dann ändern (sonst wäre storniert, aber keine Mail möglich)
+  const stornoMail = data.status === 'Storniert' && data.mail === true;
+  const nachricht = String(data.nachricht || '').trim();
+  if (stornoMail) {
+    const vorher = bestellungLesen(sheet, kopf, zeile);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vorher.email)) throw fehler('keine_email', 'Keine gültige E-Mail-Adresse bei dieser Bestellung');
+    if (!nachricht || nachricht.length > 3000) throw fehler('ungueltige_nachricht', 'Text der Mail prüfen');
+  }
   sheet.getRange(zeile, kopf.indexOf('Status') + 1).setValue(data.status);
-  const b = bestellungLesen(sheet, kopf, zeile);
+  let b = bestellungLesen(sheet, kopf, zeile);
   const lager = lagerAbgleichSicher(b.nr, b);              // Storno bucht zurück, Rücknahme des Stornos wieder ab
-  return { ok: true, bestellung: b, lagerFehler: lager < 0 };
+  let mail = false;
+  if (stornoMail) {
+    sendeStornomail(b, nachricht);
+    mail = true;
+    const heute = Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy');
+    sheet.getRange(zeile, kopf.indexOf('Notiz') + 1).setValue((b.notiz ? b.notiz + ' · ' : '') + 'Stornomail ' + heute);
+    b = bestellungLesen(sheet, kopf, zeile);
+  }
+  return { ok: true, bestellung: b, mail: mail, lagerFehler: lager < 0 };
 }
 
 // Als versendet markieren, Sendungsnummer speichern, auf Wunsch Versandmail an den Kunden
@@ -729,6 +745,24 @@ function sendeBestellbestaetigung(b) {
     'Personalisierte Kronen sind vom Widerrufsrecht ausgeschlossen.'
   ].join('\n');
   const html = mailLayout({ titel: betreff, vorschau: 'Bestellung ' + b.nr + ' ist angekommen. Wir fertigen deine Krone jetzt von Hand.', inhalt: inhalt, fussRecht: true });
+  MailApp.sendEmail({ to: b.email, subject: betreff, body: text, htmlBody: html, name: SHOP_NAME, replyTo: SHOP_EMAIL });
+}
+
+// Stornomail: Text schreibt Sara im Admin (vorausgefüllt), hier kommt er ins gemeinsame Layout
+function sendeStornomail(b, nachricht) {
+  const e = htmlEsc, pos = positionenListe(b);
+  const betreff = 'Deine Bestellung ' + b.nr + ' wurde storniert';
+  const absaetze = nachricht.split(/\n\s*\n/).map(function (a) { return mailAbsatz(e(a.trim()).replace(/\n/g, '<br>')); }).join('');
+  const inhalt = mailTitel('Deine Bestellung wurde storniert') + absaetze +
+    mailZwischen('Stornierte Bestellung') +
+    mailInfoBox([['Bestellnummer', e(b.nr)], ['Bestellt am', e(b.datum)], ['Betrag', euroText(b.preis)]]) +
+    '<div style="height:8px;"></div>' + mailPositionen(pos, false);
+  const text = nachricht + '\n\n' + [
+    'Stornierte Bestellung: ' + b.nr + ' vom ' + b.datum + ' (' + euroText(b.preis) + ')',
+    positionenText(b).map(function (p) { return '- ' + p; }).join('\n'), '', '--',
+    'Sternenstaubhandmade · Inhaberin Sara Schwarz · Vogesenweg 8 · 75045 Walzbachtal · ' + SHOP_EMAIL
+  ].join('\n');
+  const html = mailLayout({ titel: betreff, vorschau: 'Bestellung ' + b.nr + ' wurde storniert.', inhalt: inhalt, fussRecht: false });
   MailApp.sendEmail({ to: b.email, subject: betreff, body: text, htmlBody: html, name: SHOP_NAME, replyTo: SHOP_EMAIL });
 }
 
