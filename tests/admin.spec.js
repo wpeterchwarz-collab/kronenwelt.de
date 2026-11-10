@@ -767,3 +767,14 @@ test.describe('Admin: Zahlung prüfen', () => {
     await expect(page.locator('#schnittstelleStatus')).toContainText('PayPal-Prüfung ist eingerichtet');
   });
 });
+
+test('Admin-Tab hat ein eigenes Kronen-Symbol (orange statt petrol wie im Shop)', async ({ page }) => {
+  await openAdmin(page, [], { seite: '#start' });
+  const href = await page.locator('link[rel="icon"]').getAttribute('href');
+  expect(href).toMatch(/^data:image\/svg\+xml,/);
+  const svg = decodeURIComponent(href.replace(/^data:image\/svg\+xml,/, ''));
+  expect(svg).toContain('#e8a33d');
+  // Das Symbol lässt sich als Bild laden
+  const ok = await page.evaluate(h => new Promise(r => { const i = new Image(); i.onload = () => r(i.width > 0); i.onerror = () => r(false); i.src = h; }), href);
+  expect(ok).toBe(true);
+});
