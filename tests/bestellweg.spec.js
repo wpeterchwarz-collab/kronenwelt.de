@@ -51,16 +51,24 @@ test.describe('Nach der Zahlung', () => {
     await bezahlen(page, { tabelle: t });
     const f = page.locator('#dankeFenster');
     await expect(f).toBeVisible();
-    await expect(f.locator('#dankeTitel')).toHaveText('Vielen Dank, Kim!');
-    await expect(f).toContainText('k@example.de');
-    await expect(f).toContainText('5–6 Werktage');
+    await expect(f.locator('#dankeTitel')).toHaveText('Danke für deine Bestellung, Kim!');
+    await expect(f.locator('.danke-ok')).toHaveText('Bestellung abgeschlossen');
+    await expect(f.locator('.logo-name')).toHaveText("Mila's Kronenwelt");          // Logo der Website
+    await expect(f.locator('#dankeText')).toContainText('k@example.de');
+    await expect(f.locator('.danke-pos')).toHaveCount(1);
+    await expect(f.locator('.danke-pos em')).toHaveText('MILA');
+    await expect(f.locator('#dankeSchritt1')).toHaveText('Sara fertigt deine Krone jetzt von Hand, mit „MILA“.');
+    await expect(f.locator('#dankeSchritt3')).toHaveText(/^Voraussichtlich bei dir zwischen \w\w, \d\d\.\d\d\. und \w\w, \d\d\.\d\d\.$/);
+    await expect(f.locator('#dankeHinweis')).toContainText('Fehler eingeschlichen');
+    await expect(f.locator('#dankeSumme')).toContainText('€');
     await expect(f.locator('#dankeNrWert')).toHaveText(/^KW-\d{8}-\d{3}$/);
     await expect(f.locator('#dankeWa')).toHaveAttribute('href', /^https:\/\/wa\.me\/4917631242035/);
     await expect(f.locator('#dankeEmail')).toHaveAttribute('href', /subject=Bestellung%20KW-/);
     expect(await page.evaluate(() => cart.length)).toBe(0);
     await expect(page.locator('#cartPanel')).not.toBeInViewport();             // Warenkorb ist zu und leer
     await expect(page.locator('#dankeFenster .danke-box')).toBeInViewport({ ratio: 0.9 });
-    await f.getByRole('button', { name: 'Schließen' }).click();
+    await expect(f.locator('#dankeWa')).toHaveAttribute('href', /zu%20meiner%20Bestellung%20KW-/);
+    await f.getByRole('button', { name: 'Zurück zum Shop' }).click();
     await expect(f).toBeHidden();
   });
 
@@ -143,4 +151,13 @@ test('Zahlenkrone mit 6 Pets: Artikelnummer ohne Pets, Lager bucht die Krone ab'
   t.post(body);
   expect(t.post({ aktion: 'lager', schluessel: 'GEHEIM123' }).bestand[body.artikel]).toEqual({ 'Markt & Webshop': -1 });
   expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0].zahlungGeprueft).toMatch(/^OK/);  // Pets-Aufpreis stimmt
+});
+
+test('Liefertermin im Danke-Fenster zählt nur Werktage', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-10T18:00:00'));   // Dienstag
+  await openShop(page);
+  const t = await page.evaluate(() => [tagKurz(inWerktagen(5)), tagKurz(inWerktagen(6))]);
+  expect(t).toEqual(['Di, 17.11.', 'Mi, 18.11.']);
+  const fr = await page.evaluate(() => tagKurz(inWerktagen(1, new Date('2026-11-13T12:00:00'))));   // Freitag + 1 Werktag
+  expect(fr).toBe('Mo, 16.11.');
 });
