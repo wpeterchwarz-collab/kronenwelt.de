@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.5', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.6', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -465,3 +465,30 @@ test.describe('Schnittstelle: Bestellbestätigung und Versandmail', () => {
   });
 });
 const euroLaut = n => n.toFixed(2).replace('.', ',') + ' €';
+
+test.describe('Schnittstelle: Stornomail', () => {
+  test('Storno mit Mail: Saras Text im Layout, Bestellung darunter, Notiz in der Tabelle', async () => {
+    const { post, mails, daten } = umgebung([ZWEI_KRONEN], S);
+    const r = post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Storniert', mail: true, nachricht: 'Hallo Kim,\n\nleider <b>nicht</b> möglich.\n\nLiebe Grüße\nSara' });
+    expect(r).toMatchObject({ ok: true, mail: true, bestellung: { status: 'Storniert' } });
+    const m = mails[0];
+    expect(m.subject).toBe('Deine Bestellung KW-20261001-003 wurde storniert');
+    expect(m.htmlBody).toContain('leider &lt;b&gt;nicht&lt;/b&gt; möglich.');            // Text wird nicht als HTML ausgeführt
+    expect(m.htmlBody).toContain('Liebe Grüße<br>Sara');
+    expect(m.htmlBody).toContain('29,00 €');
+    expect(m.htmlBody).toContain('„FRIDOLIN“');
+    expect(m.body).toMatch(/^Hallo Kim,\n\nleider <b>nicht<\/b> möglich\./);
+    expect(daten[1][spalte(daten, 'Notiz')]).toBe('Stornomail 07.11.2026');
+  });
+
+  test('ohne Mail-Wunsch keine Mail; Mail-Wunsch ohne Adresse oder Text: nichts wird geändert', async () => {
+    const ohne = ['01.11.2026', '', 'KW-OHNE-MAIL', 'Party', 'Rosa', 'Gross', '', 15, 'Bar', 'Markt', '', ''];
+    const { post, mails, daten } = umgebung([ZWEI_KRONEN, ohne], S);
+    expect(post({ aktion: 'status', schluessel: S, nr: 'KW-OHNE-MAIL', status: 'Storniert', mail: true, nachricht: 'x' }).fehler).toBe('keine_email');
+    expect(post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Storniert', mail: true, nachricht: '  ' }).fehler).toBe('ungueltige_nachricht');
+    expect(post({ aktion: 'bestellungen', schluessel: S }).bestellungen.every(b => b.status === 'Neu')).toBe(true);
+    expect(post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Storniert' })).toMatchObject({ ok: true, mail: false });
+    expect(post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Neu', mail: true, nachricht: 'x' }).mail).toBe(false);   // nur bei Storno
+    expect(mails).toHaveLength(0);
+  });
+});
