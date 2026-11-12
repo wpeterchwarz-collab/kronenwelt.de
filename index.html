@@ -2260,7 +2260,7 @@ function startCartCheckout(method) {
         const orderData = sendOrderEmails(details, total);       // Mail an Sara sofort
         // Artikelnummern (gleiche Reihenfolge wie die Kronen), damit das Lager automatisch abbucht;
         // PayPal-Nummer, damit die Tabelle bei PayPal nachprüft, ob genau diese Zahlung angekommen ist
-        const zuSpeichern = { ...orderData, artikel: cart.map(i => artikelnummer(i.variant, i.color, i.size)).join(', '),
+        const zuSpeichern = { ...orderData, artikel: cart.map(i => artikelnummer(i.variant, i.color, i.size, true)).join(', '),
           paypal_id: details.id || '', bestaetigung_per_schnittstelle: true };
         dankeZeigen(details.payer.name.given_name, orderData.kunde_email, cart.slice(), total);
         clearCartAfterPayment();
@@ -2549,7 +2549,8 @@ function applyKatalog(k) {
 // Artikelnummer aus dem Katalog: Gruppe-Produkt-Merkmal-… (z. B. KR-PARTY-ROSA-GR).
 // Die Reihenfolge der Merkmale steht bei der Gruppe; Kürzel am Produkt (Farbe) oder global (Größe).
 // Zusätze wie „ + 6 Pets“ gehören nicht zur Artikelnummer. Unbekannt → ''.
-function artikelnummer(name, farbe, groesse) {
+// fuerLager: Farben mit „lager“ im Katalog (z. B. Zahlenfarbe bei Zahlenkronen) liegen als ein Lagerartikel.
+function artikelnummer(name, farbe, groesse, fuerLager) {
   const k = KATALOG;
   const p = k && (k.produkte || []).find(x => x.name === name);
   const g = p && (k.gruppen || []).find(x => x.id === p.gruppe);
@@ -2559,7 +2560,7 @@ function artikelnummer(name, farbe, groesse) {
   for (const m of g.merkmale || []) {
     const am = ((p.merkmale || {})[m] || []).find(x => x.wert === werte[m]);
     const glob = (((k.merkmale || {})[m] || {}).werte || []).find(x => x.wert === werte[m]);
-    const kz = (am && am.kuerzel) || (glob && glob.kuerzel);
+    const kz = (fuerLager && am && am.lager && am.lager.kuerzel) || (am && am.kuerzel) || (glob && glob.kuerzel);
     if (!am || !kz) return '';
     teile.push(kz);
   }

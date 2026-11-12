@@ -146,7 +146,9 @@ test('Zahlenkrone mit 6 Pets: Artikelnummer ohne Pets, Lager bucht die Krone ab'
   await expect(page.locator('.cart-item-meta').first()).toContainText('+ 6 Pets');
   const [[v, c, g]] = await page.evaluate(() => cart.map(i => [i.variant, i.color, i.size]));
   const body = await bezahlen(page);
-  expect(body.artikel).toBe(sku(v, c, g.replace(/\s*\+.*$/, '')));
+  // Zahlenkronen liegen im Lager ohne Pads: Farbteil der Artikelnummer ist der Lagerartikel
+  const zp = katalog.produkte.find(x => x.name === v), lagerKz = zp.merkmale.farbe.find(f => f.wert === c).lager.kuerzel;
+  expect(body.artikel).toBe(['KR', zp.kuerzel, lagerKz, katalog.merkmale.groesse.werte.find(x => x.wert === g.replace(/\s*\+.*$/, '')).kuerzel].join('-'));
   const t = umgebung([], 'GEHEIM123', { paypal: { orders: { '8RU61172JS455403V': paypalZahlung(parseFloat(body.preis.replace(',', '.'))) } } });
   t.post(body);
   expect(t.post({ aktion: 'lager', schluessel: 'GEHEIM123' }).bestand[body.artikel]).toEqual({ 'Markt & Webshop': -1 });
@@ -160,4 +162,20 @@ test('Liefertermin im Danke-Fenster zählt nur Werktage', async ({ page }) => {
   expect(t).toEqual(['Di, 17.11.', 'Mi, 18.11.']);
   const fr = await page.evaluate(() => tagKurz(inWerktagen(1, new Date('2026-11-13T12:00:00'))));   // Freitag + 1 Werktag
   expect(fr).toBe('Mo, 16.11.');
+});
+
+test('Zahlenkrone Leo: der Shop schickt die Krone ohne Pads ans Lager, die Bestellung behält die Zahlenfarbe', async ({ page }) => {
+  await openShop(page);
+  const leo = katalog.produkte.find(p => p.name === 'Zahlenkrone Leo');
+  await page.click('.mode-tab[data-mode="zahl"]');
+  await page.click(`.chip[data-v="${leo.name}"]`);
+  await page.click(`#colorChips [data-c="${leo.merkmale.farbe[1].wert}"]`);
+  for (const z of ['1', '2', '3']) await page.click(`#petPad .pet-key >> text="${z}"`);
+  await page.click('.btn-add-cart');
+  const [[v, c, g]] = await page.evaluate(() => cart.map(i => [i.variant, i.color, i.size]));
+  expect(c).toBe(leo.merkmale.farbe[1].wert);
+  const body = await bezahlen(page);
+  expect(body.farbe).toBe(leo.merkmale.farbe[1].wert);
+  const gk = katalog.merkmale.groesse.werte.find(x => x.wert === g.replace(/\s*\+.*$/, '')).kuerzel;
+  expect(body.artikel).toBe(['KR', leo.kuerzel, 'BRAUN', gk].join('-'));
 });
