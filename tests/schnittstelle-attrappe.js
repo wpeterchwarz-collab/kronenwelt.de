@@ -23,8 +23,8 @@ function blattAttrappe(daten, geld, kaputt) {
       getDisplayValues: () => block(r, c, h, w, anzeige),
       getValues: () => block(r, c, h, w, x => x == null ? '' : x),
       getDisplayValue: () => anzeige(zelle(r, c)),
-      setValue: v => setze(r, c, v),
-      setValues: vs => vs.forEach((z, i) => z.forEach((v, j) => setze(r + i, c + j, v))),
+      setValue: v => { if (kaputt) throw new Error('Blatt gesperrt'); setze(r, c, v); },
+      setValues: vs => { if (kaputt) throw new Error('Blatt gesperrt'); vs.forEach((z, i) => z.forEach((v, j) => setze(r + i, c + j, v))); },
       setBackground() {}, setNumberFormat() {}, setFontColor() {}, setFontWeight() {}
     })
   };
@@ -32,9 +32,13 @@ function blattAttrappe(daten, geld, kaputt) {
 
 // zeilen = Werte wie in der Tabelle (Preis als Zahl); kopf = Kopfzeile (Standard: die 12 alten Spalten)
 // blaetter = weitere Blätter { Name: [Zeilen inkl. Kopf] }, z. B. Lagerbewegungen; kaputt = Blätter, in die nicht geschrieben werden kann
-function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [], paypal = null, eigenschaften = {}, katalogText = null } = {}) {
+function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [], paypal = null, eigenschaften = {}, katalogText = null, serienliste = null } = {}) {
   // paypal = { orders: { ID: PayPal-Antwort }, falsch: true (Anmeldung scheitert) } → PAYPAL_CLIENT_ID/SECRET sind gesetzt
-  const props = Object.assign({ ADMIN_SCHLUESSEL: schluessel }, paypal ? { PAYPAL_CLIENT_ID: 'CID', PAYPAL_SECRET: 'GEHEIM' } : {}, eigenschaften);
+  // serienliste = Zeilen von Saras GPSR-Liste (inkl. Kopf) → eigene Tabelle, SERIENLISTE_ID ist gesetzt
+  const props = Object.assign({ ADMIN_SCHLUESSEL: schluessel }, paypal ? { PAYPAL_CLIENT_ID: 'CID', PAYPAL_SECRET: 'GEHEIM' } : {},
+    serienliste ? { SERIENLISTE_ID: 'SERIEN-ID' } : {}, eigenschaften);
+  const serienDaten = serienliste ? serienliste.map(z => z.slice()) : null;
+  const serienSheet = serienDaten ? blattAttrappe(serienDaten, false, kaputt.includes('Serienliste')) : null;
   const abrufe = [];
   const KATALOG_TEXT = katalogText || fs.readFileSync(path.join(__dirname, '..', 'katalog.json'), 'utf8');
   const cache = {};
@@ -60,10 +64,12 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
   const ss = {
     getSheetByName: holen,
     insertSheet: n => { tabellen[n] = []; return holen(n); },
+    getSheets: () => [holen('Bestellungen')],
     getName: () => 'Kronenwelt Bestellungen'
   };
   const ctx = {
-    SpreadsheetApp: { getActiveSpreadsheet: () => ss },
+    SpreadsheetApp: { getActiveSpreadsheet: () => ss,
+      openById: id => { if (id !== 'SERIEN-ID' || !serienSheet) throw new Error('Datei nicht gefunden'); return { getSheets: () => [serienSheet] }; } },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] == null ? null : props[k], setProperty: (k, v) => { props[k] = v; } }) },
     UrlFetchApp: { fetch: fetchAttrappe },
     CacheService: { getScriptCache: () => ({ get: k => cache[k] || null, put: (k, v) => { cache[k] = v; } }) },
@@ -80,7 +86,7 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
   vm.runInContext(CODE, ctx);
   const post = body => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(body) } }).text);
   // blatt('Lagerbewegungen') = Zeilen des Blatts (inkl. Kopf) oder undefined, wenn es (noch) nicht existiert
-  return { post, daten, mails, blatt: n => tabellen[n], abrufe };
+  return { post, daten, mails, blatt: n => tabellen[n], abrufe, serien: serienDaten };
 }
 
 // Antwort von PayPal auf GET /v2/checkout/orders/{id} für eine abgeschlossene Zahlung
