@@ -1080,3 +1080,25 @@ test.describe('Admin: Instagram, Sonstiges, Rechnung nachtragen', () => {
     await expect(k.locator('.best-details')).toContainText('Rechnung RE-2026-0050');
   });
 });
+
+test.describe('Admin: Spende', () => {
+  test('Spende: Preis fest 0 €, Zahlung „Keine“, „Persönlich übergeben“ in der Karte', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    await page.selectOption('#bfKanal', 'Spende');
+    await expect(page.locator('label[for="bfKunde"]')).toHaveText('Beschenkt / gesponsert an');
+    await expect(page.locator('#bfZahlung')).toHaveValue('Keine (Spende)');
+    await expect(page.locator('.bf-pos input[type="number"]')).toBeDisabled();
+    await expect(page.locator('#bfSumme')).toContainText('0,00');
+    await page.fill('#bfKunde', 'Tierheim Bruchsal');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert ✓/);
+    const b = t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0];
+    expect(b).toMatchObject({ kanal: 'Spende', preis: 0, zahlung: 'Keine (Spende)' });
+    const k = page.locator(`.best[data-nr="${b.nr}"]`);
+    await k.locator('button:has-text("In Arbeit nehmen")').first().click();
+    await k.locator('button:has-text("Persönlich übergeben")').click();
+    await expect(page.locator('#statusText')).toHaveText(/Übergeben ✓/);
+    expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0].status).toBe('Übergeben');
+  });
+});

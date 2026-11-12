@@ -46,7 +46,7 @@ const STATUS = ['Neu', 'In Arbeit', 'Versendet', 'Übergeben', 'Storniert'];
 // Lager: Kisten und aus welcher Kiste jeder Kanal verkauft. Neue Kiste = ein Eintrag hier.
 const KISTEN = ['Markt & Webshop', 'Etsy', 'Amazon', 'Werkstatt'];
 const WERKSTATT = 'Werkstatt';                         // Vorrat zum Nachfüllen der anderen Kisten
-const KANAL_KISTE = { 'Webshop': 'Markt & Webshop', 'Markt': 'Markt & Webshop', 'Instagram': 'Markt & Webshop', 'Etsy': 'Etsy', 'Amazon': 'Amazon' };
+const KANAL_KISTE = { 'Webshop': 'Markt & Webshop', 'Markt': 'Markt & Webshop', 'Instagram': 'Markt & Webshop', 'Spende': 'Markt & Webshop', 'Etsy': 'Etsy', 'Amazon': 'Amazon' };
 const OHNE_LAGER = 'nicht vom Lager';
 const LAGER_BLATT = 'Lagerbewegungen';
 const LAGER_SPALTEN = ['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz'];
@@ -63,7 +63,7 @@ const KATALOG_URL = 'https://kronenwelt.de/katalog.json';
 const SERIEN_VORSILBE = 'MK-2025-';                        // Sara zählt durchgehend weiter, auch 2026
 const SERIEN_MUSTER = /^MK-\d{4}-\d{3,}$/;
 const SERIEN_ZUSATZ = ['Bestellnr.', 'Rechnungsnr.', 'Hinweis'];
-const SERIEN_PLATTFORM = { 'Webshop': 'kronenwelt', 'Etsy': 'etsy', 'Amazon': 'amazon', 'Markt': 'markt', 'Instagram': 'instagram' };
+const SERIEN_PLATTFORM = { 'Webshop': 'kronenwelt', 'Etsy': 'etsy', 'Amazon': 'amazon', 'Markt': 'markt', 'Instagram': 'instagram', 'Spende': 'spende' };
 
 // Absender der Versandmail (Antworten gehen an die Shop-Adresse)
 const SHOP_NAME  = "Mila's Kronenwelt";
@@ -290,7 +290,7 @@ function anlegen(data) {
   if (!pos.length || pos.length > 20 || pos.some(function (p) { return !p || !p.variante; })) throw fehler('ungueltige_positionen', 'Mindestens eine Krone angeben');
   const kanal = String(data.kanal || '').trim().slice(0, 30);
   if (!kanal) throw fehler('kein_kanal', 'Kanal fehlt');
-  const preis = Number(data.preis);
+  const preis = kanal === 'Spende' ? 0 : Number(data.preis);   // Spende = verschenkt/gesponsert: kein Umsatz
   if (!(preis >= 0)) throw fehler('ungueltiger_preis', 'Preis prüfen');
   // Aus welcher Kiste? Ohne Angabe die Kiste des Kanals; „nicht vom Lager“ = auf Bestellung genäht
   const kiste = data.kiste === undefined ? (KANAL_KISTE[kanal] || '') : KISTEN.indexOf(data.kiste) >= 0 ? data.kiste : OHNE_LAGER;
@@ -330,8 +330,9 @@ function anlegen(data) {
   if (direkt) {
     serienEintragen(sheet, kopf, zeile, data);
     const setze = function (name, wert) { sheet.getRange(zeile, kopf.indexOf(name) + 1).setValue(wert); };
-    setze('Status', kanal === 'Markt' ? 'Übergeben' : 'Versendet');
-    if (kanal !== 'Markt') { setze('Sendungsnummer', sendung); setze('Versendet am', Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy')); }
+    const uebergeben = kanal === 'Markt' || (kanal === 'Spende' && !sendung);   // Spende ohne Sendung = persönlich übergeben
+    setze('Status', uebergeben ? 'Übergeben' : 'Versendet');
+    if (!uebergeben) { setze('Sendungsnummer', sendung); setze('Versendet am', Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy')); }
   }
   const b = bestellungLesen(sheet, kopf, zeile);
   const lager = lagerAbgleichSicher(b.nr, b);

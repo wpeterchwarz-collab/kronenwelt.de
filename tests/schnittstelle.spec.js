@@ -634,3 +634,21 @@ test.describe('Schnittstelle: Instagram, Sonstiges, Rechnung nachtragen, Storno'
     expect(serien[3][h]).toBe('');
   });
 });
+
+test.describe('Schnittstelle: Spende', () => {
+  const pos = [{ variante: 'Party', farbe: 'Rosa', groesse: 'Mini', pers: 'LUNA', sku: 'KR-PARTY-ROSA-MI' }];
+  test('kein Umsatz (immer 0 €), Lager abgebucht, MK-Nummer mit Plattform „spende“, ohne Sendung = übergeben', async () => {
+    const { post, serien } = umgebung([], S, { serienliste: SARAS_LISTE() });
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Spende', zahlung: 'Keine (Spende)', positionen: pos, preis: 15, kunde: 'Tierheim Bruchsal',
+      direkt: true, seriennummern: ['MK-2025-310'] });
+    expect(r.bestellung).toMatchObject({ kanal: 'Spende', preis: 0, status: 'Übergeben', sendungsnummer: '' });
+    expect(serien[3].slice(0, 2)).toEqual(['MK-2025-310', 'spende']);
+    expect(post({ aktion: 'lager', schluessel: S }).bestand['KR-PARTY-ROSA-MI']).toEqual({ 'Markt & Webshop': -1 });
+  });
+
+  test('mit Sendungsnummer: versendet', async () => {
+    const { post } = umgebung([], S);
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Spende', positionen: pos, preis: 0, kunde: 'Gewinnerin', direkt: true, sendungsnummer: '00340434123456789012' });
+    expect(r.bestellung).toMatchObject({ preis: 0, status: 'Versendet', sendungsnummer: '00340434123456789012' });
+  });
+});
