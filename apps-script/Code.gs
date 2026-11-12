@@ -46,7 +46,7 @@ const STATUS = ['Neu', 'In Arbeit', 'Versendet', 'Übergeben', 'Storniert'];
 // Lager: Kisten und aus welcher Kiste jeder Kanal verkauft. Neue Kiste = ein Eintrag hier.
 const KISTEN = ['Markt & Webshop', 'Etsy', 'Amazon', 'Werkstatt'];
 const WERKSTATT = 'Werkstatt';                         // Vorrat zum Nachfüllen der anderen Kisten
-const KANAL_KISTE = { 'Webshop': 'Markt & Webshop', 'Markt': 'Markt & Webshop', 'Etsy': 'Etsy', 'Amazon': 'Amazon' };
+const KANAL_KISTE = { 'Webshop': 'Markt & Webshop', 'Markt': 'Markt & Webshop', 'Instagram': 'Markt & Webshop', 'Etsy': 'Etsy', 'Amazon': 'Amazon' };
 const OHNE_LAGER = 'nicht vom Lager';
 const LAGER_BLATT = 'Lagerbewegungen';
 const LAGER_SPALTEN = ['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz'];
@@ -62,8 +62,8 @@ const KATALOG_URL = 'https://kronenwelt.de/katalog.json';
 // Seriennummern: Saras Liste (Spalten A–F wie bisher, neue Spalten rechts angehängt)
 const SERIEN_VORSILBE = 'MK-2025-';                        // Sara zählt durchgehend weiter, auch 2026
 const SERIEN_MUSTER = /^MK-\d{4}-\d{3,}$/;
-const SERIEN_ZUSATZ = ['Bestellnr.', 'Rechnungsnr.'];
-const SERIEN_PLATTFORM = { 'Webshop': 'kronenwelt', 'Etsy': 'etsy', 'Amazon': 'amazon', 'Markt': 'markt' };
+const SERIEN_ZUSATZ = ['Bestellnr.', 'Rechnungsnr.', 'Hinweis'];
+const SERIEN_PLATTFORM = { 'Webshop': 'kronenwelt', 'Etsy': 'etsy', 'Amazon': 'amazon', 'Markt': 'markt', 'Instagram': 'instagram' };
 
 // Absender der Versandmail (Antworten gehen an die Shop-Adresse)
 const SHOP_NAME  = "Mila's Kronenwelt";
@@ -144,7 +144,7 @@ function adminAnfrage(data) {
     Utilities.sleep(800);                                   // Ausprobieren von Schlüsseln bremsen
     return antwort({ ok: false, fehler: 'nicht_erlaubt' });
   }
-  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung'].indexOf(data.aktion) >= 0;
+  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung'].indexOf(data.aktion) >= 0;
   const lock = LockService.getScriptLock();
   try {
     if (schreibt) lock.waitLock(20000);
@@ -156,6 +156,8 @@ function adminAnfrage(data) {
         return antwort(zahlungNachpruefen(data));
       case 'seriennummern':
         return antwort(serienVorschlag(data));
+      case 'rechnung':
+        return antwort(rechnungSetzen(data));
       case 'bestellungen':
         return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, bestellungen: bestellungenLesen() });
       case 'status':
@@ -241,6 +243,12 @@ function statusSetzen(data) {
   sheet.getRange(zeile, kopf.indexOf('Status') + 1).setValue(data.status);
   let b = bestellungLesen(sheet, kopf, zeile);
   const lager = lagerAbgleichSicher(b.nr, b);              // Storno bucht zurück, Rücknahme des Stornos wieder ab
+  // MK-Nummern bleiben vergeben; in Saras Liste steht bei Storno ein Hinweis (bei Rücknahme wieder leer)
+  let serienFehler = false;
+  if (b.seriennummern) {
+    try { serienListeSetzen(b.nr, 'Hinweis', data.status === 'Storniert' ? 'storniert ' + Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy') : ''); }
+    catch (err) { serienFehler = true; Logger.log('Seriennummernliste: ' + err.message); }
+  }
   let mail = false;
   if (stornoMail) {
     sendeStornomail(b, nachricht);
@@ -249,7 +257,7 @@ function statusSetzen(data) {
     sheet.getRange(zeile, kopf.indexOf('Notiz') + 1).setValue((b.notiz ? b.notiz + ' · ' : '') + 'Stornomail ' + heute);
     b = bestellungLesen(sheet, kopf, zeile);
   }
-  return { ok: true, bestellung: b, mail: mail, lagerFehler: lager < 0 };
+  return { ok: true, bestellung: b, mail: mail, lagerFehler: lager < 0, serienFehler: serienFehler };
 }
 
 // Als versendet markieren, Sendungsnummer speichern, auf Wunsch Versandmail an den Kunden
@@ -296,6 +304,9 @@ function anlegen(data) {
   const kopf = spaltenSicherstellen(sheet);
   const nr = neueBestellnr(sheet, kopf, new Date());
   const text = function (x, n) { return String(x == null ? '' : x).trim().slice(0, n || 200); };
+  // Kronen-Angaben ohne Trennzeichen (Komma trennt die Kronen, | die Namen); wichtig für freie Bezeichnungen („Sonstiges“)
+  const feld = function (x, n) { return text(x, n).replace(/\s*,\s*/g, ' / ').replace(/\s*\|\s*/g, ' / '); };
+  pos.forEach(function (p) { p.variante = feld(p.variante, 60); p.farbe = feld(p.farbe, 60); p.groesse = feld(p.groesse, 40); p.pers = feld(p.pers, 40); });
   const zeile = zeileAnhaengen(sheet, kopf, {
     'Datum': datum,
     'Uhrzeit': Utilities.formatDate(new Date(), 'Europe/Berlin', 'HH:mm'),
@@ -699,6 +710,33 @@ function serienVorschlag(data) {
   const anzahl = Math.max(1, Math.min(20, parseInt(data.anzahl, 10) || 1));
   const info = serienLesen(sh);
   return { ok: true, nummern: serienNaechste(info, anzahl), hoechste: info.hoechste };
+}
+
+// Spalte in Saras Liste für alle Zeilen einer Bestellung setzen (Rechnungsnr., Hinweis)
+function serienListeSetzen(nr, spalte, wert) {
+  const sh = serienBlatt();
+  if (!sh) return 0;
+  let k = kopfzeile(sh);
+  if (k.indexOf(spalte) < 0) { sh.getRange(1, k.length + 1).setValue(spalte); k = k.concat([spalte]); }
+  const ib = k.indexOf('Bestellnr.');
+  if (ib < 0) return 0;
+  const n = sh.getLastRow();
+  const w = n > 1 ? sh.getRange(2, ib + 1, n - 1, 1).getDisplayValues() : [];
+  let z = 0;
+  w.forEach(function (r, i) { if (String(r[0]).trim() === nr) { sh.getRange(i + 2, k.indexOf(spalte) + 1).setValue(wert); z++; } });
+  return z;
+}
+
+// Rechnungsnummer nachträglich setzen: bei der Bestellung und in Saras Liste
+function rechnungSetzen(data) {
+  const sheet = blatt();
+  const kopf = spaltenSicherstellen(sheet);
+  const zeile = zeileFinden(sheet, kopf, data.zeile, data.nr);
+  const re = String(data.rechnungsnr || '').trim().slice(0, 60);
+  sheet.getRange(zeile, kopf.indexOf('Rechnungsnr.') + 1).setValue(re);
+  const b = bestellungLesen(sheet, kopf, zeile);
+  const inListe = b.seriennummern ? serienListeSetzen(b.nr, 'Rechnungsnr.', re) : 0;
+  return { ok: true, bestellung: b, inListe: inListe };
 }
 
 // Nummern prüfen, ohne etwas zu schreiben (Format, doppelt, schon vergeben, Liste eingerichtet)

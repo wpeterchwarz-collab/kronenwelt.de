@@ -1028,3 +1028,55 @@ test.describe('Admin: Verkauf über Etsy/Amazon in einem Schritt', () => {
     expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0].status).toBe('Versendet');
   });
 });
+
+test.describe('Admin: Instagram, Sonstiges, Rechnung nachtragen', () => {
+  const liste = () => [['(SN) Seriennnummer', 'Verkaufsplattform', 'Produktbezeichnung / Typ', 'Herstellungsdatum', 'Herstellername & Kontakt', 'Verweis auf Sicherheits-/Risikoakte'],
+    ['MK-2025-309', 'etsy', 'Gross, grün', '10.11.2026', 'Hersteller', 'Risikoakte_Hundekrone_2025.xlsx']];
+
+  test('Instagram ist ein eigener Kanal, Zahlung PayPal, ohne Plattform-Nummer', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    await page.selectOption('#bfKanal', 'Instagram');
+    await expect(page.locator('#bfPlattformNr')).toHaveCount(0);
+    await page.fill('#bfKunde', 'Insta Kundin');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert ✓/);
+    expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0]).toMatchObject({ kanal: 'Instagram', zahlung: 'PayPal' });
+  });
+
+  test('Sonstiges: freie Bezeichnung und Preis, ohne Bezeichnung wird nicht gespeichert', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    await page.fill('#bfKunde', 'Etsy Kundin');
+    await page.locator('.bf-pos select').first().selectOption('Sonstiges (freie Bezeichnung)');
+    const bez = page.locator('.bf-pos input[placeholder^="z. B. Zahlen-Set"]');
+    await expect(bez).toBeVisible();
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/Bezeichnung eintragen/);
+    await bez.fill('Zahlen-Set 1–9');
+    await page.locator('.bf-pos input[type="number"]').fill('9.5');
+    await page.locator('.bf-pos input[type="number"]').dispatchEvent('change');
+    await expect(page.locator('#bfSumme')).toContainText('9,50');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert ✓/);
+    const b = t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0];
+    expect(b).toMatchObject({ variante: 'Zahlen-Set 1–9', preis: 9.5 });
+    expect(t.post({ aktion: 'lager', schluessel: 'GEHEIM123' }).bewegungen).toEqual([]);
+  });
+
+  test('Rechnungsnummer unter „Weitere Aktionen“ nachtragen, landet auch in Saras Liste', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
+    t.post({ aktion: 'versenden', schluessel: 'GEHEIM123', nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2025-310', 'MK-2025-311'] });
+    await page.reload();
+    await page.click('#bestFilterLeiste [data-filter="erledigt"]');
+    const k = page.locator('.best[data-nr="KW-20261001-003"]');
+    await k.locator('summary').first().click();
+    await k.locator('.best-mehr summary').click();
+    await k.locator('input[id^="re2-"]').fill('RE-2026-0050');
+    await k.locator('.best-mehr button:has-text("Speichern")').click();
+    await expect(page.locator('#statusText')).toHaveText(/Rechnungsnummer gespeichert ✓/);
+    const re = t.serien[0].indexOf('Rechnungsnr.');
+    expect(t.serien.slice(2).map(z => z[re])).toEqual(['RE-2026-0050', 'RE-2026-0050']);
+    await expect(k.locator('.best-details')).toContainText('Rechnung RE-2026-0050');
+  });
+});

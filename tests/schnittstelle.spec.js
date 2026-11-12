@@ -514,7 +514,7 @@ test.describe('Schnittstelle: Seriennummern', () => {
     const r = post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false,
       seriennummern: ['MK-2025-310', 'mk-2025-311'], rechnungsnr: 'RE-2026-0042' });
     expect(r).toMatchObject({ ok: true, bestellung: { status: 'Versendet', seriennummern: 'MK-2025-310, MK-2025-311', rechnungsnr: 'RE-2026-0042' } });
-    expect(serien[0]).toEqual([...SL_KOPF, 'Bestellnr.', 'Rechnungsnr.']);
+    expect(serien[0]).toEqual([...SL_KOPF, 'Bestellnr.', 'Rechnungsnr.', 'Hinweis']);
     expect(serien[3]).toEqual(['MK-2025-310', 'kronenwelt', 'Einfarbig, Grün, Extra Mini, FRIDOLIN', '07.11.2026', HERST, 'Risikoakte_Hundekrone_2025.xlsx', 'KW-20261001-003', 'RE-2026-0042']);
     expect(serien[4]).toEqual(['MK-2025-311', 'kronenwelt', 'Glitzer, Blau, Gross', '07.11.2026', HERST, 'Risikoakte_Hundekrone_2025.xlsx', 'KW-20261001-003', 'RE-2026-0042']);
     expect(serien).toHaveLength(5);                                     // vorbereitete Zeile 310 wurde gefüllt, nicht doppelt angelegt
@@ -585,5 +585,52 @@ test.describe('Schnittstelle: Verkauf über Etsy/Amazon in einem Schritt', () =>
     expect(daten).toHaveLength(1);
     expect(serien).toHaveLength(4);
     expect(post({ aktion: 'lager', schluessel: S }).bewegungen).toEqual([]);
+  });
+});
+
+test.describe('Schnittstelle: Instagram, Sonstiges, Rechnung nachtragen, Storno', () => {
+  test('Instagram: eigener Kanal, Plattform „instagram“, Lager aus Markt & Webshop', async () => {
+    const pos = [{ variante: 'Party', farbe: 'Rosa', groesse: 'Mini', pers: 'ELLY', sku: 'KR-PARTY-ROSA-MI' }];
+    const { post, serien } = umgebung([], S, { serienliste: SARAS_LISTE() });
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Instagram', positionen: pos, preis: 15, kunde: 'Insta', direkt: true, seriennummern: ['MK-2025-310'] });
+    expect(r.bestellung).toMatchObject({ kanal: 'Instagram', status: 'Versendet' });
+    expect(serien[3].slice(0, 2)).toEqual(['MK-2025-310', 'instagram']);
+    expect(post({ aktion: 'lager', schluessel: S }).bestand['KR-PARTY-ROSA-MI']).toEqual({ 'Markt & Webshop': -1 });
+  });
+
+  test('Sonstiges: freie Bezeichnung ohne Artikelnummer, Kommas zerstören die Positionen nicht', async () => {
+    const { post } = umgebung([], S);
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Markt', preis: 8,
+      positionen: [{ variante: 'Leine, rosa | Glitzer', farbe: '', groesse: '', pers: '', sku: '' }] });
+    expect(r.ok).toBe(true);
+    expect(r.bestellung.variante).toBe('Leine / rosa / Glitzer');
+    expect(post({ aktion: 'lager', schluessel: S }).bewegungen).toEqual([]);
+  });
+
+  test('Rechnungsnummer nachtragen: in der Bestellung und in Saras Liste', async () => {
+    const { post, serien, daten } = umgebung([ZWEI_KRONEN], S, { serienliste: SARAS_LISTE() });
+    post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2025-310', 'MK-2025-311'] });
+    const r = post({ aktion: 'rechnung', schluessel: S, nr: 'KW-20261001-003', rechnungsnr: 'RE-2026-0050' });
+    expect(r).toMatchObject({ ok: true, bestellung: { rechnungsnr: 'RE-2026-0050' } });
+    expect(daten[1][spalte(daten, 'Rechnungsnr.')]).toBe('RE-2026-0050');
+    const re = serien[0].indexOf('Rechnungsnr.');
+    expect(serien[3][re]).toBe('RE-2026-0050');
+    expect(serien[4][re]).toBe('RE-2026-0050');
+    expect(serien[1][re] || '').toBe('');                               // fremde Zeilen bleiben unberührt
+    expect(post({ aktion: 'rechnung', schluessel: 'falsch', nr: 'KW-20261001-003', rechnungsnr: 'X' }).ok).toBe(false);
+  });
+
+  test('Storno vermerkt „storniert“ in Saras Liste, Zurücksetzen löscht den Hinweis wieder', async () => {
+    const { post, serien } = umgebung([ZWEI_KRONEN], S, { serienliste: SARAS_LISTE() });
+    post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2025-310', 'MK-2025-311'] });
+    const r = post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Storniert', mail: false });
+    expect(r).toMatchObject({ ok: true, serienFehler: false });
+    const h = serien[0].indexOf('Hinweis');
+    expect(h).toBeGreaterThan(5);
+    expect(serien[3][h]).toBe('storniert 07.11.2026');
+    expect(serien[4][h]).toBe('storniert 07.11.2026');
+    expect(serien[3][0]).toBe('MK-2025-310');                           // Nummer bleibt vergeben
+    post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Versendet', mail: false });
+    expect(serien[3][h]).toBe('');
   });
 });
