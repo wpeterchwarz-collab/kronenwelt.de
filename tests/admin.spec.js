@@ -22,13 +22,13 @@ const BESTELLUNGEN = [
 
 // api: true → Admin-Schlüssel ist eingetragen, die Schnittstelle (echter Apps-Script-Code) antwortet
 // lager: Zeilen für das Blatt „Lagerbewegungen“ (ohne Kopf), z. B. [['01.11.2026', '', 'KR-…', '', 'Werkstatt', 2, 'Genäht', '', '']]
-async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null, paypal = null, serienliste = null, github = false, cloudinary = false } = {}) {
+async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null, paypal = null, serienliste = null, github = false, cloudinary = false, etsy = null } = {}) {
   // github/cloudinary: true → Zugänge liegen im Apps Script (ab 1.8); direkte GitHub-Aufrufe landen dann in t.direkt
   await page.addInitScript(() => { localStorage.setItem('mkw_admin_pw', 'test'); localStorage.setItem('mkw_github_token', 'test'); });
   const blaetter = lager ? { Lagerbewegungen: [['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz'], ...lager] } : {};
   const ghDateien = github ? Object.fromEntries(['katalog.json', 'galerie.json', 'medien.json'].filter(d => fs.existsSync(path.join(ROOT, d)))
     .map(d => [d, fs.readFileSync(path.join(ROOT, d), 'utf8')])) : null;
-  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter, paypal, serienliste, github: github ? { dateien: ghDateien } : null, cloudinary });
+  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter, paypal, serienliste, github: github ? { dateien: ghDateien } : null, cloudinary, etsy });
   tabelle.direkt = [];
   await page.route(/^https?:\/\/(?!localhost)/, route => {
     const u = route.request().url();
@@ -1288,5 +1288,65 @@ test.describe('Admin: Startseite und neue Bestellungen', () => {
     await page.click('.nav-item[data-nav="start"]');
     await page.click('.nav-item[data-nav="bestellungen"]');
     await expect(page.locator('#bestListe .frisch-punkt')).toHaveCount(0);
+  });
+});
+
+
+// ============================================================
+// Etsy: verbinden und neue Bestellungen holen
+// ============================================================
+test.describe('Admin: Etsy', () => {
+  const etsyBestellung = id => ({ receipt_id: id, status: 'paid', name: 'Erika Etsy', created_timestamp: Math.floor(Date.now() / 1000) + 3600,
+    formatted_address: 'Erika Etsy\nHundeweg 3\n76131 Karlsruhe', grandtotal: { amount: 1500, divisor: 100 },
+    transactions: [{ title: 'Personalisierte Hundekrone, blau', quantity: 1, sku: 'KR-PARTY-ROSA-GR', variations: [{ formatted_name: 'Personalisierung', formatted_value: 'BELLO' }] }] });
+  // Etsy nachstellen: die Anmeldeseite schickt sofort mit Code und state zurück zur Admin-Seite
+  const etsySeite = page => page.route(/www\.etsy\.com\/oauth\/connect/, r => {
+    const state = new URL(r.request().url()).searchParams.get('state');
+    r.fulfill({ status: 302, headers: { location: 'http://localhost:4173/admin.html?code=CODE&state=' + state } });
+  });
+
+  test('ohne Zugang im Apps Script: Hinweis, was einzutragen ist', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#einstellungen', api: true });
+    await expect(page.locator('#etsyStatus')).toContainText('ETSY_KEYSTRING');
+    await expect(page.locator('#etsyKnoepfe')).not.toContainText('Mit Etsy verbinden');
+  });
+
+  test('verbinden: weiter zu Etsy, zurück mit Code, Code wird eingelöst und steht nicht mehr in der Adresse', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#einstellungen', api: true, etsy: {} });
+    await etsySeite(page);
+    await expect(page.locator('#etsyStatus')).toContainText('Zugriff auf den Shop erlauben');
+    await page.getByRole('button', { name: 'Mit Etsy verbinden' }).click();
+    await expect(page.locator('#etsyStatus')).toContainText('Mit dem Etsy-Shop verbunden');
+    expect(page.url()).toBe('http://localhost:4173/admin.html#einstellungen');
+    expect(JSON.parse(t.props.ETSY_TOKEN).refresh).toBe('ETSY-RT-1');
+    // Weder Secret noch Tokens sind je im Browser gelandet
+    const speicher = await page.evaluate(() => JSON.stringify([Object.entries(localStorage), Object.entries(sessionStorage)]));
+    expect(speicher).not.toMatch(/ETSY-SECRET|ETSY-AT|ETSY-RT/);
+  });
+
+  test('Etsy lehnt ab oder der state passt nicht: klare Meldung, nicht verbunden', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#einstellungen', api: true, etsy: {} });
+    await page.goto('/admin.html?code=CODE&state=FREMD');
+    await expect(page.locator('#etsyStatus')).toContainText('abgelaufen');
+    await expect(page.locator('#etsyKnoepfe')).toContainText('Mit Etsy verbinden');
+    await page.goto('/admin.html?error=access_denied&state=X');
+    await expect(page.locator('#etsyStatus')).toContainText('nicht erlaubt');
+  });
+
+  test('„Aktualisieren“ holt neue Etsy-Bestellungen in die Liste; ein zweites Mal kommt nichts doppelt', async ({ page }) => {
+    const etsy = { receipts: [] };
+    const t = await openAdmin(page, [], { seite: '#einstellungen', api: true, etsy });
+    await etsySeite(page);
+    await page.getByRole('button', { name: 'Mit Etsy verbinden' }).click();
+    await expect(page.locator('#etsyStatus')).toContainText('Mit dem Etsy-Shop verbunden');
+    etsy.receipts.push(etsyBestellung(98765));
+    await page.goto('/admin.html#bestellungen');
+    await page.getByRole('button', { name: 'Aktualisieren' }).click();
+    await expect(page.locator('#statusText')).toHaveText(/1 neue Etsy-Bestellung übernommen/);
+    await expect(page.locator('#bestListe')).toContainText('Erika Etsy');
+    const zeilen = t.daten.length;
+    await page.getByRole('button', { name: 'Aktualisieren' }).click();
+    await expect(page.locator('#statusText')).toHaveText(/Bestellungen aktualisiert/);
+    expect(t.daten.length).toBe(zeilen);
   });
 });

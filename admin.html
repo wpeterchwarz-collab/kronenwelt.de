@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#263234">
 <!-- Tab-Symbol: dieselbe Krone wie im Shop, aber orange, damit man den Admin-Tab sofort erkennt -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M12 50 L13 25 L24 39 L32 17 L40 39 L51 25 L52 50 Z' fill='%23e8a33d' stroke='%23263234' stroke-width='4' stroke-linejoin='round'/><circle cx='13' cy='17' r='4.5' fill='%23e8a33d' stroke='%23263234' stroke-width='3.5'/><circle cx='32' cy='9' r='4.5' fill='%23e8a33d' stroke='%23263234' stroke-width='3.5'/><circle cx='51' cy='17' r='4.5' fill='%23e8a33d' stroke='%23263234' stroke-width='3.5'/></svg>">
-<link rel="stylesheet" href="admin/admin.css?v=1.1">
+<link rel="stylesheet" href="admin/admin.css?v=1.2">
 </head>
 <body>
 
@@ -120,7 +120,7 @@
     <div class="best-kopf">
       <h1 class="start-titel">Bestellungen</h1>
       <div class="best-kopf-knoepfe">
-        <button class="btn btn-teal btn-sm" onclick="ladeBestellungen(true)">Aktualisieren</button>
+        <button class="btn btn-teal btn-sm" onclick="bestellungenAktualisieren()">Aktualisieren</button>
         <button class="btn btn-primary btn-sm" id="btnNeueBestellung" onclick="formularOeffnen()">+ Bestellung</button>
       </div>
     </div>
@@ -205,6 +205,13 @@
       </div>
       <div id="schnittstelleStatus" class="leise" style="margin-top:12px"></div>
     </div>
+    <div class="card" id="karteEtsy">
+      <div class="card-title">Etsy</div>
+      <div class="card-sub">Neue Bestellungen aus dem Etsy-Shop kommen von selbst in die Bestellliste (Kanal „Etsy“).
+        Der Zugang liegt nur im Apps Script; hier erlaubst du einmalig den Zugriff auf den Shop.</div>
+      <div id="etsyStatus" class="leise"></div>
+      <div class="btn-row" id="etsyKnoepfe" style="margin-top:12px"></div>
+    </div>
     <div class="card">
       <div class="card-title">Zugang zu diesem Admin</div>
       <div class="card-sub">Das Passwort gilt nur auf diesem Gerät. Es wird nirgends im Klartext gespeichert, außer du lässt dich hier angemeldet.</div>
@@ -264,17 +271,18 @@
   <span id="statusText"></span>
 </div>
 
-<script src="admin/js/01-grundlagen.js?v=1.1"></script>
-<script src="admin/js/02-anmeldung.js?v=1.1"></script>
-<script src="admin/js/03-navigation.js?v=1.1"></script>
-<script src="admin/js/04-start.js?v=1.1"></script>
-<script src="admin/js/05-schnittstelle.js?v=1.1"></script>
-<script src="admin/js/06-bestellungen.js?v=1.1"></script>
-<script src="admin/js/07-lager.js?v=1.1"></script>
-<script src="admin/js/08-daten.js?v=1.1"></script>
-<script src="admin/js/09-produkte.js?v=1.1"></script>
-<script src="admin/js/10-galerie.js?v=1.1"></script>
-<script src="admin/js/11-einstellungen.js?v=1.1"></script>
-<script src="admin/js/12-meldungen.js?v=1.1"></script>
+<script src="admin/js/01-grundlagen.js?v=1.2"></script>
+<script src="admin/js/02-anmeldung.js?v=1.2"></script>
+<script src="admin/js/03-navigation.js?v=1.2"></script>
+<script src="admin/js/04-start.js?v=1.2"></script>
+<script src="admin/js/05-schnittstelle.js?v=1.2"></script>
+<script src="admin/js/06-bestellungen.js?v=1.2"></script>
+<script src="admin/js/07-lager.js?v=1.2"></script>
+<script src="admin/js/08-daten.js?v=1.2"></script>
+<script src="admin/js/09-produkte.js?v=1.2"></script>
+<script src="admin/js/10-galerie.js?v=1.2"></script>
+<script src="admin/js/11-einstellungen.js?v=1.2"></script>
+<script src="admin/js/12-meldungen.js?v=1.2"></script>
+<script src="admin/js/13-etsy.js?v=1.2"></script>
 </body>
 </html>

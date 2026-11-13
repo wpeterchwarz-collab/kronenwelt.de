@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.8', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.9', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -712,5 +712,166 @@ test.describe('Schnittstelle: GitHub und Cloudinary über das Apps Script (1.8)'
     expect(post({ aktion: 'cloudinary', schluessel: S, params: { public_id: 'x', type: 'private' } }).fehler).toBe('parameter_nicht_erlaubt');
     expect(post({ aktion: 'cloudinary', schluessel: S, params: { public_id: '../x y' } }).fehler).toBe('ungueltige_id');
     expect(umgebung([], S).post({ aktion: 'cloudinary', schluessel: S, params: { public_id: 'x' } }).fehler).toBe('cloudinary_fehlt');
+  });
+});
+
+test.describe('Schnittstelle: Etsy (1.9)', () => {
+  const JETZT = Math.floor(Date.now() / 1000);
+  const receipt = (id, extra = {}) => Object.assign({
+    receipt_id: id, status: 'paid', name: 'Erika Etsy', buyer_email: '', created_timestamp: JETZT + 60,
+    formatted_address: 'Erika Etsy\nHundeweg 3\n76131 Karlsruhe\nDeutschland',
+    grandtotal: { amount: 1500, divisor: 100, currency_code: 'EUR' },
+    transactions: [{ title: 'Personalisierte handgemachte Hundekrone, individuelle Krone, perfekt für Geburtstag, blau', quantity: 1, sku: '',
+      variations: [{ formatted_name: 'Größe', formatted_value: 'Groß' }, { formatted_name: 'Personalisierung', formatted_value: 'BELLO' }] }]
+  }, extra);
+  // Anmeldung wie in der Admin-Seite: Start → Etsy schickt Code + state zurück → Code einlösen
+  const verbinden = u => {
+    const start = u.post({ aktion: 'etsyStart', schluessel: S });
+    const state = new URL(start.url).searchParams.get('state');
+    return u.post({ aktion: 'etsyCode', schluessel: S, code: 'CODE', state });
+  };
+  const etsyAb = u => { u.props.ETSY_AB = String(JETZT); };
+
+  test('ping meldet den Stand: fehlt → eingerichtet → verbunden', async () => {
+    expect(umgebung([]).post({ aktion: 'ping', schluessel: S }).etsy).toBe('fehlt');
+    const u = umgebung([], S, { etsy: {} });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsy).toBe('eingerichtet');
+    expect(verbinden(u)).toMatchObject({ ok: true, etsy: 'verbunden', shop: '4711' });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsy).toBe('verbunden');
+  });
+
+  test('Anmeldeadresse: PKCE, nur Leserechte, Rückkehr zur Admin-Seite; das Secret steht nie darin', async () => {
+    const u = umgebung([], S, { etsy: {} });
+    const url = new URL(u.post({ aktion: 'etsyStart', schluessel: S }).url);
+    expect(url.origin + url.pathname).toBe('https://www.etsy.com/oauth/connect');
+    const q = Object.fromEntries(url.searchParams);
+    expect(q).toMatchObject({ response_type: 'code', client_id: 'ETSY-KEY', redirect_uri: 'https://kronenwelt.de/admin.html',
+      scope: 'transactions_r shops_r', code_challenge_method: 'S256' });
+    expect(q.code_challenge).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(url.href).not.toContain('ETSY-SECRET');
+    // Der Prüfwert wird beim Einlösen mitgeschickt und passt zur Challenge
+    u.post({ aktion: 'etsyCode', schluessel: S, code: 'CODE', state: q.state });
+    const gesendet = u.abrufe.find(a => a.url.endsWith('/public/oauth/token')).opt.payload;
+    expect(gesendet).toMatchObject({ grant_type: 'authorization_code', code: 'CODE', redirect_uri: 'https://kronenwelt.de/admin.html' });
+    expect(require('crypto').createHash('sha256').update(gesendet.code_verifier).digest('base64url')).toBe(q.code_challenge);
+  });
+
+  test('falscher oder fehlender state: nichts wird eingelöst', async () => {
+    const u = umgebung([], S, { etsy: {} });
+    u.post({ aktion: 'etsyStart', schluessel: S });
+    for (const state of ['FALSCH', undefined]) {
+      expect(u.post({ aktion: 'etsyCode', schluessel: S, code: 'CODE', state })).toMatchObject({ ok: false, fehler: 'etsy_anmeldung_abgelaufen' });
+    }
+    expect(u.abrufe.some(a => a.url.includes('etsy.com'))).toBe(false);
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsy).toBe('eingerichtet');
+  });
+
+  test('ohne Admin-Schlüssel, ohne Zugang oder ohne Verbindung geht nichts', async () => {
+    const u = umgebung([], S, { etsy: {} });
+    expect(u.post({ aktion: 'etsyStart', schluessel: 'FALSCH' })).toEqual({ ok: false, fehler: 'nicht_erlaubt' });
+    expect(u.post({ aktion: 'etsyAbruf', schluessel: S })).toMatchObject({ ok: false, fehler: 'etsy_nicht_verbunden' });
+    expect(umgebung([]).post({ aktion: 'etsyStart', schluessel: S })).toMatchObject({ ok: false, fehler: 'etsy_fehlt' });
+  });
+
+  test('Etsy lehnt die Anmeldung ab: klare Meldung, nicht verbunden', async () => {
+    const u = umgebung([], S, { etsy: { falsch: true } });
+    expect(verbinden(u)).toMatchObject({ ok: false, fehler: 'etsy_anmeldung' });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsy).toBe('eingerichtet');
+  });
+
+  test('neue Bestellung ohne SKU: Etsy-Text, Größe und Name erkannt, kein Lager, Hinweis in der Notiz', async () => {
+    const u = umgebung([BESTELLUNG], S, { etsy: { receipts: [receipt(111)] } });
+    verbinden(u); etsyAb(u);
+    const r = u.post({ aktion: 'etsyAbruf', schluessel: S });
+    expect(r).toMatchObject({ ok: true, neu: 1 });
+    const b = u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0];
+    expect(b).toMatchObject({ kanal: 'Etsy', status: 'Neu', zahlung: 'Etsy', preis: 15, kunde: 'Erika Etsy', plattformNr: '111',
+      groesse: 'Gross', personalisierung: 'BELLO', artikel: '', kiste: 'nicht vom Lager',
+      adresse: 'Hundeweg 3, 76131 Karlsruhe, Deutschland' });
+    expect(b.variante).not.toContain(',');                       // Kommas im Etsy-Titel dürfen die Positionen nicht zerlegen
+    expect(b.variante.length).toBeLessThanOrEqual(60);
+    expect(b.notiz).toContain('noch nicht dem Katalog zugeordnet');
+    expect(u.blatt('Lagerbewegungen')).toBeUndefined();
+  });
+
+  test('mit unserer Artikelnummer als SKU: Krone aus dem Katalog, Lager aus der Etsy-Kiste abgebucht', async () => {
+    const t = { title: 'Egal', quantity: 2, sku: 'KR-PARTY-ROSA-GR', variations: [{ formatted_name: 'Personalization', formatted_value: 'LUNA' }] };
+    const u = umgebung([], S, { etsy: { receipts: [receipt(222, { transactions: [t], grandtotal: { amount: 3000, divisor: 100 } })] } });
+    verbinden(u); etsyAb(u);
+    u.post({ aktion: 'etsyAbruf', schluessel: S });
+    const b = u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0];
+    expect(b).toMatchObject({ variante: 'Party, Party', farbe: 'Rosa mit Punkten, Rosa mit Punkten', groesse: 'Gross, Gross',
+      personalisierung: 'LUNA | LUNA', artikel: 'KR-PARTY-ROSA-GR, KR-PARTY-ROSA-GR', kiste: 'Etsy', preis: 30, notiz: '' });
+    const lager = u.blatt('Lagerbewegungen');
+    const z = lager.find(x => x.includes('KR-PARTY-ROSA-GR'));
+    expect(z[lager[0].indexOf('Kiste')]).toBe('Etsy');
+    expect(z[lager[0].indexOf('Menge')]).toBe(-2);
+  });
+
+  test('Zahlenkrone: Etsy-SKU mit Farbe wird zur Lager-Nummer (BASIS), Farbe bleibt erhalten', async () => {
+    const t = { title: 'Zahlenkrone', quantity: 1, sku: 'KR-ZKLASSIK-MINT-KL', variations: [] };
+    const u = umgebung([], S, { etsy: { receipts: [receipt(333, { transactions: [t] })] } });
+    verbinden(u); etsyAb(u);
+    u.post({ aktion: 'etsyAbruf', schluessel: S });
+    expect(u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0])
+      .toMatchObject({ variante: 'Zahlenkrone Klassik', farbe: 'Mint', groesse: 'Klein', artikel: 'KR-ZKLASSIK-BASIS-KL' });
+  });
+
+  test('jede Etsy-Bestellung nur einmal – auch wenn Sara sie schon von Hand mit Plattform-Nr. eingetragen hat', async () => {
+    const kopf = KOPF.concat(['Status', 'Kanal', 'Plattform-Nr.']);
+    const vonHand = ['07.11.2026', '09:00', 'KW-20261107-001', 'Party', 'Blau', 'Gross', 'REX', 15, 'Etsy', 'Erika Etsy', '', '', 'Neu', 'Etsy', '111'];
+    const u = umgebung([vonHand], S, { kopf, etsy: { receipts: [receipt(111), receipt(112)] } });
+    verbinden(u); etsyAb(u);
+    expect(u.post({ aktion: 'etsyAbruf', schluessel: S }).neu).toBe(1);
+    expect(u.post({ aktion: 'etsyAbruf', schluessel: S }).neu).toBe(0);
+    expect(u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen.map(b => b.plattformNr)).toEqual(['112', '111']);
+  });
+
+  test('nur Bestellungen ab dem Verbinden; stornierte werden übersprungen; mehrere Seiten werden gelesen', async () => {
+    const liste = [receipt(1, { created_timestamp: JETZT - 86400 }), receipt(2, { status: 'canceled' }), receipt(3), receipt(4, { created_timestamp: JETZT + 30 })];
+    const u = umgebung([], S, { etsy: { receipts: liste, seite: 1 } });
+    verbinden(u); etsyAb(u);
+    expect(u.post({ aktion: 'etsyAbruf', schluessel: S }).neu).toBe(2);
+    // älteste zuerst in der Tabelle → in der Liste (neueste zuerst) steht 3 vor 4
+    expect(u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen.map(b => b.plattformNr)).toEqual(['3', '4']);
+  });
+
+  test('abgelaufenes Zugriffs-Token wird mit dem Erneuerungs-Token erneuert', async () => {
+    const etsy = { receipts: [receipt(5)] };
+    const u = umgebung([], S, { etsy });
+    verbinden(u); etsyAb(u);
+    const t = JSON.parse(u.props.ETSY_TOKEN); t.bis = Date.now() - 1000; u.props.ETSY_TOKEN = JSON.stringify(t);
+    expect(u.post({ aktion: 'etsyAbruf', schluessel: S }).neu).toBe(1);
+    expect(etsy.tokenAbrufe.at(-1)).toMatchObject({ grant_type: 'refresh_token', refresh_token: 'ETSY-RT-1' });
+    expect(JSON.parse(u.props.ETSY_TOKEN).refresh).toBe('ETSY-RT-2');
+  });
+
+  test('Erneuerung abgelehnt (z. B. nach 90 Tagen): Verbindung gilt als getrennt, klare Meldung', async () => {
+    const etsy = {};
+    const u = umgebung([], S, { etsy });
+    verbinden(u);
+    const t = JSON.parse(u.props.ETSY_TOKEN); t.bis = 0; u.props.ETSY_TOKEN = JSON.stringify(t);
+    etsy.falsch = true;
+    expect(u.post({ aktion: 'etsyAbruf', schluessel: S })).toMatchObject({ ok: false, fehler: 'etsy_anmeldung' });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsy).toBe('eingerichtet');
+  });
+
+  test('Zeitplan-Abruf: übernimmt Bestellungen, verschluckt Fehler, tut ohne Verbindung nichts', async () => {
+    const etsy = { receipts: [receipt(6)] };
+    const u = umgebung([], S, { etsy });
+    u.ctx.etsyAutomatisch();                                     // noch nicht verbunden
+    expect(u.abrufe.length).toBe(0);
+    verbinden(u); etsyAb(u);
+    u.ctx.etsyAutomatisch();
+    expect(u.daten.length).toBe(2);
+    etsy.abgelaufen = true;
+    expect(() => u.ctx.etsyAutomatisch()).not.toThrow();
+  });
+
+  test('Trennen löscht die Tokens, der Zugang bleibt eingetragen', async () => {
+    const u = umgebung([], S, { etsy: {} });
+    verbinden(u);
+    expect(u.post({ aktion: 'etsyTrennen', schluessel: S })).toEqual({ ok: true, etsy: 'eingerichtet' });
+    expect(u.props.ETSY_TOKEN).toBe('');
   });
 });

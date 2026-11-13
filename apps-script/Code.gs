@@ -30,6 +30,12 @@
       Die Admin-Seite liest und speichert ihre Dateien über die Aktion „github“ (nur die Dateien in
       GITHUB_DATEIEN) und lässt Foto-Uploads über „cloudinary“ unterschreiben. Hochgeladen wird direkt.
 
+   7) Etsy (ab 1.9): Neue Etsy-Bestellungen kommen von selbst in die Tabelle (Kanal „Etsy“).
+      Zugang: Skript-Eigenschaften ETSY_KEYSTRING und ETSY_SECRET (von „Your Apps“ bei Etsy, nie im Code).
+      Verbinden: in der Admin-Seite (Einstellungen → Etsy); Sara erlaubt den Zugriff einmal bei Etsy.
+      Automatisch alle 15 Minuten: einmal die Funktion „etsyZeitplan“ im Editor ausführen.
+      Übernommen werden nur bezahlte Bestellungen ab dem Verbinden, jede nur einmal (Spalte „Plattform-Nr.“).
+
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
    werden rechts angehängt, sobald sie gebraucht werden. Nichts wird umbenannt oder gelöscht.
 
@@ -38,7 +44,7 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.8';
+const SCHNITTSTELLE_VERSION = '1.9';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
@@ -151,7 +157,7 @@ function adminAnfrage(data) {
     Utilities.sleep(800);                                   // Ausprobieren von Schlüsseln bremsen
     return antwort({ ok: false, fehler: 'nicht_erlaubt' });
   }
-  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung'].indexOf(data.aktion) >= 0;
+  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung', 'etsyAbruf'].indexOf(data.aktion) >= 0;
   const lock = LockService.getScriptLock();
   try {
     if (schreibt) lock.waitLock(20000);
@@ -159,11 +165,20 @@ function adminAnfrage(data) {
       case 'ping':
         return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, tabelle: SpreadsheetApp.getActiveSpreadsheet().getName(),
           paypal: paypalZugang() ? 'eingerichtet' : 'fehlt', serienliste: serienStatus(),
-          github: githubToken() ? 'eingerichtet' : 'fehlt', cloudinary: cloudinaryZugang() ? 'eingerichtet' : 'fehlt' });
+          github: githubToken() ? 'eingerichtet' : 'fehlt', cloudinary: cloudinaryZugang() ? 'eingerichtet' : 'fehlt',
+          etsy: etsyStatus() });
       case 'github':
         return antwort(githubAnfrage(data));
       case 'cloudinary':
         return antwort(cloudinarySignatur(data));
+      case 'etsyStart':
+        return antwort(etsyStart());
+      case 'etsyCode':
+        return antwort(etsyCode(data));
+      case 'etsyAbruf':
+        return antwort(etsyAbruf());
+      case 'etsyTrennen':
+        return antwort(etsyTrennen());
       case 'zahlung':
         return antwort(zahlungNachpruefen(data));
       case 'seriennummern':
@@ -1093,6 +1108,243 @@ function schluesselOk(gesendet) {
 
 function antwort(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ---------------- 7) Etsy ---------------- */
+// Etsy Open API v3, „Seller App“ (nur der eigene Shop). Anmeldung: OAuth 2 mit PKCE.
+// Das Zugriffs-Token gilt 1 Stunde und wird mit dem Erneuerungs-Token (90 Tage) selbst erneuert.
+const ETSY_API = 'https://api.etsy.com/v3';
+const ETSY_ANMELDUNG = 'https://www.etsy.com/oauth/connect';
+const ETSY_RUECKKEHR = 'https://kronenwelt.de/admin.html';   // muss bei Etsy genau so als Callback-URL eingetragen sein
+const ETSY_RECHTE = 'transactions_r shops_r';                // nur lesen: Bestellungen und Shop-Nummer
+
+function etsyProps() { return PropertiesService.getScriptProperties(); }
+function etsyZugang() {
+  const p = etsyProps(), key = p.getProperty('ETSY_KEYSTRING'), secret = p.getProperty('ETSY_SECRET');
+  return key && secret ? { key: key, secret: secret } : null;
+}
+function etsyTokenLesen() {
+  try { return JSON.parse(etsyProps().getProperty('ETSY_TOKEN') || 'null'); } catch (e) { return null; }
+}
+// 'fehlt' = Zugang nicht eingetragen · 'eingerichtet' = Zugang da, Shop noch nicht verbunden · 'verbunden'
+function etsyStatus() {
+  if (!etsyZugang()) return 'fehlt';
+  const t = etsyTokenLesen();
+  return t && t.refresh ? 'verbunden' : 'eingerichtet';
+}
+function etsyOhnePolster(b64) { return String(b64).replace(/=+$/, ''); }
+
+// Schritt 1: Adresse, auf der Sara bei Etsy den Zugriff erlaubt
+function etsyStart() {
+  const z = etsyZugang();
+  if (!z) throw fehler('etsy_fehlt', 'Etsy-Zugang fehlt (ETSY_KEYSTRING und ETSY_SECRET im Apps Script eintragen)');
+  const pruef = Utilities.getUuid() + Utilities.getUuid();          // 72 Zeichen, erlaubt sind A–Z a–z 0–9 . _ ~ -
+  const state = Utilities.getUuid();
+  const challenge = etsyOhnePolster(Utilities.base64EncodeWebSafe(
+    Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pruef, Utilities.Charset.UTF_8)));
+  etsyProps().setProperty('ETSY_ANMELDUNG', JSON.stringify({ pruef: pruef, state: state, zeit: Date.now() }));
+  const q = { response_type: 'code', client_id: z.key, redirect_uri: ETSY_RUECKKEHR, scope: ETSY_RECHTE,
+    state: state, code_challenge: challenge, code_challenge_method: 'S256' };
+  return { ok: true, url: ETSY_ANMELDUNG + '?' + Object.keys(q).map(function (k) { return k + '=' + encodeURIComponent(q[k]); }).join('&') };
+}
+
+// Schritt 2: Etsy schickt Sara mit einem Code zurück zur Admin-Seite; hier wird er gegen die Tokens getauscht
+function etsyCode(data) {
+  const z = etsyZugang();
+  if (!z) throw fehler('etsy_fehlt', 'Etsy-Zugang fehlt');
+  let a = null;
+  try { a = JSON.parse(etsyProps().getProperty('ETSY_ANMELDUNG') || 'null'); } catch (e) { a = null; }
+  if (!a || !data.state || data.state !== a.state || Date.now() - a.zeit > 15 * 60000) {
+    throw fehler('etsy_anmeldung_abgelaufen', 'Die Anmeldung bei Etsy ist abgelaufen. Bitte noch einmal „Mit Etsy verbinden“ klicken.');
+  }
+  etsyProps().setProperty('ETSY_ANMELDUNG', '');
+  etsyTokenHolen(z, { grant_type: 'authorization_code', client_id: z.key, redirect_uri: ETSY_RUECKKEHR,
+    code: String(data.code || ''), code_verifier: a.pruef });
+  const ich = etsyAbrufen('/application/users/me');
+  if (!ich.shop_id) throw fehler('etsy_kein_shop', 'Zu diesem Etsy-Konto gehört kein Shop.');
+  const p = etsyProps();
+  p.setProperty('ETSY_SHOP_ID', String(ich.shop_id));
+  // Nur Bestellungen ab jetzt übernehmen: ältere hat Sara schon von Hand eingetragen
+  if (!p.getProperty('ETSY_AB')) p.setProperty('ETSY_AB', String(Math.floor(Date.now() / 1000)));
+  return { ok: true, etsy: 'verbunden', shop: String(ich.shop_id) };
+}
+
+function etsyTrennen() {
+  const p = etsyProps();
+  p.setProperty('ETSY_TOKEN', ''); p.setProperty('ETSY_ANMELDUNG', '');
+  return { ok: true, etsy: etsyStatus() };
+}
+
+function etsyTokenHolen(z, felder) {
+  const r = UrlFetchApp.fetch(ETSY_API + '/public/oauth/token', { method: 'post', muteHttpExceptions: true,
+    headers: { 'x-api-key': z.key + ':' + z.secret }, payload: felder });
+  let d = {};
+  try { d = JSON.parse(r.getContentText()); } catch (e) { d = {}; }
+  if (r.getResponseCode() !== 200 || !d.access_token) {
+    if (felder.grant_type === 'refresh_token' && r.getResponseCode() >= 400 && r.getResponseCode() < 500) etsyProps().setProperty('ETSY_TOKEN', '');
+    throw fehler('etsy_anmeldung', 'Etsy hat die Anmeldung abgelehnt (' + r.getResponseCode() + (d.error_description ? ': ' + d.error_description : d.error ? ': ' + d.error : '') + '). Bitte neu verbinden.');
+  }
+  const t = { access: d.access_token, refresh: d.refresh_token || felder.refresh_token || '', bis: Date.now() + (Number(d.expires_in) || 3600) * 1000 };
+  etsyProps().setProperty('ETSY_TOKEN', JSON.stringify(t));
+  return t;
+}
+
+// Gültiges Zugriffs-Token; kurz vor Ablauf wird es erneuert
+function etsyToken(z) {
+  let t = etsyTokenLesen();
+  if (!t || !t.refresh) throw fehler('etsy_nicht_verbunden', 'Etsy ist noch nicht verbunden.');
+  if (!t.access || Date.now() > t.bis - 120000) t = etsyTokenHolen(z, { grant_type: 'refresh_token', client_id: z.key, refresh_token: t.refresh });
+  return t.access;
+}
+
+function etsyAbrufen(pfad) {
+  const z = etsyZugang();
+  if (!z) throw fehler('etsy_fehlt', 'Etsy-Zugang fehlt');
+  const r = UrlFetchApp.fetch(ETSY_API + pfad, { method: 'get', muteHttpExceptions: true,
+    headers: { 'x-api-key': z.key + ':' + z.secret, 'Authorization': 'Bearer ' + etsyToken(z) } });
+  if (r.getResponseCode() !== 200) throw fehler('etsy_fehler', 'Etsy antwortet mit Fehler ' + r.getResponseCode());
+  return JSON.parse(r.getContentText());
+}
+
+function etsyGeld(g) { return g && Number(g.divisor) ? Number(g.amount) / Number(g.divisor) : 0; }
+
+// Eine Etsy-Bestellung („Receipt“) in die Felder der Tabelle übersetzen. Jede Krone ist eine Position.
+// Steht bei Etsy unsere Artikelnummer als SKU, werden Krone, Farbe und Größe aus dem Katalog übernommen
+// (dann bucht auch das Lager ab). Sonst steht der Etsy-Text in der Bestellung.
+function etsyPositionen(receipt, katalog) {
+  const groessen = (((katalog || {}).merkmale || {}).groesse || {}).werte || [];
+  const kurz = function (x, n) { return String(x == null ? '' : x).replace(/\s+/g, ' ').replace(/\s*[,|]\s*/g, ' / ').trim().slice(0, n); };
+  const liste = [];
+  (receipt.transactions || []).forEach(function (t) {
+    const vars = Array.isArray(t.variations) ? t.variations : [];
+    let pers = '', groesse = '';
+    const rest = [];
+    vars.forEach(function (v) {
+      const name = String(v.formatted_name || ''), wert = String(v.formatted_value || '').trim();
+      if (!wert) return;
+      if (/personali/i.test(name)) { pers = wert; return; }
+      const g = groessen.filter(function (x) { return [x.wert, x.name].some(function (n) { return n && wert.toLowerCase().indexOf(String(n).toLowerCase()) === 0; }); })
+        .sort(function (a, b) { return String(b.wert).length - String(a.wert).length; })[0];   // „Extra Mini“ vor „Mini“
+      if (g && !groesse) { groesse = g.wert; return; }
+      rest.push(wert);
+    });
+    const sku = skuOk(String(t.sku || '').trim()) ? String(t.sku).trim() : '';
+    const k = sku ? etsyArtikel(sku, katalog) : null;
+    const p = k ? { variante: k.variante, farbe: k.farbe || kurz(rest.join(' / '), 60), groesse: k.groesse, sku: k.lagerSku }
+      : { variante: kurz(t.title, 60), farbe: kurz(rest.join(' / '), 60), groesse: groesse || '', sku: '' };
+    p.pers = kurz(pers, 40);
+    const menge = Math.max(1, Math.min(20, parseInt(t.quantity, 10) || 1));
+    for (let i = 0; i < menge; i++) liste.push(p);
+  });
+  return liste;
+}
+
+// Artikelnummer (KR-PARTY-ROSA-GR) → Krone, Farbe, Größe aus dem Katalog; unbekannt → null.
+// Bei Etsy darf die Nummer mit dem Farbkürzel stehen (KR-ZKLASSIK-ROSA-GR) oder die Lager-Nummer (KR-ZKLASSIK-BASIS-GR).
+// Zurück kommt immer die Lager-Nummer (lagerSku), wie bei Shop-Bestellungen; bei der Lager-Nummer bleibt die Farbe offen.
+function etsyArtikel(sku, katalog) {
+  const k = katalog || {};
+  const gWerte = (((k.merkmale || {}).groesse || {}).werte) || [];
+  let genau = null, lager = null;
+  (k.produkte || []).forEach(function (p) {
+    const gruppe = (k.gruppen || []).filter(function (g) { return g.id === p.gruppe; })[0] || {};
+    ((p.merkmale || {}).farbe || []).forEach(function (f) {
+      ((p.merkmale || {}).groesse || []).forEach(function (g) {
+        const gk = (gWerte.filter(function (x) { return x.wert === g.wert; })[0] || {}).kuerzel;
+        const lk = (f.lager && f.lager.kuerzel) || f.kuerzel;
+        const lagerSku = [gruppe.kuerzel, p.kuerzel, lk, gk].join('-');
+        if ([gruppe.kuerzel, p.kuerzel, f.kuerzel, gk].join('-') === sku) genau = genau || { variante: p.name, farbe: f.wert, groesse: g.wert, lagerSku: lagerSku };
+        else if (lagerSku === sku) lager = lager || { variante: p.name, farbe: '', groesse: g.wert, lagerSku: lagerSku };
+      });
+    });
+  });
+  return genau || lager;
+}
+
+// Neue bezahlte Etsy-Bestellungen in die Tabelle übernehmen. Jede Etsy-Nummer nur einmal.
+function etsyAbruf() {
+  const p = etsyProps(), shop = p.getProperty('ETSY_SHOP_ID');
+  if (etsyStatus() !== 'verbunden' || !shop) throw fehler('etsy_nicht_verbunden', 'Etsy ist noch nicht verbunden.');
+  const ab = parseInt(p.getProperty('ETSY_AB'), 10) || Math.floor(Date.now() / 1000);
+  const sheet = blatt(), kopf = spaltenSicherstellen(sheet);
+  const vorhanden = {};
+  const sp = kopf.indexOf('Plattform-Nr.') + 1, n = sheet.getLastRow();
+  if (n > 1) sheet.getRange(2, sp, n - 1, 1).getDisplayValues().forEach(function (z) { if (z[0]) vorhanden[String(z[0]).trim()] = true; });
+  let katalog = null;
+  try { katalog = katalogLaden(); } catch (e) { katalog = null; }
+  const neu = [];
+  let offset = 0, gesamt = 0;
+  do {
+    const r = etsyAbrufen('/application/shops/' + encodeURIComponent(shop) + '/receipts?was_paid=true&min_created=' + ab + '&limit=100&offset=' + offset);
+    const liste = r.results || [];
+    gesamt = Number(r.count) || 0;
+    liste.forEach(function (rc) {
+      const id = String(rc.receipt_id || '');
+      if (!id || vorhanden[id] || /cancel/i.test(String(rc.status || ''))) return;
+      vorhanden[id] = true;
+      neu.push(rc);
+    });
+    offset += liste.length;
+    if (!liste.length) break;
+  } while (offset < gesamt && offset < 500);
+  // Älteste zuerst, damit die Reihenfolge in der Tabelle stimmt
+  neu.sort(function (a, b) { return (a.created_timestamp || a.create_timestamp || 0) - (b.created_timestamp || b.create_timestamp || 0); });
+  const angelegt = [];
+  neu.forEach(function (rc) {
+    const pos = etsyPositionen(rc, katalog);
+    if (!pos.length) return;
+    const zeit = new Date(((rc.created_timestamp || rc.create_timestamp) || Math.floor(Date.now() / 1000)) * 1000);
+    const nr = neueBestellnr(sheet, kopf, new Date());
+    const alleSkus = pos.every(function (x) { return x.sku; });
+    const zeile = zeileAnhaengen(sheet, kopf, {
+      'Datum': Utilities.formatDate(zeit, 'Europe/Berlin', 'dd.MM.yyyy'),
+      'Uhrzeit': Utilities.formatDate(zeit, 'Europe/Berlin', 'HH:mm'),
+      'Bestellnr.': nr,
+      'Variante': pos.map(function (x) { return x.variante; }).join(', '),
+      'Farbe': pos.map(function (x) { return x.farbe; }).join(', '),
+      'Grösse': pos.map(function (x) { return x.groesse; }).join(', '),
+      'Personalisierung': pos.map(function (x) { return x.pers || 'ohne Namen'; }).join(' | '),
+      'Preis (€)': Math.round(etsyGeld(rc.grandtotal) * 100) / 100,
+      'Zahlung': 'Etsy',
+      'Kundenname': String(rc.name || '').trim().slice(0, 100),
+      'E-Mail': String(rc.buyer_email || '').trim().slice(0, 120),
+      'Lieferadresse': String(rc.formatted_address || '').split(/\r?\n/).map(function (x) { return x.trim(); })
+        .filter(function (x, i) { return x && !(i === 0 && x === String(rc.name || '').trim()); }).join(', ').slice(0, 300),
+      'Status': 'Neu',
+      'Kanal': 'Etsy',
+      'Notiz': (alleSkus ? '' : 'Von Etsy übernommen, Krone noch nicht dem Katalog zugeordnet. ')
+        + (rc.message_from_buyer ? 'Nachricht: ' + String(rc.message_from_buyer).replace(/\s+/g, ' ').trim().slice(0, 300) : ''),
+      'Artikelnr.': artikelListe(pos.map(function (x) { return x.sku; })),
+      'Kiste': alleSkus ? KANAL_KISTE['Etsy'] : OHNE_LAGER,
+      'Plattform-Nr.': String(rc.receipt_id)
+    });
+    if (alleSkus) lagerAbgleichSicher(nr, bestellungLesen(sheet, kopf, zeile));
+    angelegt.push(nr);
+  });
+  return { ok: true, neu: angelegt.length, bestellnummern: angelegt };
+}
+
+// Läuft per Zeitplan alle 15 Minuten (siehe etsyZeitplan). Fehler landen nur im Protokoll.
+function etsyAutomatisch() {
+  if (etsyStatus() !== 'verbunden') return;
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(20000);
+    const r = etsyAbruf();
+    if (r.neu) Logger.log('Etsy: ' + r.neu + ' neue Bestellung(en) übernommen: ' + r.bestellnummern.join(', '));
+  } catch (err) {
+    Logger.log('Etsy-Abruf: ' + err.message);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* Einmalig im Editor ausführen: holt neue Etsy-Bestellungen ab jetzt alle 15 Minuten von selbst.
+   Erneut ausführen ist harmlos (der alte Zeitplan wird ersetzt). */
+function etsyZeitplan() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'etsyAutomatisch') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('etsyAutomatisch').timeBased().everyMinutes(15).create();
+  Logger.log('Etsy-Zeitplan eingerichtet: alle 15 Minuten. Status: ' + etsyStatus());
 }
 
 /* Einmalig im Editor ausführen: legt einen neuen Admin-Schlüssel an und zeigt ihn im Protokoll.
