@@ -1190,3 +1190,103 @@ test.describe('Admin: Zugänge im Apps Script (Schnittstelle 1.8)', () => {
     expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('CL-SECRET');
   });
 });
+
+test.describe('Admin: Startseite und neue Bestellungen', () => {
+  const heuteText = () => { const h = new Date(); return String(h.getDate()).padStart(2, '0') + '.' + String(h.getMonth() + 1).padStart(2, '0') + '.' + h.getFullYear(); };
+  const shopBestellung = (t, name) => t.post({ variante: 'Party', farbe: 'Rosa mit Punkten', groesse: 'Gross', hundename: 'NALA', preis: '15,00',
+    kunde_name: name, kunde_email: 'm@example.de', lieferadresse: 'Weg 1, 76137 Karlsruhe, DE' }).bestellnr;
+
+  test('„Jetzt wichtig“ zeigt nur Aufgaben mit den Bestellungen darin; Fotos und Videos stehen unter „Shop pflegen“', async ({ page }) => {
+    await openAdmin(page, [], { seite: '', api: true });
+    await expect(page.locator('#startTodo .todo-best')).toHaveCount(2);
+    await expect(page.locator('#startTodo .todo-best').first()).toContainText('Kim Muster');
+    await expect(page.locator('#startTodo .todo-best').first().locator('.alter')).toHaveClass(/warn/);
+    await expect(page.locator('#startTodo')).not.toContainText('Video');
+    await expect(page.locator('#startPflegeKarte')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#startPflegeZahl')).toHaveText(/\d+ Hinweise?/);
+    await page.click('#startPflegeKarte > summary');
+    await expect(page.locator('#startPflege .todo').first()).toBeVisible();
+    await expect(page.locator('#startLage')).toHaveText('2 neue Bestellungen');
+    await page.locator('#startTodo .todo-best').nth(1).click();
+    await expect(page.locator('.best[data-nr="KW-20260408-000"]')).toHaveAttribute('open', '');
+  });
+
+  test('„+ Verkauf erfassen“ öffnet gleich das Formular', async ({ page }) => {
+    await openAdmin(page, [], { seite: '', api: true });
+    await page.click('button:has-text("+ Verkauf erfassen")');
+    await expect(page).toHaveURL(/#bestellungen$/);
+    await expect(page.locator('#bfKanal')).toBeVisible();
+  });
+
+  test('Zahlen des Monats: ohne Storno, Spenden extra, Vergleich zum Vormonat, Jahresumsatz', async ({ page }) => {
+    await openAdmin(page, [], { seite: '' });
+    const s = await page.evaluate(() => startStatistik([
+      { datum: '03.11.2026', preis: 39, kanal: 'Markt', status: 'Übergeben', variante: 'Party' },
+      { datum: '10.11.2026', preis: 29, kanal: 'Webshop', status: 'Versendet', variante: 'Einfarbig, Glitzer', farbe: 'Grün, Blau', groesse: 'Mini, Gross' },
+      { datum: '11.11.2026', preis: 15, kanal: 'Webshop', status: 'Storniert', variante: 'Party' },
+      { datum: '12.11.2026', preis: 0, kanal: 'Spende', status: 'Übergeben', variante: 'Party, Party', farbe: 'Rosa, Grau', groesse: 'Mini, Mini' },
+      { datum: '20.10.2026', preis: 50, kanal: 'Etsy', status: 'Versendet', variante: 'Glitzer' },
+      { datum: '20.12.2025', preis: 99, kanal: 'Etsy', status: 'Versendet', variante: 'Glitzer' }
+    ], new Date(2026, 10, 13)));
+    expect(s.monat).toEqual({ umsatz: 68, anzahl: 2, kronen: 3, spenden: 2, kanaele: { Markt: 39, Webshop: 29 } });
+    expect(s.vormonat).toMatchObject({ umsatz: 50, anzahl: 1 });
+    expect(s.jahresumsatz.umsatz).toBe(118);
+    const jan = await page.evaluate(() => startStatistik([{ datum: '15.12.2025', preis: 10, kanal: 'Etsy', status: 'Neu', variante: 'Party' }], new Date(2026, 0, 5)));
+    expect(jan.vormonat.umsatz).toBe(10);                                   // Vormonat über den Jahreswechsel
+  });
+
+  test('Kleinunternehmergrenze: Balken, Warnung ab 80 %, deutlicher Hinweis darüber', async ({ page }) => {
+    await openAdmin(page, [], { seite: '', api: true });
+    const setze = async summe => {
+      await page.evaluate(([summe, d]) => { bestellungen = [{ nr: 'KW-X', datum: d, preis: summe, kanal: 'Etsy', status: 'Versendet', variante: 'Party' }]; renderStartMonat(); }, [summe, heuteText()]);
+    };
+    await setze(5000);
+    await expect(page.locator('#startMonat .grenze')).not.toHaveClass(/knapp|drueber/);
+    await expect(page.locator('#startMonat .grenze')).toContainText('von 25.000 €');
+    await setze(21000);
+    await expect(page.locator('#startMonat .grenze')).toHaveClass(/knapp/);
+    await expect(page.locator('#startMonat .grenze')).toContainText('Es wird knapp');
+    await setze(26000);
+    await expect(page.locator('#startMonat .grenze')).toHaveClass(/drueber/);
+    await expect(page.locator('#startMonat .grenze')).toContainText('Steuerberater');
+    await expect(page.locator('#startMonat .kanal-balken')).toContainText('26.000 €');
+  });
+
+  test('Zähler an „Bestellungen“ und im Titel; verschwindet, sobald nichts mehr neu ist', async ({ page }) => {
+    await openAdmin(page, [], { seite: '', api: true });
+    const zahl = page.locator('#navZahlBestellungen');
+    await expect(zahl).toHaveText('2');
+    await expect(page).toHaveTitle('(2) Kronenwelt Admin');
+    for (const nr of ['KW-20261001-003', 'KW-20260408-000']) await page.evaluate(n => statusSpeichern(n, 'In Arbeit', {}), nr);
+    await expect(zahl).toBeHidden();
+    await expect(page).toHaveTitle('Kronenwelt Admin');
+  });
+
+  test('neue Bestellung kommt von selbst: Meldung, Zähler, Punkt „neu für dich“ – auf der Bestellseite nur ein Hinweis', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '', api: true });
+    await expect(page.locator('#navZahlBestellungen')).toHaveText('2');
+    await expect(page.locator('#startTodo .frisch-punkt')).toHaveCount(0);       // alte Bestellungen gelten als gesehen
+    const nr = shopBestellung(t, 'Mona Mogel');
+    await page.evaluate(() => bestellAbgleich());
+    await expect(page.locator('#statusText')).toHaveText('Neue Bestellung: Mona Mogel · Party');
+    await expect(page.locator('#navZahlBestellungen')).toHaveText('3');
+    await expect(page.locator('#startTodo .todo-best').filter({ hasText: 'Mona Mogel' }).locator('.frisch-punkt')).toHaveCount(1);
+    // Bestellseite: Punkt beim ersten Ansehen, danach nicht mehr
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    await expect(page.locator(`.best[data-nr="${nr}"] .frisch-punkt`)).toHaveCount(1);
+    // Während Sara auf der Bestellseite ist: nichts umbauen, nur Hinweis
+    await page.locator(`.best[data-nr="${nr}"] summary`).first().click();
+    shopBestellung(t, 'Nora Neu');
+    await page.evaluate(() => bestellAbgleich());
+    await expect(page.locator('#bestNeuHinweis')).toBeVisible();
+    await expect(page.locator('#bestNeuHinweis')).toContainText('Eine neue Bestellung');
+    await expect(page.locator('#bestListe .best')).toHaveCount(3);
+    await expect(page.locator('#navZahlBestellungen')).toHaveText('4');
+    await page.click('#bestNeuHinweis button');
+    await expect(page.locator('#bestListe .best')).toHaveCount(4);
+    await expect(page.locator('#bestNeuHinweis')).toBeHidden();
+    await page.click('.nav-item[data-nav="start"]');
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    await expect(page.locator('#bestListe .frisch-punkt')).toHaveCount(0);
+  });
+});
