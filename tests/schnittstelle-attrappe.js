@@ -32,11 +32,14 @@ function blattAttrappe(daten, geld, kaputt) {
 
 // zeilen = Werte wie in der Tabelle (Preis als Zahl); kopf = Kopfzeile (Standard: die 12 alten Spalten)
 // blaetter = weitere Blätter { Name: [Zeilen inkl. Kopf] }, z. B. Lagerbewegungen; kaputt = Blätter, in die nicht geschrieben werden kann
-function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [], paypal = null, eigenschaften = {}, katalogText = null, serienliste = null } = {}) {
+function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [], paypal = null, eigenschaften = {}, katalogText = null, serienliste = null, github = null, cloudinary = false } = {}) {
+  // github = { dateien: { 'katalog.json': '…' } } → GITHUB_TOKEN ist gesetzt; cloudinary: true → CLOUDINARY_KEY/SECRET gesetzt
   // paypal = { orders: { ID: PayPal-Antwort }, falsch: true (Anmeldung scheitert) } → PAYPAL_CLIENT_ID/SECRET sind gesetzt
   // serienliste = Zeilen von Saras GPSR-Liste (inkl. Kopf) → eigene Tabelle, SERIENLISTE_ID ist gesetzt
   const props = Object.assign({ ADMIN_SCHLUESSEL: schluessel }, paypal ? { PAYPAL_CLIENT_ID: 'CID', PAYPAL_SECRET: 'GEHEIM' } : {},
-    serienliste ? { SERIENLISTE_ID: 'SERIEN-ID' } : {}, eigenschaften);
+    serienliste ? { SERIENLISTE_ID: 'SERIEN-ID' } : {}, github ? { GITHUB_TOKEN: 'GH-TOKEN' } : {},
+    cloudinary ? { CLOUDINARY_KEY: 'CL-KEY', CLOUDINARY_SECRET: 'CL-SECRET' } : {}, eigenschaften);
+  const gh = github ? { dateien: Object.assign({}, github.dateien || {}), gespeichert: [], falsch: !!github.falsch } : null;
   const serienDaten = serienliste ? serienliste.map(z => z.slice()) : null;
   const serienSheet = serienDaten ? blattAttrappe(serienDaten, false, kaputt.includes('Serienliste')) : null;
   const abrufe = [];
@@ -46,6 +49,22 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
   const fetchAttrappe = (url, opt = {}) => {
     abrufe.push({ url, opt });
     if (url === 'https://kronenwelt.de/katalog.json') return antwortVon(200, KATALOG_TEXT);
+    const g = /^https:\/\/api\.github\.com\/repos\/wpeterchwarz-collab\/kronenwelt\.de\/(contents\/(.+)|commits\?.*)$/.exec(url);
+    if (g) {
+      if (!gh || gh.falsch || opt.headers.Authorization !== 'Bearer GH-TOKEN') return antwortVon(401, { message: 'Bad credentials' });
+      if (!g[2]) return antwortVon(200, [{ commit: { message: 'Admin: Preise aktualisiert\n\nmehr', author: { date: '2026-11-13T10:00:00Z' } } }]);
+      const datei = g[2];
+      if ((opt.method || 'get') === 'put') {
+        const body = JSON.parse(opt.payload);
+        if (gh.dateien[datei] != null && body.sha !== 'sha-' + datei) return antwortVon(409, { message: 'sha does not match' });
+        gh.dateien[datei] = Buffer.from(body.content, 'base64').toString('utf8');
+        gh.gespeichert.push({ datei, nachricht: body.message, inhalt: gh.dateien[datei] });
+        return antwortVon(200, { content: { sha: 'neu' } });
+      }
+      if (gh.dateien[datei] == null) return antwortVon(404, { message: 'Not Found' });
+      const b64 = Buffer.from(gh.dateien[datei], 'utf8').toString('base64').replace(/(.{60})/g, '$1\n');   // GitHub bricht Base64 um
+      return antwortVon(200, { content: b64, sha: 'sha-' + datei });
+    }
     if (/\/v1\/oauth2\/token$/.test(url)) return paypal && !paypal.falsch ? antwortVon(200, { access_token: 'TOKEN', expires_in: 32400 }) : antwortVon(401, { error: 'invalid_client' });
     const m = /\/v2\/checkout\/orders\/([^/]+)$/.exec(url);
     if (m) {
@@ -77,7 +96,11 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     MailApp: { sendEmail: m => mails.push(m), getRemainingDailyQuota: () => 100 },
     Utilities: {
-      sleep() {}, getUuid: () => 'x', computeDigest: () => [], base64Encode: t => Buffer.from(t).toString('base64'),
+      sleep() {}, getUuid: () => 'x', base64Encode: t => Buffer.from(t).toString('base64'),
+      DigestAlgorithm: { SHA_1: 'sha1', SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
+      computeDigest: (alg, text) => [...require('crypto').createHash(alg).update(String(text), 'utf8').digest()].map(b => b > 127 ? b - 256 : b),
+      base64Decode: t => [...Buffer.from(t, 'base64')].map(b => b > 127 ? b - 256 : b),
+      newBlob: bytes => ({ getDataAsString: () => Buffer.from(bytes.map(b => (b + 256) % 256)).toString('utf8') }),
       formatDate: (d, tz, f) => f === 'HH:mm' ? '10:15' : f === 'yyyyMMdd' ? '20261107' : f === 'yyyy' ? '2026' : '07.11.2026'
     },
     Logger: { log() {} }
@@ -86,7 +109,7 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
   vm.runInContext(CODE, ctx);
   const post = body => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(body) } }).text);
   // blatt('Lagerbewegungen') = Zeilen des Blatts (inkl. Kopf) oder undefined, wenn es (noch) nicht existiert
-  return { post, daten, mails, blatt: n => tabellen[n], abrufe, serien: serienDaten };
+  return { post, daten, mails, blatt: n => tabellen[n], abrufe, serien: serienDaten, github: gh };
 }
 
 // Antwort von PayPal auf GET /v2/checkout/orders/{id} für eine abgeschlossene Zahlung

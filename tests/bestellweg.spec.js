@@ -83,21 +83,21 @@ test.describe('Nach der Zahlung', () => {
     expect(await page.evaluate(() => window.__emailjs)).toEqual(['template_wihnwzo']);
   });
 
-  test('alte Apps-Script-Version: Kunde bekommt die Bestätigung wie früher über EmailJS', async ({ page }) => {
+  test('alte Apps-Script-Version: über EmailJS geht nur die Mail an Sara (keine Kundenmail mehr über EmailJS)', async ({ page }) => {
     await eineKrone(page);
     await bezahlen(page, { tabelle: 'alt' });
-    await expect.poll(() => page.evaluate(() => window.__emailjs)).toEqual(['template_wihnwzo', 'template_kodm23r']);
+    await expect.poll(() => page.evaluate(() => window.__emailjs)).toEqual(['template_wihnwzo']);
     await expect(page.locator('#dankeNrWert')).toHaveText('KW-ALT-001');
   });
 
-  test('Tabelle nicht erreichbar: Bestätigung über EmailJS, Bestellung wird nicht doppelt geschickt', async ({ page }) => {
+  test('Tabelle nicht erreichbar: Sara hat die Mail, Bestellung wird nicht doppelt geschickt', async ({ page }) => {
     await eineKrone(page);
     await bezahlen(page, { tabelle: 'fehler' });
-    await expect.poll(() => page.evaluate(() => window.__emailjs)).toEqual(['template_wihnwzo', 'template_kodm23r']);
+    await expect.poll(() => page.evaluate(() => window.__emailjs)).toEqual(['template_wihnwzo']);
     await expect(page.locator('#dankeFenster')).toBeVisible();
     await expect(page.locator('#dankeNr')).toBeHidden();
     await page.waitForTimeout(500);
-    expect(await page.evaluate(() => window.__emailjs.length)).toBe(2);
+    expect(await page.evaluate(() => window.__emailjs.length)).toBe(1);
   });
 });
 
