@@ -60,7 +60,9 @@ const PAYPAL_API = { live: 'https://api-m.paypal.com', sandbox: 'https://api-m.s
 const KATALOG_URL = 'https://kronenwelt.de/katalog.json';
 
 // Seriennummern: Saras Liste (Spalten A–F wie bisher, neue Spalten rechts angehängt)
-const SERIEN_VORSILBE = 'MK-2025-';                        // Sara zählt durchgehend weiter, auch 2026
+// MK-<Jahr>-<laufende Zahl>: das Jahr ist das aktuelle, die Zahl hinten läuft über alle Jahre durch (MK-2025-309 → MK-2026-310)
+function serienVorsilbe() { return 'MK-' + Utilities.formatDate(new Date(), 'Europe/Berlin', 'yyyy') + '-'; }
+function serienZahl(sn) { return parseInt(String(sn).split('-').pop(), 10); }
 const SERIEN_MUSTER = /^MK-\d{4}-\d{3,}$/;
 const SERIEN_ZUSATZ = ['Bestellnr.', 'Rechnungsnr.', 'Hinweis'];
 const SERIEN_PLATTFORM = { 'Webshop': 'kronenwelt', 'Etsy': 'etsy', 'Amazon': 'amazon', 'Markt': 'markt', 'Instagram': 'instagram', 'Spende': 'spende' };
@@ -684,23 +686,24 @@ function serienStatus() {
 function serienLesen(sh) {
   const n = sh.getLastRow();
   const w = n > 1 ? sh.getRange(2, 1, n - 1, 3).getDisplayValues() : [];
-  const vergeben = {}, frei = [];
+  const vergeben = {}, frei = [];                         // vergeben: laufende Zahl → Nummer (Jahr egal)
   let max = 0, hoechste = '';
   w.forEach(function (z, i) {
-    const sn = String(z[0]).trim();
+    const sn = String(z[0]).trim().toUpperCase();
     if (!SERIEN_MUSTER.test(sn)) return;
-    const zahl = parseInt(sn.split('-').pop(), 10);
-    if (sn.indexOf(SERIEN_VORSILBE) === 0 && zahl > max) max = zahl;
-    if (String(z[2]).trim()) { vergeben[sn] = i + 2; if (!hoechste || zahl >= parseInt(hoechste.split('-').pop(), 10)) hoechste = sn; }
-    else frei.push({ sn: sn, zeile: i + 2 });
+    const zahl = serienZahl(sn);
+    if (zahl > max) max = zahl;
+    if (String(z[2]).trim()) { vergeben[zahl] = sn; if (!hoechste || zahl >= serienZahl(hoechste)) hoechste = sn; }
+    else frei.push({ sn: sn, zahl: zahl, zeile: i + 2 });
   });
-  return { vergeben: vergeben, frei: frei, max: max, hoechste: hoechste };
+  return { vergeben: vergeben, frei: frei.filter(function (f) { return !vergeben[f.zahl]; }).sort(function (a, b) { return a.zahl - b.zahl; }), max: max, hoechste: hoechste };
 }
 
 function serienNaechste(info, anzahl) {
-  const l = info.frei.map(function (f) { return f.sn; });
+  const v = serienVorsilbe();
+  const l = info.frei.map(function (f) { return v + String(f.zahl).padStart(3, '0'); });   // vorbereitete Zeilen zuerst, mit aktuellem Jahr
   let m = info.max;
-  while (l.length < anzahl) { m++; l.push(SERIEN_VORSILBE + String(m).padStart(3, '0')); }
+  while (l.length < anzahl) { m++; l.push(v + String(m).padStart(3, '0')); }
   return l.slice(0, anzahl);
 }
 
@@ -742,14 +745,15 @@ function rechnungSetzen(data) {
 
 // Nummern prüfen, ohne etwas zu schreiben (Format, doppelt, schon vergeben, Liste eingerichtet)
 function serienPruefen(liste) {
-  if (liste.some(function (x) { return !SERIEN_MUSTER.test(x); })) throw fehler('ungueltige_seriennummer', 'Seriennummer prüfen (z. B. MK-2025-310)');
-  if (liste.some(function (x, i) { return liste.indexOf(x) !== i; })) throw fehler('ungueltige_seriennummer', 'Seriennummer doppelt');
+  if (liste.some(function (x) { return !SERIEN_MUSTER.test(x); })) throw fehler('ungueltige_seriennummer', 'Seriennummer prüfen (z. B. MK-2026-310)');
+  const zahlen = liste.map(serienZahl);
+  if (zahlen.some(function (x, i) { return zahlen.indexOf(x) !== i; })) throw fehler('ungueltige_seriennummer', 'Seriennummer doppelt');
   const sh = serienBlatt();
   if (!sh) throw fehler('serienliste_fehlt', 'Seriennummernliste ist nicht eingerichtet');
   const info = serienLesen(sh);
-  const schon = liste.filter(function (x) { return info.vergeben[x]; });
+  const schon = liste.filter(function (x) { return info.vergeben[serienZahl(x)]; });   // die Zahl zählt, nicht das Jahr
   if (schon.length) {
-    const e = fehler('seriennummer_vergeben', 'Schon vergeben: ' + schon.join(', '));
+    const e = fehler('seriennummer_vergeben', 'Schon vergeben: ' + schon.map(function (x) { return info.vergeben[serienZahl(x)]; }).join(', '));
     e.vorschlag = serienNaechste(info, liste.length);
     throw e;
   }
@@ -782,7 +786,7 @@ function serienEintragen(sheet, kopf, zeile, data) {
     const p = pos[i] || pos[pos.length - 1] || { name: b.variante, details: '', pers: '' };
     const bez = [p.name].concat(String(p.details || '').split(' · ')).concat(p.pers ? [p.pers] : []).filter(Boolean).join(', ');
     const werte = [sn, SERIEN_PLATTFORM[b.kanal] || String(b.kanal || '').toLowerCase(), bez, heute, vorlage[4], vorlage[5]];
-    const frei = info.frei.filter(function (f) { return f.sn === sn; })[0];
+    const frei = info.frei.filter(function (f) { return f.zahl === serienZahl(sn); })[0];   // vorbereitete Zeile, Jahr wird angepasst
     const z = frei ? frei.zeile : sh.getLastRow() + 1;
     sh.getRange(z, 1, 1, 6).setValues([werte]);
     sh.getRange(z, k.indexOf('Bestellnr.') + 1).setValue(b.nr);

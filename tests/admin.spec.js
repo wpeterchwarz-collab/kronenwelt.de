@@ -922,37 +922,37 @@ test.describe('Admin: MK-Seriennummern', () => {
     const k = await zumVersand(page, 'KW-20261001-003');
     const felder = k.locator('.serien input[id^="mk-"]');
     await expect(felder).toHaveCount(2);
-    await expect(felder.nth(0)).toHaveValue('MK-2025-310');
-    await expect(felder.nth(1)).toHaveValue('MK-2025-311');
+    await expect(felder.nth(0)).toHaveValue('MK-2026-310');
+    await expect(felder.nth(1)).toHaveValue('MK-2026-311');
     await expect(k.locator('.serien')).toContainText('„FRIDOLIN“');
     await k.locator('input[id^="re-"]').fill('RE-2026-0042');
     page.once('dialog', d => d.accept());                                  // ohne Sendungsnummer
     await k.locator('button:has-text("Als versendet markieren")').click();
-    await expect(page.locator('#statusText')).toHaveText(/MK-Nummern: MK-2025-310, MK-2025-311/);
-    expect(t.serien.map(z => z[0])).toEqual(['(SN) Seriennnummer', 'MK-2025-309', 'MK-2025-310', 'MK-2025-311']);
+    await expect(page.locator('#statusText')).toHaveText(/MK-Nummern: MK-2026-310, MK-2026-311/);
+    expect(t.serien.map(z => z[0])).toEqual(['(SN) Seriennnummer', 'MK-2025-309', 'MK-2026-310', 'MK-2026-311']);
     expect(t.serien[2].slice(1, 3)).toEqual(['kronenwelt', 'Einfarbig, Grün, Extra Mini, FRIDOLIN']);
     expect(t.serien[2].slice(6)).toEqual(['KW-20261001-003', 'RE-2026-0042']);
     await page.click('#bestFilterLeiste [data-filter="erledigt"]');
-    await expect(k.locator('.best-details .mk')).toHaveText(['MK-2025-310', 'MK-2025-311']);
+    await expect(k.locator('.best-details .mk')).toHaveText(['MK-2026-310', 'MK-2026-311']);
     await expect(k.locator('.best-details')).toContainText('Rechnung RE-2026-0042');
   });
 
   test('schon vergebene Nummer: freie Nummern werden eingesetzt, nichts ist versendet', async ({ page }) => {
     const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
     const k = await zumVersand(page, 'KW-20261001-003');
-    await expect(k.locator('input[id^="mk-"]').first()).toHaveValue('MK-2025-310');
+    await expect(k.locator('input[id^="mk-"]').first()).toHaveValue('MK-2026-310');
     await k.locator('input[id^="mk-"]').first().fill('MK-2025-309');
     page.once('dialog', d => d.accept());
     await k.locator('button:has-text("Als versendet markieren")').click();
     await expect(page.locator('#statusText')).toContainText('schon vergeben');
-    await expect(k.locator('input[id^="mk-"]').first()).toHaveValue('MK-2025-310');
+    await expect(k.locator('input[id^="mk-"]').first()).toHaveValue('MK-2026-310');
     expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen.find(b => b.nr === 'KW-20261001-003').status).toBe('Neu');
   });
 
   test('Haken weg: versendet ohne Eintrag in die Liste; leeres Feld wird bemängelt', async ({ page }) => {
     const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
     const k = await zumVersand(page, 'KW-20261001-003');
-    await expect(k.locator('input[id^="mk-"]').first()).toHaveValue('MK-2025-310');
+    await expect(k.locator('input[id^="mk-"]').first()).toHaveValue('MK-2026-310');
     await k.locator('input[id^="mk-"]').nth(1).fill('');
     await k.locator('button:has-text("Als versendet markieren")').click();
     await expect(page.locator('#statusText')).toContainText('Bitte bei jeder Krone eine MK-Nummer');
@@ -976,10 +976,10 @@ test.describe('Admin: MK-Seriennummern', () => {
     await page.click('#tab-bestellungen button:has-text("Aktualisieren")');
     const k = page.locator(`.best[data-nr="${nr}"]`);
     await k.locator('summary').first().click();
-    await expect(k.locator('input[id^="mk-"]')).toHaveValue('MK-2025-310');
+    await expect(k.locator('input[id^="mk-"]')).toHaveValue('MK-2026-310');
     await k.locator('.best-schritt button:has-text("Übergeben")').click();
     await expect(page.locator('#statusText')).toHaveText(/Übergeben ✓/);
-    expect(t.serien[2].slice(0, 3)).toEqual(['MK-2025-310', 'markt', 'Party, ' + PARTY.merkmale.farbe[0].wert + ', Mini, BELLA']);
+    expect(t.serien[2].slice(0, 3)).toEqual(['MK-2026-310', 'markt', 'Party, ' + PARTY.merkmale.farbe[0].wert + ', Mini, BELLA']);
   });
 
   test('Einstellungen zeigen die zuletzt vergebene MK-Nummer', async ({ page }) => {
@@ -1000,16 +1000,16 @@ test.describe('Admin: Verkauf über Etsy/Amazon in einem Schritt', () => {
     await page.fill('#bfPlattformNr', '302-1234567-1234567');
     await page.fill('#bfKunde', 'Elly Muster');
     await page.check('#bfDirekt');
-    await expect(page.locator('#bfMk-0')).toHaveValue('MK-2025-310');
+    await expect(page.locator('#bfMk-0')).toHaveValue('MK-2026-310');
     await expect(page.locator('#bfStatus')).toHaveCount(0);
     await page.fill('#bfSendung', '00340434123456789012');
     await page.fill('#bfRechnung', 'RE-8');
     await expect(page.locator('#bfSpeichern')).toHaveText('Speichern als versendet');
     await page.click('#bfSpeichern');
-    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert ✓ MK-Nummern: MK-2025-310/);
+    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert ✓ MK-Nummern: MK-2026-310/);
     const b = t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0];
-    expect(b).toMatchObject({ kanal: 'Amazon', status: 'Versendet', plattformNr: '302-1234567-1234567', sendungsnummer: '00340434123456789012', seriennummern: 'MK-2025-310', rechnungsnr: 'RE-8' });
-    expect(t.serien[2].slice(0, 2)).toEqual(['MK-2025-310', 'amazon']);
+    expect(b).toMatchObject({ kanal: 'Amazon', status: 'Versendet', plattformNr: '302-1234567-1234567', sendungsnummer: '00340434123456789012', seriennummern: 'MK-2026-310', rechnungsnr: 'RE-8' });
+    expect(t.serien[2].slice(0, 2)).toEqual(['MK-2026-310', 'amazon']);
     await expect(page.locator(`.best[data-nr="${b.nr}"] .best-details`)).toContainText('Amazon-Nr. 302-1234567-1234567');
   });
 
@@ -1018,9 +1018,9 @@ test.describe('Admin: Verkauf über Etsy/Amazon in einem Schritt', () => {
     await page.click('#btnNeueBestellung');
     await page.fill('#bfKunde', 'Etsy Kundin');
     await page.check('#bfDirekt');
-    await expect(page.locator('#bfMk-0')).toHaveValue('MK-2025-310');
+    await expect(page.locator('#bfMk-0')).toHaveValue('MK-2026-310');
     await page.click('.bf button:has-text("+ weitere Krone")');
-    await expect(page.locator('#bfMk-1')).toHaveValue('MK-2025-311');
+    await expect(page.locator('#bfMk-1')).toHaveValue('MK-2026-311');
     await page.uncheck('#bfMkAn');
     await page.click('#bfSpeichern');
     await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert ✓$/);
@@ -1066,7 +1066,7 @@ test.describe('Admin: Instagram, Sonstiges, Rechnung nachtragen', () => {
 
   test('Rechnungsnummer unter „Weitere Aktionen“ nachtragen, landet auch in Saras Liste', async ({ page }) => {
     const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
-    t.post({ aktion: 'versenden', schluessel: 'GEHEIM123', nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2025-310', 'MK-2025-311'] });
+    t.post({ aktion: 'versenden', schluessel: 'GEHEIM123', nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2026-310', 'MK-2026-311'] });
     await page.reload();
     await page.click('#bestFilterLeiste [data-filter="erledigt"]');
     const k = page.locator('.best[data-nr="KW-20261001-003"]');

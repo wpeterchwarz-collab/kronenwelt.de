@@ -78,7 +78,7 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
     MailApp: { sendEmail: m => mails.push(m), getRemainingDailyQuota: () => 100 },
     Utilities: {
       sleep() {}, getUuid: () => 'x', computeDigest: () => [], base64Encode: t => Buffer.from(t).toString('base64'),
-      formatDate: (d, tz, f) => f === 'HH:mm' ? '10:15' : f === 'yyyyMMdd' ? '20261107' : '07.11.2026'
+      formatDate: (d, tz, f) => f === 'HH:mm' ? '10:15' : f === 'yyyyMMdd' ? '20261107' : f === 'yyyy' ? '2026' : '07.11.2026'
     },
     Logger: { log() {} }
   };
