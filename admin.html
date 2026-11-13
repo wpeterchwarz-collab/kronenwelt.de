@@ -72,34 +72,44 @@
     <div class="start-kopf">
       <h1 class="start-titel">Hallo Sara</h1>
       <p class="start-sub" id="startDatum"></p>
+      <p class="start-lage" id="startLage"></p>
     </div>
     <div class="start-grid">
-      <section class="card start-karte start-todo">
-        <div class="card-title">Zu tun</div>
-        <div id="startTodo" class="todo-liste"><div class="leise">Wird geprüft …</div></div>
-      </section>
+      <div class="start-links">
+        <section class="card start-karte start-todo">
+          <div class="card-title">Jetzt wichtig</div>
+          <div id="startTodo" class="todo-liste"><div class="leise">Wird geprüft …</div></div>
+        </section>
+        <section class="card start-karte">
+          <div class="schnell schnell-gross">
+            <button class="schnell-btn haupt" onclick="verkaufErfassen()">+ Verkauf erfassen</button>
+            <button class="schnell-btn" onclick="geheZu('lager')">Lager</button>
+            <button class="schnell-btn" onclick="bestellFilter='alle';geheZu('bestellungen')">Alle Bestellungen</button>
+            <a class="schnell-btn" href="https://kronenwelt.de" target="_blank" rel="noopener">Shop ansehen ↗</a>
+          </div>
+        </section>
+      </div>
       <div class="start-rechts">
-      <section class="card start-karte">
-        <div class="card-title">Letzte Bestellungen</div>
-        <div id="startBestellungen"><div class="leise">Wird geladen …</div></div>
-      </section>
-      <section class="card start-karte">
-        <div class="card-title">Shop in Zahlen</div>
-        <div id="startZahlen" class="zahlen"></div>
-      </section>
-      <section class="card start-karte">
-        <div class="card-title">Schnell zu</div>
-        <div class="schnell">
-          <button class="schnell-btn" onclick="geheZu('preise')">Preise ändern</button>
-          <button class="schnell-btn" onclick="geheZu('medien')">Fotos hochladen</button>
-          <button class="schnell-btn" onclick="geheZu('galerie')">Galerie</button>
-          <a class="schnell-btn" href="https://kronenwelt.de" target="_blank" rel="noopener">Shop ansehen ↗</a>
-        </div>
-      </section>
-      <section class="card start-karte">
-        <div class="card-title">Zuletzt geändert</div>
-        <div id="startVerlauf" class="verlauf"><div class="leise">Wird geladen …</div></div>
-      </section>
+        <section class="card start-karte">
+          <div class="card-title" id="startMonatTitel">Dieser Monat</div>
+          <div id="startMonat"><div class="leise">Wird geladen …</div></div>
+        </section>
+        <section class="card start-karte">
+          <div class="card-title">Zuletzt eingegangen</div>
+          <div id="startBestellungen"><div class="leise">Wird geladen …</div></div>
+        </section>
+        <details class="card start-karte start-pflege" id="startPflegeKarte">
+          <summary class="card-title">Shop pflegen <span id="startPflegeZahl" class="leise"></span></summary>
+          <div id="startPflege" class="todo-liste"></div>
+          <div id="startZahlen" class="zahlen"></div>
+          <div class="pflege-unter">Zuletzt geändert</div>
+          <div id="startVerlauf" class="verlauf"><div class="leise">Wird geladen …</div></div>
+          <div class="schnell" style="margin-top:14px">
+            <button class="schnell-btn" onclick="geheZu('preise')">Preise ändern</button>
+            <button class="schnell-btn" onclick="geheZu('medien')">Fotos hochladen</button>
+            <button class="schnell-btn" onclick="geheZu('galerie')">Galerie</button>
+          </div>
+        </details>
       </div>
     </div>
     <p class="version" id="adminVersion"></p>
@@ -114,6 +124,7 @@
         <button class="btn btn-primary btn-sm" id="btnNeueBestellung" onclick="formularOeffnen()">+ Bestellung</button>
       </div>
     </div>
+    <div id="bestNeuHinweis" class="neu-hinweis" style="display:none"></div>
     <div id="bestFormular"></div>
     <div id="bestInhalt"></div>
   </div>
@@ -264,5 +275,6 @@
 <script src="admin/js/09-produkte.js?v=1.1"></script>
 <script src="admin/js/10-galerie.js?v=1.1"></script>
 <script src="admin/js/11-einstellungen.js?v=1.1"></script>
+<script src="admin/js/12-meldungen.js?v=1.1"></script>
 </body>
 </html>

@@ -8,7 +8,7 @@
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
 const ADMIN_VERSION = '1.1';
-const ADMIN_NEU = 'Sicherer und als App: Zugänge zu GitHub und Cloudinary liegen jetzt im Apps Script, das Passwort wird nicht mehr gespeichert, und den Admin kannst du auf den Startbildschirm legen.';
+const ADMIN_NEU = 'Neue Startseite: Jetzt wichtig, Zahlen des Monats mit Kleinunternehmergrenze, und neue Bestellungen erscheinen von selbst mit Zähler an „Bestellungen“.';
 const ICON = {
   start:    '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/></svg>',
   bestellungen: '<svg viewBox="0 0 24 24"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5"/><path d="M12 12v9"/></svg>',
@@ -30,7 +30,7 @@ const letzteSeite = {};                       // je Bereich die zuletzt offene U
 
 function baueNavigation() {
   document.getElementById('hauptNav').innerHTML = BEREICHE.map(b =>
-    `<button class="nav-item" data-nav="${b.id}" onclick="geheZu('${b.id}')">${ICON[b.id] || ''}<span>${b.titel}</span></button>`).join('');
+    `<button class="nav-item" data-nav="${b.id}" onclick="geheZu('${b.id}')">${ICON[b.id] || ''}<span>${b.titel}</span>${b.id === 'bestellungen' ? '<span class="nav-zahl" id="navZahlBestellungen" hidden></span>' : ''}</button>`).join('');
 }
 
 // Ziel: Bereich ('produkte') oder Unterseite ('medien')
@@ -49,7 +49,7 @@ function geheZu(ziel, ohneVerlauf) {
   if (!ohneVerlauf && location.hash !== hash) history.pushState(null, '', hash);
   window.scrollTo(0, 0);
   if (seite === 'start') renderUebersicht();
-  if (seite === 'bestellungen') ladeBestellungen();
+  if (seite === 'bestellungen') { gesehenBeimOeffnen(); ladeBestellungen(); if (bestellungen) bestellungenAktualisiert(); }
   if (seite === 'lager') ladeLager();
 }
 // Alter Name, falls irgendwo noch benutzt

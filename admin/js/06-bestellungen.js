@@ -18,7 +18,9 @@ function ladeBestellungen(neu) {
     bestellungen = r.bestellungen || []; bestellFehler = '';
   }).catch(e => { bestellFehler = apiFehlerText(e); }).then(() => {
     bestellLaden = null;
+    if (neu) neuHinweisWeg();
     renderBestellungen();
+    bestellungenAktualisiert();
     renderStartBestellungen();
     if (document.getElementById('tab-start').style.display !== 'none') renderTodo();
     if (neu) showStatus(bestellFehler ? bestellFehler : 'Bestellungen aktualisiert ✓', bestellFehler ? 'error' : 'success');
@@ -203,7 +205,7 @@ function bestellKarte(b) {
   return `<details class="best ${b.status === 'Storniert' ? 'storniert' : ''}" data-nr="${id}" ${bestellOffen[b.nr] ? 'open' : ''} ontoggle="bestellOffen[this.dataset.nr]=this.open">
       <summary>
         <div class="best-datum"><b>${d.tag}</b><span>${medienEsc(d.monat)}</span></div>
-        <div><div class="best-kunde">${medienEsc(b.kunde || 'ohne Namen')} <span class="${statusKlasse(b.status)}">${medienEsc(b.status)}</span><span class="best-kanal" style="${kanalStil}">${medienEsc(b.kanal)}</span>${zPruefen && b.status !== 'Storniert' ? '<span class="badge-pruefen">Zahlung prüfen</span>' : ''}</div>
+        <div><div class="best-kunde">${istUngesehen(b) ? '<span class="frisch-punkt" title="Neu seit deinem letzten Besuch"></span>' : ''}${medienEsc(b.kunde || 'ohne Namen')} <span class="${statusKlasse(b.status)}">${medienEsc(b.status)}</span><span class="best-kanal" style="${kanalStil}">${medienEsc(b.kanal)}</span>${zPruefen && b.status !== 'Storniert' ? '<span class="badge-pruefen">Zahlung prüfen</span>' : ''}</div>
           <div class="best-pos">${pos.map(posZeile).join('<br>')}</div>${alter}</div>
         <div class="best-betrag">${euro(b.preis)}<small>${pos.length > 1 ? pos.length + ' Kronen' : medienEsc(b.zahlung || '')}</small></div>
       </summary>
@@ -241,7 +243,8 @@ function bestellungErsetzen(neu) {
   if (i >= 0) bestellungen[i] = neu; else (bestellungen = bestellungen || []).unshift(neu);
   renderBestellListe();
   renderStartBestellungen();
-  if (document.getElementById('tab-start').style.display !== 'none') renderTodo();
+  if (document.getElementById('tab-start').style.display !== 'none') { renderTodo(); renderStartMonat(); }
+  bestellungenAktualisiert();
 }
 
 async function statusKlick(nr, status) {
