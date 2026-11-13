@@ -35,6 +35,8 @@
       Verbinden: in der Admin-Seite (Einstellungen → Etsy); Sara erlaubt den Zugriff einmal bei Etsy.
       Automatisch alle 15 Minuten: einmal die Funktion „etsyZeitplan“ im Editor ausführen.
       Übernommen werden nur bezahlte Bestellungen ab dem Verbinden, jede nur einmal (Spalte „Plattform-Nr.“).
+      Ab 1.10: Blatt „Etsy-Artikel“ – je Etsy-Artikel eine Zeile; in „Krone“ und „Farbe“ steht, welcher
+      Katalog-Artikel dazu gehört. Dann bucht bei Etsy-Bestellungen auch das Lager ab.
 
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
    werden rechts angehängt, sobald sie gebraucht werden. Nichts wird umbenannt oder gelöscht.
@@ -44,7 +46,7 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.9';
+const SCHNITTSTELLE_VERSION = '1.10';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
@@ -157,7 +159,7 @@ function adminAnfrage(data) {
     Utilities.sleep(800);                                   // Ausprobieren von Schlüsseln bremsen
     return antwort({ ok: false, fehler: 'nicht_erlaubt' });
   }
-  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung', 'etsyAbruf'].indexOf(data.aktion) >= 0;
+  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung', 'etsyAbruf', 'etsyArtikel'].indexOf(data.aktion) >= 0;
   const lock = LockService.getScriptLock();
   try {
     if (schreibt) lock.waitLock(20000);
@@ -177,6 +179,8 @@ function adminAnfrage(data) {
         return antwort(etsyCode(data));
       case 'etsyAbruf':
         return antwort(etsyAbruf());
+      case 'etsyArtikel':
+        return antwort(etsyArtikelAbgleich());
       case 'etsyTrennen':
         return antwort(etsyTrennen());
       case 'zahlung':
@@ -1209,34 +1213,163 @@ function etsyAbrufen(pfad) {
 function etsyGeld(g) { return g && Number(g.divisor) ? Number(g.amount) / Number(g.divisor) : 0; }
 
 // Eine Etsy-Bestellung („Receipt“) in die Felder der Tabelle übersetzen. Jede Krone ist eine Position.
-// Steht bei Etsy unsere Artikelnummer als SKU, werden Krone, Farbe und Größe aus dem Katalog übernommen
-// (dann bucht auch das Lager ab). Sonst steht der Etsy-Text in der Bestellung.
-function etsyPositionen(receipt, katalog) {
+// Welcher Katalog-Artikel gemeint ist, steht (in dieser Reihenfolge)
+//   1. in der SKU bei Etsy, wenn dort unsere Artikelnummer eingetragen ist, oder
+//   2. im Blatt „Etsy-Artikel“ (zuordnung: Etsy-Nr. → Krone und Farbe).
+// Dann bucht auch das Lager ab. Sonst steht der Etsy-Text in der Bestellung.
+function etsyPositionen(receipt, katalog, zuordnung) {
   const groessen = (((katalog || {}).merkmale || {}).groesse || {}).werte || [];
   const kurz = function (x, n) { return String(x == null ? '' : x).replace(/\s+/g, ' ').replace(/\s*[,|]\s*/g, ' / ').trim().slice(0, n); };
   const liste = [];
   (receipt.transactions || []).forEach(function (t) {
     const vars = Array.isArray(t.variations) ? t.variations : [];
-    let pers = '', groesse = '';
+    let pers = '', groesse = '', zusatz = '';
     const rest = [];
     vars.forEach(function (v) {
       const name = String(v.formatted_name || ''), wert = String(v.formatted_value || '').trim();
       if (!wert) return;
       if (/personali/i.test(name)) { pers = wert; return; }
-      const g = groessen.filter(function (x) { return [x.wert, x.name].some(function (n) { return n && wert.toLowerCase().indexOf(String(n).toLowerCase()) === 0; }); })
-        .sort(function (a, b) { return String(b.wert).length - String(a.wert).length; })[0];   // „Extra Mini“ vor „Mini“
-      if (g && !groesse) { groesse = g.wert; return; }
+      let treffer = null, laenge = 0;                       // „Extra Mini“ vor „Mini“: der längste passende Name gewinnt
+      groessen.forEach(function (x) {
+        [x.wert, x.name].forEach(function (n) {
+          if (n && String(n).length > laenge && wert.toLowerCase().indexOf(String(n).toLowerCase()) === 0) { treffer = x; laenge = String(n).length; }
+        });
+      });
+      if (treffer && !groesse) { groesse = treffer.wert; zusatz = wert.slice(laenge).trim(); return; }   // „Groß + 3 Pet“ → Gross, „+ 3 Pet“
       rest.push(wert);
     });
+    const mitZusatz = function (g) { return kurz(g + (zusatz ? ' ' + zusatz : ''), 40); };
     const sku = skuOk(String(t.sku || '').trim()) ? String(t.sku).trim() : '';
     const k = sku ? etsyArtikel(sku, katalog) : null;
-    const p = k ? { variante: k.variante, farbe: k.farbe || kurz(rest.join(' / '), 60), groesse: k.groesse, sku: k.lagerSku }
-      : { variante: kurz(t.title, 60), farbe: kurz(rest.join(' / '), 60), groesse: groesse || '', sku: '' };
+    const z = !k && zuordnung ? zuordnung[String(t.listing_id || '')] : null;
+    let p;
+    if (k) {
+      p = { variante: k.variante, farbe: k.farbe || kurz(rest.join(' / '), 60), groesse: k.groesse, sku: k.lagerSku };
+    } else if (z && z.krone) {
+      const a = etsyAusBlatt(z, rest, groesse, katalog);
+      p = { variante: kurz(a.variante, 60), farbe: kurz(a.farbe || rest.join(' / '), 60), groesse: mitZusatz(groesse), sku: a.sku };
+    } else {
+      p = { variante: kurz(t.title, 60), farbe: kurz(rest.join(' / '), 60), groesse: mitZusatz(groesse), sku: '' };
+    }
     p.pers = kurz(pers, 40);
+    p.listing = String(t.listing_id || '');
+    p.titel = String(t.title || '');
+    p.preis = etsyGeld(t.price);
     const menge = Math.max(1, Math.min(20, parseInt(t.quantity, 10) || 1));
     for (let i = 0; i < menge; i++) liste.push(p);
   });
   return liste;
+}
+
+/* ---------------- Blatt „Etsy-Artikel“ ---------------- */
+const ETSY_BLATT = 'Etsy-Artikel';
+const ETSY_BLATT_SPALTEN = ['Etsy-Nr.', 'Titel', 'Preis (€)', 'Krone', 'Farbe', 'Hinweis'];
+const ETSY_OFFEN = 'Bitte Krone und Farbe eintragen (wie im Katalog). Leer lassen, wenn es den Artikel im Katalog nicht gibt.';
+const ETSY_KRONE_TITEL = 'Personalisierte handgemachte Hundekrone, individuelle Krone, perfekt für Geburtstag und Fotoshooting mit Hund, ';
+// Vorschläge für die erste Befüllung (Stand 13.11.2026, mit Peter abgestimmt). preis = nur nötig, wo es den Titel zweimal gibt.
+// Farbe mit „=“: Die Farbe hängt von der Etsy-Variante ab („Etsy-Wert = Farbe im Katalog; …“).
+const ETSY_VORSCHLAG = [
+  [ETSY_KRONE_TITEL + 'Gold', 'Edel & Wild', 'Gold'],
+  [ETSY_KRONE_TITEL + 'schwarz', 'Edel & Wild', 'Schwarz'],
+  [ETSY_KRONE_TITEL + 'rosa', 'Edel & Wild', 'Rosa', 14],
+  [ETSY_KRONE_TITEL + 'rosa', 'Party', 'Rosa mit Punkten', 12],
+  [ETSY_KRONE_TITEL + 'hellgrau', 'Party', 'Grau mit Punkten'],
+  [ETSY_KRONE_TITEL + 'mint', 'Party', 'Mint mit Punkten'],
+  [ETSY_KRONE_TITEL + 'petrol', 'Party', 'Petrol mit Punkten'],
+  [ETSY_KRONE_TITEL + 'petrol mit weißen Punkten', 'Party', 'Petrol mit Punkten'],
+  [ETSY_KRONE_TITEL + 'Konfetti', 'Party', 'Konfetti'],
+  [ETSY_KRONE_TITEL + 'orange', 'Einfarbig', 'Orange'],
+  [ETSY_KRONE_TITEL + 'berry', 'Einfarbig', 'Berry'],
+  [ETSY_KRONE_TITEL + 'grün', 'Einfarbig', 'Grün'],
+  [ETSY_KRONE_TITEL + 'blau', 'Glitzer', 'Blau', 14],
+  [ETSY_KRONE_TITEL + 'weiß', 'Glitzer', 'Weiss'],
+  [ETSY_KRONE_TITEL + 'pink', 'Glitzer', 'Pink'],
+  [ETSY_KRONE_TITEL + 'silber', 'Glitzer', 'Silber'],
+  [ETSY_KRONE_TITEL + 'türkis', 'Glitzer', 'Türkis'],
+  ['Krone mit Leo Muster, Hundekrone, Geburtstag', 'Edel & Wild', 'Weiß schwarz = Leo Weiss; Braun schwarz = Leo Braun; Großes Muster = Leopard'],
+  ['Handgemachte Hundekrone, drei Farben zur Auswahl, mit austauschbaren Zahlen nach Wahl, perfekt für Geburtstag und Fotoshooting mit Hund',
+    'Zahlenkrone Klassik', 'Rosa = Rosa; Grün = Mint; Weiß/ bunte Punkte = Weiss/bunte Punkte'],
+  ['Handgemachte Hundekrone Leo, mit austauschbaren Zahlen nach Wahl, perfekt für Geburtstag und Fotoshooting mit Hund',
+    'Zahlenkrone Leo', 'Gold/Zahlen schwarz = Gold / Zahlen schwarz; Schwarz/Zahlen gold = Schwarz / Zahlen gold']
+];
+function etsyGleich(x) { return String(x == null ? '' : x).toLowerCase().replace(/ß/g, 'ss').replace(/[\s\/]+/g, ''); }
+
+// Vorschlag für einen Etsy-Artikel. preis = Grundpreis des Artikels oder null (dann nur bei eindeutigem Titel).
+function etsyVorschlag(titel, preis) {
+  const t = String(titel || '').replace(/\s+/g, ' ').trim();
+  const passend = ETSY_VORSCHLAG.filter(function (v) { return v[0] === t; });
+  if (!passend.length) return null;
+  if (passend.length === 1 && passend[0][3] == null) return passend[0];
+  const genau = passend.filter(function (v) { return preis != null && v[3] === preis; });
+  return genau.length === 1 ? genau[0] : null;
+}
+
+// Zeile aus dem Blatt → Katalog-Artikel. Ergebnis: Bezeichnung für die Bestellung und (wenn alles passt) die Lager-Artikelnummer.
+function etsyAusBlatt(z, etsyWerte, groesse, katalog) {
+  const k = katalog || {};
+  let farbe = String(z.farbe || '').trim();
+  if (farbe.indexOf('=') >= 0) {                              // „Etsy-Wert = Farbe im Katalog; …“
+    let gefunden = '';
+    farbe.split(';').forEach(function (teil) {
+      const i = teil.indexOf('=');
+      if (i < 0) return;
+      const links = etsyGleich(teil.slice(0, i));
+      if (!gefunden && (etsyWerte || []).some(function (w) { return etsyGleich(w) === links; })) gefunden = teil.slice(i + 1).trim();
+    });
+    farbe = gefunden;
+  }
+  const p = (k.produkte || []).filter(function (x) { return etsyGleich(x.name) === etsyGleich(z.krone); })[0];
+  if (!p) return { variante: String(z.krone).trim(), farbe: farbe, sku: '' };       // freie Bezeichnung, z. B. „Nikolausmütze“
+  const f = ((p.merkmale || {}).farbe || []).filter(function (x) { return farbe && etsyGleich(x.wert) === etsyGleich(farbe); })[0];
+  const g = ((p.merkmale || {}).groesse || []).filter(function (x) { return x.wert === groesse; })[0];
+  const gruppe = (k.gruppen || []).filter(function (x) { return x.id === p.gruppe; })[0] || {};
+  const gk = ((((k.merkmale || {}).groesse || {}).werte || []).filter(function (x) { return x.wert === groesse; })[0] || {}).kuerzel;
+  const sku = f && g && gk ? [gruppe.kuerzel, p.kuerzel, (f.lager && f.lager.kuerzel) || f.kuerzel, gk].join('-') : '';
+  return { variante: p.name, farbe: f ? f.wert : farbe, sku: skuOk(sku) ? sku : '' };
+}
+
+// Blatt lesen: Etsy-Nr. → { zeile, krone, farbe }
+function etsyBlattLesen(sheet) {
+  const kopf = kopfzeile(sheet), n = sheet.getLastRow(), map = {};
+  if (n < 2) return map;
+  const sp = function (name) { return kopf.indexOf(name); };
+  sheet.getRange(2, 1, n - 1, kopf.length).getDisplayValues().forEach(function (z, i) {
+    const id = String(z[sp('Etsy-Nr.')] || '').trim();
+    if (id) map[id] = { zeile: i + 2, titel: z[sp('Titel')], krone: String(z[sp('Krone')] || '').trim(), farbe: String(z[sp('Farbe')] || '').trim() };
+  });
+  return map;
+}
+
+// Neue Zeile für einen Etsy-Artikel; preis = Grundpreis (aus der Artikelliste) oder null (aus einer Bestellung)
+function etsyBlattZeile(sheet, id, titel, preis) {
+  const v = etsyVorschlag(titel, preis);
+  sheet.appendRow([String(id), String(titel || '').replace(/\s+/g, ' ').trim(), preis == null ? '' : preis,
+    v ? v[1] : '', v ? v[2] : '', v ? 'Vorschlag – bitte prüfen' : ETSY_OFFEN]);
+  return v ? { krone: v[1], farbe: v[2] } : { krone: '', farbe: '' };
+}
+
+// Alle Etsy-Artikel im Verkauf ins Blatt „Etsy-Artikel“ holen. Vorhandene Zeilen (und was Sara eingetragen hat) bleiben.
+function etsyArtikelAbgleich() {
+  const shop = etsyProps().getProperty('ETSY_SHOP_ID');
+  if (etsyStatus() !== 'verbunden' || !shop) throw fehler('etsy_nicht_verbunden', 'Etsy ist noch nicht verbunden.');
+  const sheet = lagerBlatt(ETSY_BLATT, ETSY_BLATT_SPALTEN);
+  const map = etsyBlattLesen(sheet);
+  let offset = 0, gesamt = 0, neu = 0;
+  do {
+    const r = etsyAbrufen('/application/shops/' + encodeURIComponent(shop) + '/listings/active?limit=100&offset=' + offset);
+    const liste = r.results || [];
+    gesamt = Number(r.count) || 0;
+    liste.forEach(function (l) {
+      const id = String(l.listing_id || '');
+      if (!id || map[id]) return;
+      const z = etsyBlattZeile(sheet, id, l.title, l.price ? Math.round(etsyGeld(l.price) * 100) / 100 : null);
+      map[id] = z; neu++;
+    });
+    offset += liste.length;
+    if (!liste.length) break;
+  } while (offset < gesamt && offset < 1000);
+  const alle = Object.keys(map);
+  return { ok: true, neu: neu, gesamt: alle.length, offen: alle.filter(function (id) { return !map[id].krone; }).length };
 }
 
 // Artikelnummer (KR-PARTY-ROSA-GR) → Krone, Farbe, Größe aus dem Katalog; unbekannt → null.
@@ -1272,6 +1405,8 @@ function etsyAbruf() {
   if (n > 1) sheet.getRange(2, sp, n - 1, 1).getDisplayValues().forEach(function (z) { if (z[0]) vorhanden[String(z[0]).trim()] = true; });
   let katalog = null;
   try { katalog = katalogLaden(); } catch (e) { katalog = null; }
+  const artikelBlatt = lagerBlatt(ETSY_BLATT, ETSY_BLATT_SPALTEN);
+  const zuordnung = etsyBlattLesen(artikelBlatt);
   const neu = [];
   let offset = 0, gesamt = 0;
   do {
@@ -1291,8 +1426,12 @@ function etsyAbruf() {
   neu.sort(function (a, b) { return (a.created_timestamp || a.create_timestamp || 0) - (b.created_timestamp || b.create_timestamp || 0); });
   const angelegt = [];
   neu.forEach(function (rc) {
-    const pos = etsyPositionen(rc, katalog);
+    const pos = etsyPositionen(rc, katalog, zuordnung);
     if (!pos.length) return;
+    // Etsy-Artikel, die noch nicht im Blatt stehen, dort eintragen: Sara kann sie dann zuordnen
+    pos.forEach(function (x) {
+      if (x.listing && !zuordnung[x.listing]) { etsyBlattZeile(artikelBlatt, x.listing, x.titel, null); zuordnung[x.listing] = { krone: '', farbe: '' }; }
+    });
     const zeit = new Date(((rc.created_timestamp || rc.create_timestamp) || Math.floor(Date.now() / 1000)) * 1000);
     const nr = neueBestellnr(sheet, kopf, new Date());
     const alleSkus = pos.every(function (x) { return x.sku; });
@@ -1312,7 +1451,7 @@ function etsyAbruf() {
         .filter(function (x, i) { return x && !(i === 0 && x === String(rc.name || '').trim()); }).join(', ').slice(0, 300),
       'Status': 'Neu',
       'Kanal': 'Etsy',
-      'Notiz': (alleSkus ? '' : 'Von Etsy übernommen, Krone noch nicht dem Katalog zugeordnet. ')
+      'Notiz': (alleSkus ? '' : 'Von Etsy übernommen, Krone noch nicht dem Katalog zugeordnet (Blatt „Etsy-Artikel“). ')
         + (rc.message_from_buyer ? 'Nachricht: ' + String(rc.message_from_buyer).replace(/\s+/g, ' ').trim().slice(0, 300) : ''),
       'Artikelnr.': artikelListe(pos.map(function (x) { return x.sku; })),
       'Kiste': alleSkus ? KANAL_KISTE['Etsy'] : OHNE_LAGER,
