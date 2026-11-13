@@ -22,10 +22,14 @@ const BESTELLUNGEN = [
 
 // api: true → Admin-Schlüssel ist eingetragen, die Schnittstelle (echter Apps-Script-Code) antwortet
 // lager: Zeilen für das Blatt „Lagerbewegungen“ (ohne Kopf), z. B. [['01.11.2026', '', 'KR-…', '', 'Werkstatt', 2, 'Genäht', '', '']]
-async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null, paypal = null, serienliste = null } = {}) {
+async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null, paypal = null, serienliste = null, github = false, cloudinary = false } = {}) {
+  // github/cloudinary: true → Zugänge liegen im Apps Script (ab 1.8); direkte GitHub-Aufrufe landen dann in t.direkt
   await page.addInitScript(() => { localStorage.setItem('mkw_admin_pw', 'test'); localStorage.setItem('mkw_github_token', 'test'); });
   const blaetter = lager ? { Lagerbewegungen: [['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz'], ...lager] } : {};
-  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter, paypal, serienliste });
+  const ghDateien = github ? Object.fromEntries(['katalog.json', 'galerie.json', 'medien.json'].filter(d => fs.existsSync(path.join(ROOT, d)))
+    .map(d => [d, fs.readFileSync(path.join(ROOT, d), 'utf8')])) : null;
+  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter, paypal, serienliste, github: github ? { dateien: ghDateien } : null, cloudinary });
+  tabelle.direkt = [];
   await page.route(/^https?:\/\/(?!localhost)/, route => {
     const u = route.request().url();
     if (u.includes('script.google.com')) {
@@ -42,6 +46,7 @@ async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', f
   });
   // GitHub-API: Dateien aus dem Projektordner ausliefern, Speichern nur abfangen
   await page.route(/api\.github\.com\/repos\/.*\/contents\//, route => {
+    if (github) { tabelle.direkt.push(route.request().url()); return route.abort(); }
     const datei = decodeURIComponent(route.request().url().split('/contents/')[1]);
     const pfad = path.join(ROOT, datei);
     if (route.request().method() !== 'GET') {
@@ -1100,5 +1105,88 @@ test.describe('Admin: Spende', () => {
     await k.locator('button:has-text("Persönlich übergeben")').click();
     await expect(page.locator('#statusText')).toHaveText(/Übergeben ✓/);
     expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0].status).toBe('Übergeben');
+  });
+});
+
+test.describe('Admin: Anmeldung ohne gespeichertes Passwort', () => {
+  test('erster Start: Passwort festlegen; danach wird gefragt; nichts im Klartext gespeichert', async ({ page }) => {
+    await page.route(/^https?:\/\/(?!localhost)/, r => r.abort());
+    await page.goto('/admin.html');
+    await expect(page.locator('#loginKnopf')).toHaveText('Passwort festlegen');
+    await page.fill('#loginPassword', 'kurz');
+    await page.click('#loginKnopf');
+    await expect(page.locator('#loginError')).toHaveText(/mindestens 8 Zeichen/);
+    await page.fill('#loginPassword', 'Krone-2026!');
+    await page.fill('#loginPassword2', 'Krone-2026?');
+    await page.click('#loginKnopf');
+    await expect(page.locator('#loginError')).toHaveText(/nicht gleich/);
+    await page.fill('#loginPassword2', 'Krone-2026!');
+    await page.click('#loginKnopf');
+    await expect(page.locator('#adminScreen')).toBeVisible();
+    const speicher = await page.evaluate(() => JSON.stringify(localStorage));
+    expect(speicher).not.toContain('Krone-2026!');
+    expect(speicher).not.toContain('kronenwelt2024');
+    await page.reload();
+    await expect(page.locator('#loginScreen')).toBeVisible();
+    await expect(page.locator('#loginKnopf')).toHaveText('Einloggen');
+    await page.fill('#loginPassword', 'kronenwelt2024');               // altes Standardpasswort gilt nicht mehr
+    await page.click('#loginKnopf');
+    await expect(page.locator('#loginError')).toHaveText(/Falsches Passwort/);
+    await page.fill('#loginPassword', 'Krone-2026!');
+    await page.check('#loginMerken');
+    await page.click('#loginKnopf');
+    await expect(page.locator('#adminScreen')).toBeVisible();
+    await page.reload();
+    await expect(page.locator('#adminScreen')).toBeVisible();          // angemeldet bleiben
+    await page.goto('/admin.html#einstellungen');
+    await page.click('#tab-einstellungen button:has-text("Abmelden")');
+    await expect(page.locator('#loginScreen')).toBeVisible();
+    await page.reload();
+    await expect(page.locator('#loginScreen')).toBeVisible();
+  });
+
+  test('Umstieg von 0.9: altes Klartext-Passwort wird ersetzt, Admin-Schlüssel geht weiter; neues Passwort verschlüsselt neu', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#einstellungen', api: true });
+    expect(await page.evaluate(() => [localStorage.getItem('mkw_admin_pw'), !!localStorage.getItem('mkw_pw_pruef')])).toEqual([null, true]);
+    await page.fill('#settingsPassword', 'Neues-Passwort-1');
+    await page.uncheck('#settingsMerken');
+    await page.click('button[onclick="savePasswort()"]');
+    await expect(page.locator('#statusText')).toHaveText(/Neues Passwort gespeichert/);
+    const enc = await page.evaluate(() => localStorage.getItem('mkw_api_schluessel_enc'));
+    expect(await page.evaluate(e => decryptToken(e, 'Neues-Passwort-1'), enc)).toBe('GEHEIM123');
+    expect(await page.evaluate(e => decryptToken(e, 'test'), enc)).toBe(null);
+    expect(t).toBeTruthy();
+  });
+});
+
+test.describe('Admin: Zugänge im Apps Script (Schnittstelle 1.8)', () => {
+  test('Preise speichern läuft über das Apps Script, Token wird aus dem Browser gelöscht', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#produkte/preise', api: true, github: true, cloudinary: true });
+    t.direkt.length = 0;                                                // beim Einrichten (noch ohne Schlüssel) zählt nicht
+    await page.reload();
+    await expect(page.locator('#statusText')).toHaveText(/Daten geladen/);
+    expect(await page.evaluate(() => [localStorage.getItem('mkw_github_token'), localStorage.getItem('mkw_github_token_enc'), localStorage.getItem('mkw_cl_secret')])).toEqual([null, null, null]);
+    await page.fill('#price_Party_Gross', '16.5');
+    await page.evaluate(() => savePreise());
+    await expect.poll(() => t.github.gespeichert.length).toBe(1);
+    expect(t.github.gespeichert[0].datei).toBe('katalog.json');
+    expect(JSON.parse(t.github.gespeichert[0].inhalt).produkte.find(p => p.name === 'Party').merkmale.groesse.find(g => g.wert === 'Gross').preis).toBe(16.5);
+    expect(t.direkt).toEqual([]);                                       // kein direkter Aufruf bei GitHub
+    await page.goto('/admin.html#einstellungen');
+    await expect(page.locator('#githubServer')).toBeVisible();
+    await expect(page.locator('#cloudServer')).toBeVisible();
+    await expect(page.locator('#githubAlt')).toBeHidden();
+  });
+
+  test('Foto-Upload: Unterschrift vom Apps Script, das Secret ist nie im Browser', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#produkte/medien', api: true, github: true, cloudinary: true });
+    let formular = '';
+    await page.route(/api\.cloudinary\.com\/v1_1\/dw6amyijc\/image\/upload/, r => { formular = r.request().postData() || ''; r.fulfill({ json: { public_id: 'party-test' } }); });
+    const id = await page.evaluate(async () => (await cloudinaryUpload(new Blob(['x'], { type: 'image/jpeg' }), { public_id: 'party-test', overwrite: 'true' }, 'image')).public_id);
+    expect(id).toBe('party-test');
+    expect(formular).toContain('CL-KEY');
+    expect(formular).toMatch(/name="signature"\r\n\r\n[0-9a-f]{40}/);
+    expect(formular).not.toContain('CL-SECRET');
+    expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('CL-SECRET');
   });
 });

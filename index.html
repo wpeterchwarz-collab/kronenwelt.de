@@ -2146,14 +2146,6 @@ function sendOrderEmails(details, total) {
   return { ...emailParams, lieferadresse };
 }
 
-// Ersatzweg: Bestellbestätigung an den Kunden über EmailJS (wie früher)
-function kundenmailPerEmailjs(emailParams) {
-  try {
-    emailjs.send('service_vwuvctq', 'template_kodm23r', emailParams)
-      .catch(err => console.warn('EmailJS Kunde fehlgeschlagen:', err));
-  } catch (err) { console.warn('EmailJS nicht geladen:', err); }
-}
-
 // Bestellung an die Google-Tabelle. Antwort: { success, bestellnr, bestaetigung } oder null (Fehler/zu langsam)
 function saveToSheets(orderData, zahlung) {
   if (!CONFIG.SHEETS_URL || CONFIG.SHEETS_URL.length < 10) return Promise.resolve(null);
@@ -2162,7 +2154,7 @@ function saveToSheets(orderData, zahlung) {
   const anfrage = fetch(CONFIG.SHEETS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body })
     .then(r => r.json())
     // Antwort nicht lesbar: nicht nochmal senden (sonst stünde die Bestellung doppelt in der Tabelle),
-    // nur die Kundenmail kommt dann über EmailJS
+    // Sara hat die Bestellung trotzdem per Mail (EmailJS)
     .catch(err => { console.warn('Google Sheets: keine lesbare Antwort', err); return null; });
   return Promise.race([anfrage, zuLangsam]);
 }
@@ -2264,10 +2256,10 @@ function startCartCheckout(method) {
           paypal_id: details.id || '', bestaetigung_per_schnittstelle: true };
         dankeZeigen(details.payer.name.given_name, orderData.kunde_email, cart.slice(), total);
         clearCartAfterPayment();
-        // Bestätigung an den Kunden schickt die Tabelle (mit Bestellnummer). Klappt das nicht, schickt sie EmailJS wie bisher.
+        // Bestätigung an den Kunden schickt nur noch die Tabelle (mit Bestellnummer). Über EmailJS geht nur die Mail an Sara,
+        // deren Empfänger fest in der Vorlage steht – so kann niemand über EmailJS Mails an fremde Adressen schicken.
         saveToSheets(zuSpeichern, 'PayPal').then(r => {
           if (r && r.bestellnr) dankeNummer(r.bestellnr);
-          if (!(r && r.bestaetigung)) kundenmailPerEmailjs(orderData);
         });
       }),
       onError:  () => alert('❌ PayPal Fehler. Bitte nochmal versuchen.'),

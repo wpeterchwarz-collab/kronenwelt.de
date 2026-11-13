@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.7', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.8', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -661,5 +661,56 @@ test.describe('Schnittstelle: Spende', () => {
     const { post } = umgebung([], S);
     const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Spende', positionen: pos, preis: 0, kunde: 'Gewinnerin', direkt: true, sendungsnummer: '00340434123456789012' });
     expect(r.bestellung).toMatchObject({ preis: 0, status: 'Versendet', sendungsnummer: '00340434123456789012' });
+  });
+});
+
+test.describe('Schnittstelle: GitHub und Cloudinary über das Apps Script (1.8)', () => {
+  const crypto = require('crypto');
+  test('ping meldet, ob die Zugänge eingerichtet sind', async () => {
+    expect(umgebung([], S).post({ aktion: 'ping', schluessel: S })).toMatchObject({ github: 'fehlt', cloudinary: 'fehlt' });
+    expect(umgebung([], S, { github: {}, cloudinary: true }).post({ aktion: 'ping', schluessel: S })).toMatchObject({ github: 'eingerichtet', cloudinary: 'eingerichtet' });
+  });
+
+  test('lesen: mehrere Dateien auf einmal, Umlaute bleiben heil, fehlende Datei = null', async () => {
+    const { post } = umgebung([], S, { github: { dateien: { 'katalog.json': '{"name":"Größe – Grün"}', 'medien.json': '{}' } } });
+    const r = post({ aktion: 'github', schluessel: S, art: 'lesen', pfade: ['katalog.json', 'medien.json', 'galerie.json'] });
+    expect(r).toMatchObject({ ok: true, dateien: { 'katalog.json': { inhalt: '{"name":"Größe – Grün"}', sha: 'sha-katalog.json' }, 'medien.json': { inhalt: '{}' }, 'galerie.json': null } });
+  });
+
+  test('schreiben: mit aktueller sha, nur gültiges JSON, nur erlaubte Dateien', async () => {
+    const { post, github } = umgebung([], S, { github: { dateien: { 'galerie.json': '[]' } } });
+    expect(post({ aktion: 'github', schluessel: S, art: 'schreiben', pfad: 'galerie.json', inhalt: '[{"titel":"Mädchen"}]', nachricht: 'Admin: Galerie' }).ok).toBe(true);
+    expect(github.gespeichert).toEqual([{ datei: 'galerie.json', nachricht: 'Admin: Galerie', inhalt: '[{"titel":"Mädchen"}]' }]);
+    expect(post({ aktion: 'github', schluessel: S, art: 'schreiben', pfad: 'medien.json', inhalt: '{}' }).ok).toBe(true);   // neue Datei
+    for (const pfad of ['index.html', 'config.js', '../katalog.json', 'apps-script/Code.gs']) {
+      expect(post({ aktion: 'github', schluessel: S, art: 'schreiben', pfad, inhalt: '{}' }).fehler).toBe('datei_nicht_erlaubt');
+      expect(post({ aktion: 'github', schluessel: S, art: 'lesen', pfade: [pfad] }).fehler).toBe('datei_nicht_erlaubt');
+    }
+    expect(post({ aktion: 'github', schluessel: S, art: 'schreiben', pfad: 'katalog.json', inhalt: '{kaputt' }).fehler).toBe('ungueltiger_inhalt');
+    expect(github.gespeichert).toHaveLength(2);
+  });
+
+  test('ohne Admin-Schlüssel oder ohne Token geht nichts; abgelaufenes Token wird klar gemeldet', async () => {
+    const mit = umgebung([], S, { github: { dateien: { 'katalog.json': '{}' } } });
+    expect(mit.post({ aktion: 'github', schluessel: 'falsch', art: 'lesen', pfade: ['katalog.json'] })).toMatchObject({ ok: false, fehler: 'nicht_erlaubt' });
+    expect(umgebung([], S).post({ aktion: 'github', schluessel: S, art: 'lesen', pfade: ['katalog.json'] }).fehler).toBe('github_fehlt');
+    expect(umgebung([], S, { github: { falsch: true } }).post({ aktion: 'github', schluessel: S, art: 'lesen', pfade: ['katalog.json'] }).fehler).toBe('github_token_ungueltig');
+  });
+
+  test('Verlauf der letzten Speicherungen', async () => {
+    const r = umgebung([], S, { github: {} }).post({ aktion: 'github', schluessel: S, art: 'verlauf' });
+    expect(r.verlauf).toEqual([{ text: 'Admin: Preise aktualisiert', datum: '2026-11-13T10:00:00Z' }]);
+  });
+
+  test('Cloudinary: gültige Unterschrift, Secret verlässt das Skript nie, nur erlaubte Parameter', async () => {
+    const { post } = umgebung([], S, { cloudinary: true });
+    const r = post({ aktion: 'cloudinary', schluessel: S, params: { public_id: 'party-rosa', overwrite: 'true', invalidate: 'true' } });
+    expect(r).toMatchObject({ ok: true, cloud: 'dw6amyijc', api_key: 'CL-KEY', params: { public_id: 'party-rosa', overwrite: 'true', invalidate: 'true' } });
+    const text = Object.keys(r.params).sort().map(k => k + '=' + r.params[k]).join('&') + 'CL-SECRET';
+    expect(r.signature).toBe(crypto.createHash('sha1').update(text).digest('hex'));
+    expect(JSON.stringify(r)).not.toContain('CL-SECRET');
+    expect(post({ aktion: 'cloudinary', schluessel: S, params: { public_id: 'x', type: 'private' } }).fehler).toBe('parameter_nicht_erlaubt');
+    expect(post({ aktion: 'cloudinary', schluessel: S, params: { public_id: '../x y' } }).fehler).toBe('ungueltige_id');
+    expect(umgebung([], S).post({ aktion: 'cloudinary', schluessel: S, params: { public_id: 'x' } }).fehler).toBe('cloudinary_fehlt');
   });
 });

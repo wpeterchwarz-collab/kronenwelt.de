@@ -25,6 +25,11 @@
       (MK-2025-310, …). Sie wird in Saras bestehende „GPSR_Seriennummernliste“ geschrieben
       (eigene Tabelle, ID in der Skript-Eigenschaft SERIENLISTE_ID) und bei der Bestellung vermerkt.
 
+   6) Zugänge der Admin-Seite (ab 1.8): GitHub-Token und Cloudinary-Zugang liegen nur hier in den
+      Skript-Eigenschaften (GITHUB_TOKEN, CLOUDINARY_KEY, CLOUDINARY_SECRET), nicht mehr im Browser.
+      Die Admin-Seite liest und speichert ihre Dateien über die Aktion „github“ (nur die Dateien in
+      GITHUB_DATEIEN) und lässt Foto-Uploads über „cloudinary“ unterschreiben. Hochgeladen wird direkt.
+
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
    werden rechts angehängt, sobald sie gebraucht werden. Nichts wird umbenannt oder gelöscht.
 
@@ -33,7 +38,7 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.7';
+const SCHNITTSTELLE_VERSION = '1.8';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
@@ -153,7 +158,12 @@ function adminAnfrage(data) {
     switch (data.aktion) {
       case 'ping':
         return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, tabelle: SpreadsheetApp.getActiveSpreadsheet().getName(),
-          paypal: paypalZugang() ? 'eingerichtet' : 'fehlt', serienliste: serienStatus() });
+          paypal: paypalZugang() ? 'eingerichtet' : 'fehlt', serienliste: serienStatus(),
+          github: githubToken() ? 'eingerichtet' : 'fehlt', cloudinary: cloudinaryZugang() ? 'eingerichtet' : 'fehlt' });
+      case 'github':
+        return antwort(githubAnfrage(data));
+      case 'cloudinary':
+        return antwort(cloudinarySignatur(data));
       case 'zahlung':
         return antwort(zahlungNachpruefen(data));
       case 'seriennummern':
@@ -1096,6 +1106,108 @@ function einrichten() {
   PropertiesService.getScriptProperties().setProperty('ADMIN_SCHLUESSEL', schluessel);
   Logger.log('Neuer Admin-Schlüssel (in die Admin-Seite unter Einstellungen → Bestellungen eintragen):');
   Logger.log(schluessel);
+}
+
+/* ---------------- 6) Zugänge der Admin-Seite: GitHub und Cloudinary ----------------
+   Die Geheimnisse bleiben hier. Die Admin-Seite bekommt nur Dateiinhalte bzw. eine Unterschrift für einen Upload. */
+const GITHUB_REPO_PFAD = 'wpeterchwarz-collab/kronenwelt.de';
+const GITHUB_DATEIEN = ['katalog.json', 'preise.json', 'galerie.json', 'produktfotos.json', 'medien.json'];   // nur diese darf der Admin lesen/schreiben
+const CLOUDINARY_CLOUD = 'dw6amyijc';
+const CLOUDINARY_PARAMETER = ['public_id', 'overwrite', 'invalidate', 'eager', 'eager_async'];
+
+function githubToken() { return PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN') || ''; }
+function cloudinaryZugang() {
+  const p = PropertiesService.getScriptProperties();
+  const key = p.getProperty('CLOUDINARY_KEY'), secret = p.getProperty('CLOUDINARY_SECRET');
+  return key && secret ? { key: key, secret: secret } : null;
+}
+
+function githubAbruf(methode, pfad, inhalt) {
+  const t = githubToken();
+  if (!t) throw fehler('github_fehlt', 'GitHub-Zugang fehlt: GITHUB_TOKEN in den Skript-Eigenschaften eintragen');
+  const opt = { method: methode, muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + t, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' } };
+  if (inhalt) { opt.contentType = 'application/json'; opt.payload = JSON.stringify(inhalt); }
+  const r = UrlFetchApp.fetch('https://api.github.com/repos/' + GITHUB_REPO_PFAD + pfad, opt);
+  let daten = {};
+  try { daten = JSON.parse(r.getContentText()); } catch (e) {}
+  return { code: r.getResponseCode(), daten: daten };
+}
+function githubFehler(r) {
+  return r.code === 401 ? fehler('github_token_ungueltig', 'GitHub lehnt das Token ab (abgelaufen oder falsch?)')
+    : fehler('github_fehler', 'GitHub: ' + ((r.daten && r.daten.message) || r.code));
+}
+function githubPfadPruefen(p) {
+  if (GITHUB_DATEIEN.indexOf(p) < 0) throw fehler('datei_nicht_erlaubt', 'Diese Datei darf der Admin nicht ändern: ' + p);
+}
+
+// art „lesen“ (pfade: [...]) → { dateien: { pfad: { inhalt, sha } | null } }; „schreiben“ (pfad, inhalt, nachricht); „verlauf“
+function githubAnfrage(data) {
+  if (data.art === 'verlauf') {
+    const r = githubAbruf('get', '/commits?per_page=6');
+    if (r.code !== 200) throw githubFehler(r);
+    return { ok: true, verlauf: (Array.isArray(r.daten) ? r.daten : []).map(function (c) {
+      return { text: String((c.commit && c.commit.message) || '').split('\n')[0], datum: c.commit && c.commit.author && c.commit.author.date };
+    }) };
+  }
+  if (data.art === 'lesen') {
+    const pfade = Array.isArray(data.pfade) ? data.pfade.slice(0, 10) : [];
+    pfade.forEach(githubPfadPruefen);
+    const dateien = {};
+    pfade.forEach(function (p) {
+      const r = githubAbruf('get', '/contents/' + p);
+      if (r.code === 404) { dateien[p] = null; return; }
+      if (r.code !== 200) throw githubFehler(r);
+      const bytes = Utilities.base64Decode(String(r.daten.content || '').replace(/\s/g, ''));
+      dateien[p] = { inhalt: Utilities.newBlob(bytes).getDataAsString('UTF-8'), sha: r.daten.sha };
+    });
+    return { ok: true, dateien: dateien };
+  }
+  if (data.art === 'schreiben') {
+    const p = String(data.pfad || '');
+    githubPfadPruefen(p);
+    const inhalt = String(data.inhalt == null ? '' : data.inhalt);
+    if (!inhalt.trim() || inhalt.length > 2000000) throw fehler('ungueltiger_inhalt', 'Inhalt leer oder zu groß');
+    try { JSON.parse(inhalt); } catch (e) { throw fehler('ungueltiger_inhalt', 'Kein gültiges JSON: ' + p); }
+    const alt = githubAbruf('get', '/contents/' + p);
+    if (alt.code !== 200 && alt.code !== 404) throw githubFehler(alt);
+    const body = { message: String(data.nachricht || 'Admin: ' + p + ' aktualisiert').slice(0, 200),
+      content: Utilities.base64Encode(inhalt, Utilities.Charset.UTF_8) };
+    if (alt.code === 200) body.sha = alt.daten.sha;
+    const r = githubAbruf('put', '/contents/' + p, body);
+    if (r.code !== 200 && r.code !== 201) throw githubFehler(r);
+    return { ok: true };
+  }
+  throw fehler('unbekannte_art', 'github: art fehlt');
+}
+
+// Unterschrift für einen Upload direkt vom Browser zu Cloudinary (das Secret verlässt das Apps Script nie)
+function cloudinarySignatur(data) {
+  const z = cloudinaryZugang();
+  if (!z) throw fehler('cloudinary_fehlt', 'Cloudinary-Zugang fehlt: CLOUDINARY_KEY und CLOUDINARY_SECRET eintragen');
+  const ein = data.params || {};
+  const params = {};
+  Object.keys(ein).forEach(function (k) {
+    if (CLOUDINARY_PARAMETER.indexOf(k) < 0) throw fehler('parameter_nicht_erlaubt', 'Nicht erlaubt: ' + k);
+    params[k] = String(ein[k]);
+  });
+  if (!params.public_id || !/^[A-Za-z0-9_\-\/]{1,120}$/.test(params.public_id)) throw fehler('ungueltige_id', 'public_id prüfen');
+  params.timestamp = String(Math.floor(Date.now() / 1000));
+  const text = Object.keys(params).sort().map(function (k) { return k + '=' + params[k]; }).join('&') + z.secret;
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1, text, Utilities.Charset.UTF_8);
+  const signatur = digest.map(function (b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+  return { ok: true, cloud: CLOUDINARY_CLOUD, api_key: z.key, params: params, signature: signatur };
+}
+
+/* Nach dem Update auf 1.8 einmal ausführen: Google fragt ggf. nach der Erlaubnis für Anfragen ins Internet,
+   und im Protokoll steht, ob GitHub und Cloudinary eingerichtet sind. */
+function zugaengeTesten() {
+  if (!githubToken()) Logger.log('GitHub: GITHUB_TOKEN fehlt in den Skript-Eigenschaften.');
+  else {
+    const r = githubAbruf('get', '/contents/katalog.json');
+    Logger.log(r.code === 200 ? 'GitHub: Zugang klappt, katalog.json lesbar.' : 'GitHub: Fehler ' + r.code + ' – ' + ((r.daten && r.daten.message) || ''));
+  }
+  Logger.log(cloudinaryZugang() ? 'Cloudinary: Zugang ist eingetragen.' : 'Cloudinary: CLOUDINARY_KEY / CLOUDINARY_SECRET fehlen.');
 }
 
 /* Nach dem Update auf 1.4 einmal „paypalTesten“ ausführen: zeigt im Protokoll, ob die Anmeldung bei PayPal klappt. */
