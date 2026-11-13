@@ -106,6 +106,8 @@ function anmelden(pw) {
   baueNavigation();
   seiteAusAdresse();
   loadCurrentData();
+  etsyKarteZeigen();
+  etsyRueckkehrEinloesen();
 }
 
 function logout() {
@@ -123,12 +125,14 @@ async function zugaengePruefen() {
   try {
     const r = await schnittstelle('ping');
     serverZugang = { github: r.github === 'eingerichtet', cloudinary: r.cloudinary === 'eingerichtet' };
+    etsyStand = r.etsy || '';
   } catch (e) {
     return { github: false, cloudinary: false };          // nicht merken: beim nächsten Mal neu fragen
   }
   if (serverZugang.github) { localStorage.removeItem('mkw_github_token_enc'); localStorage.removeItem('mkw_github_token'); }
   if (serverZugang.cloudinary) { localStorage.removeItem('mkw_cl_key'); localStorage.removeItem('mkw_cl_secret'); }
   zugangsKartenZeigen();
+  etsyKarteZeigen();
   return serverZugang;
 }
 function zugangsKartenZeigen() {
