@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /admin.html
+Disallow: /vorlagen/
 
 Sitemap: https://kronenwelt.de/sitemap.xml

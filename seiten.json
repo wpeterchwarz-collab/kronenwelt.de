@@ -1,0 +1,74 @@
+{
+  "_info": "Unterseiten und Produktkarten der Website. Aus dieser Datei und katalog.json erzeugt scripts/seiten.js automatisch: die Unterseiten (z. B. zahlenkrone-hund.html), die Produktkarten und Seitenlinks in index.html sowie sitemap.xml. Preise, Fotos, Farben und Größen kommen immer aus katalog.json – hier stehen nur Texte. Neue Unterseite = neuer Eintrag unter 'seiten'. Die erzeugten Dateien nie von Hand ändern.",
+
+  "karten": {
+    "_info": "Produktkarten der Startseite: Reihenfolge und Zusatzangaben je Produkt (Schlüssel = id aus katalog.json). Produkte, die hier fehlen, erscheinen automatisch hinten mit ihrem Namen.",
+    "reihenfolge": ["einfarbig", "party", "edel-wild", "glitzer", "zahlenkrone-klassik", "zahlenkrone-leo", "zahlenkrone-glitzer", "zahlenkrone-konfetti"],
+    "einfarbig": { "badge": "★ Bestseller", "alt": "Einfarbige Hundekrone mit Bommeln, personalisierbar mit Namen" },
+    "party": { "alt": "Bunte Party-Geburtstagskrone für Hunde mit Namen" },
+    "edel-wild": { "badge": "Premium", "badgeDunkel": true, "alt": "Edle Hundekrone Edel & Wild mit goldenen Bommeln" },
+    "glitzer": { "alt": "Glitzer-Geburtstagskrone für Hunde mit Namen" },
+    "zahlenkrone-klassik": { "badge": "Neu · Wechselzahlen", "alt": "Zahlenkrone Klassik für Hunde mit austauschbaren Geburtstagszahlen" },
+    "zahlenkrone-leo": { "badge": "Neu · Wechselzahlen", "alt": "Zahlenkrone Leo für Hunde mit austauschbaren Zahlen" },
+    "zahlenkrone-glitzer": { "titel": "Zahlenkrone Glitzer rosa", "badge": "Neu · Wechselzahlen", "alt": "Zahlenkrone Glitzer rosa für Hunde mit austauschbaren Zahlen" },
+    "zahlenkrone-konfetti": { "badge": "Neu · Wechselzahlen", "alt": "Zahlenkrone Konfetti für Hunde mit austauschbaren Zahlen" }
+  },
+
+  "seiten": [
+    {
+      "datei": "zahlenkrone-hund.html",
+      "linkText": "Zahlenkrone für Hunde",
+      "produkte": { "typ": "zahl" },
+      "titel": "Zahlenkrone für Hunde – Geburtstagskrone mit Wechselzahlen | Mila's Kronenwelt",
+      "beschreibung": "Handgemachte Zahlenkrone für Hunde: Geburtstagskrone mit austauschbaren Zahlenpads, jedes Jahr wieder verwendbar. Mit 3, 6 oder 9 Zahlen, kostenloser Versand.",
+      "eyebrow": "Handmade · Geburtstagskrone mit Wechselzahlen",
+      "h1": "Zahlenkrone",
+      "h1Betont": "für Hunde",
+      "einleitung": "Die Geburtstagskrone, die jedes Jahr wieder passt: Bei der Zahlenkrone tauschst du die Zahlenpads einfach aus – so stimmt das Alter an jedem Hundegeburtstag aufs Neue.",
+      "bild": "zahl-klassik-krone",
+      "bildAlt": "Hund mit handgemachter Zahlenkrone zum Geburtstag",
+      "knopf": "Zahlenkrone gestalten",
+      "kartenTitel": "Unsere Zahlenkronen",
+      "kartenEyebrow": "KOLLEKTION",
+      "abschnitte": [
+        {
+          "eyebrow": "SO FUNKTIONIERT'S",
+          "titel": "Was ist eine Zahlenkrone?",
+          "absaetze": [
+            "Eine Zahlenkrone ist eine handgefertigte Geburtstagskrone für Hunde mit <strong>austauschbaren Zahlenpads</strong>. Statt eines Namens zeigt sie das Alter deines Hundes – und weil sich die Zahlen wechseln lassen, kannst du die Krone zu jedem Hundegeburtstag wieder verwenden.",
+            "Welche Zahlen du bekommst, bestimmst du selbst: Beim Bestellen wählst du deine Wunschzahlen einfach aus.",
+            "Wie alle unsere Hundekronen ist die Zahlenkrone aus weichem Filz mit sanften Gewebebändern gefertigt – leicht und angenehm zu tragen, ideal für die Geburtstagsfeier oder ein Fotoshooting mit deinem Hund."
+          ]
+        }
+      ],
+      "zahlenpads": {
+        "eyebrow": "ZAHLENPADS",
+        "titel": "3, 6 oder 9 Zahlen",
+        "text": "Jede Zahlenkrone kommt mit Zahlenpads zum Wechseln. Mit 6 oder 9 Zahlen hast du die nächsten Geburtstage gleich mit dabei."
+      },
+      "groessen": {
+        "eyebrow": "GRÖSSENGUIDE",
+        "titel": "Welche Größe passt?"
+      },
+      "faqTitel": "Häufige Fragen zur Zahlenkrone",
+      "faq": [
+        {
+          "frage": "Welche Zahlen kann ich wählen?",
+          "antwort": "Du wählst deine Wunschzahlen beim Bestellen selbst aus – je nach Paket für 3, 6 oder 9 Zahlenpads."
+        },
+        {
+          "frage": "Gibt es die Zahlenkrone auch mit dem Namen meines Hundes?",
+          "antwort": "Die Zahlenkronen tragen Zahlen statt eines Namens. Kronen mit dem Namen deines Hundes findest du bei unseren <a href=\"/#kronen\">personalisierten Hundekronen</a>."
+        },
+        {
+          "frage": "Wie lange dauert der Versand?",
+          "antwort": "Jede Krone wird für dich von Hand gefertigt. Die Lieferzeit beträgt 5–6 Werktage, der Versand innerhalb Deutschlands ist kostenlos."
+        },
+        {
+          "frage": "Wie kann ich bezahlen?",
+          "antwort": "Die Zahlung läuft sicher über PayPal – dort kannst du auch per Kreditkarte, Lastschrift oder später bezahlen."
+        }
+      ]
+    }
+  ]
+}
