@@ -21,6 +21,10 @@
       die Bestellung immer; eine verdächtige Bestellung wird nur markiert.
       Zugang zu PayPal: Skript-Eigenschaften PAYPAL_CLIENT_ID und PAYPAL_SECRET (nie im Code).
 
+   5) Seriennummern (GPSR): Beim Versenden/Übergeben bekommt jede Krone die nächste MK-Nummer
+      (MK-2025-310, …). Sie wird in Saras bestehende „GPSR_Seriennummernliste“ geschrieben
+      (eigene Tabelle, ID in der Skript-Eigenschaft SERIENLISTE_ID) und bei der Bestellung vermerkt.
+
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
    werden rechts angehängt, sobald sie gebraucht werden. Nichts wird umbenannt oder gelöscht.
 
@@ -29,20 +33,20 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.6';
+const SCHNITTSTELLE_VERSION = '1.7';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
   'Preis (€)', 'Zahlung',
   'Kundenname', 'E-Mail', 'Lieferadresse'
 ];
-const ZUSATZ_SPALTEN = ['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft'];
+const ZUSATZ_SPALTEN = ['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft', 'Seriennummern', 'Rechnungsnr.', 'Plattform-Nr.'];
 const STATUS = ['Neu', 'In Arbeit', 'Versendet', 'Übergeben', 'Storniert'];
 
 // Lager: Kisten und aus welcher Kiste jeder Kanal verkauft. Neue Kiste = ein Eintrag hier.
 const KISTEN = ['Markt & Webshop', 'Etsy', 'Amazon', 'Werkstatt'];
 const WERKSTATT = 'Werkstatt';                         // Vorrat zum Nachfüllen der anderen Kisten
-const KANAL_KISTE = { 'Webshop': 'Markt & Webshop', 'Markt': 'Markt & Webshop', 'Etsy': 'Etsy', 'Amazon': 'Amazon' };
+const KANAL_KISTE = { 'Webshop': 'Markt & Webshop', 'Markt': 'Markt & Webshop', 'Instagram': 'Markt & Webshop', 'Spende': 'Markt & Webshop', 'Etsy': 'Etsy', 'Amazon': 'Amazon' };
 const OHNE_LAGER = 'nicht vom Lager';
 const LAGER_BLATT = 'Lagerbewegungen';
 const LAGER_SPALTEN = ['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz'];
@@ -54,6 +58,14 @@ const GRUENDE = ['Genäht', 'Umlagerung', 'Ausgebucht', 'Korrektur'];
 // Zahlung prüfen: PayPal (Live; mit Skript-Eigenschaft PAYPAL_MODUS = sandbox zum Testen) und der Katalog der Website
 const PAYPAL_API = { live: 'https://api-m.paypal.com', sandbox: 'https://api-m.sandbox.paypal.com' };
 const KATALOG_URL = 'https://kronenwelt.de/katalog.json';
+
+// Seriennummern: Saras Liste (Spalten A–F wie bisher, neue Spalten rechts angehängt)
+// MK-<Jahr>-<laufende Zahl>: das Jahr ist das aktuelle, die Zahl hinten läuft über alle Jahre durch (MK-2025-309 → MK-2026-310)
+function serienVorsilbe() { return 'MK-' + Utilities.formatDate(new Date(), 'Europe/Berlin', 'yyyy') + '-'; }
+function serienZahl(sn) { return parseInt(String(sn).split('-').pop(), 10); }
+const SERIEN_MUSTER = /^MK-\d{4}-\d{3,}$/;
+const SERIEN_ZUSATZ = ['Bestellnr.', 'Rechnungsnr.', 'Hinweis'];
+const SERIEN_PLATTFORM = { 'Webshop': 'kronenwelt', 'Etsy': 'etsy', 'Amazon': 'amazon', 'Markt': 'markt', 'Instagram': 'instagram', 'Spende': 'spende' };
 
 // Absender der Versandmail (Antworten gehen an die Shop-Adresse)
 const SHOP_NAME  = "Mila's Kronenwelt";
@@ -134,16 +146,20 @@ function adminAnfrage(data) {
     Utilities.sleep(800);                                   // Ausprobieren von Schlüsseln bremsen
     return antwort({ ok: false, fehler: 'nicht_erlaubt' });
   }
-  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung'].indexOf(data.aktion) >= 0;
+  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung'].indexOf(data.aktion) >= 0;
   const lock = LockService.getScriptLock();
   try {
     if (schreibt) lock.waitLock(20000);
     switch (data.aktion) {
       case 'ping':
         return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, tabelle: SpreadsheetApp.getActiveSpreadsheet().getName(),
-          paypal: paypalZugang() ? 'eingerichtet' : 'fehlt' });
+          paypal: paypalZugang() ? 'eingerichtet' : 'fehlt', serienliste: serienStatus() });
       case 'zahlung':
         return antwort(zahlungNachpruefen(data));
+      case 'seriennummern':
+        return antwort(serienVorschlag(data));
+      case 'rechnung':
+        return antwort(rechnungSetzen(data));
       case 'bestellungen':
         return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, bestellungen: bestellungenLesen() });
       case 'status':
@@ -164,7 +180,9 @@ function adminAnfrage(data) {
         return antwort({ ok: false, fehler: 'unbekannte_aktion' });
     }
   } catch (err) {
-    return antwort({ ok: false, fehler: err.code || 'fehler', text: err.message });
+    const r = { ok: false, fehler: err.code || 'fehler', text: err.message };
+    if (err.vorschlag) r.vorschlag = err.vorschlag;
+    return antwort(r);
   } finally {
     if (schreibt) lock.releaseLock();
   }
@@ -204,7 +222,8 @@ function bestellungAusZeile(kopf, a, w, zeile) {
     status: feld('Status') || 'Neu', kanal: feld('Kanal') || 'Webshop',
     sendungsnummer: feld('Sendungsnummer'), versendetAm: feld('Versendet am'), notiz: feld('Notiz'),
     artikel: feld('Artikelnr.'), kiste: feld('Kiste'),
-    paypalId: feld('PayPal-ID'), zahlungGeprueft: feld('Zahlung geprüft')
+    paypalId: feld('PayPal-ID'), zahlungGeprueft: feld('Zahlung geprüft'),
+    seriennummern: feld('Seriennummern'), rechnungsnr: feld('Rechnungsnr.'), plattformNr: feld('Plattform-Nr.')
   };
 }
 
@@ -222,9 +241,16 @@ function statusSetzen(data) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vorher.email)) throw fehler('keine_email', 'Keine gültige E-Mail-Adresse bei dieser Bestellung');
     if (!nachricht || nachricht.length > 3000) throw fehler('ungueltige_nachricht', 'Text der Mail prüfen');
   }
+  if (data.status === 'Übergeben' || data.status === 'Versendet') serienEintragen(sheet, kopf, zeile, data);
   sheet.getRange(zeile, kopf.indexOf('Status') + 1).setValue(data.status);
   let b = bestellungLesen(sheet, kopf, zeile);
   const lager = lagerAbgleichSicher(b.nr, b);              // Storno bucht zurück, Rücknahme des Stornos wieder ab
+  // MK-Nummern bleiben vergeben; in Saras Liste steht bei Storno ein Hinweis (bei Rücknahme wieder leer)
+  let serienFehler = false;
+  if (b.seriennummern) {
+    try { serienListeSetzen(b.nr, 'Hinweis', data.status === 'Storniert' ? 'storniert ' + Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy') : ''); }
+    catch (err) { serienFehler = true; Logger.log('Seriennummernliste: ' + err.message); }
+  }
   let mail = false;
   if (stornoMail) {
     sendeStornomail(b, nachricht);
@@ -233,7 +259,7 @@ function statusSetzen(data) {
     sheet.getRange(zeile, kopf.indexOf('Notiz') + 1).setValue((b.notiz ? b.notiz + ' · ' : '') + 'Stornomail ' + heute);
     b = bestellungLesen(sheet, kopf, zeile);
   }
-  return { ok: true, bestellung: b, mail: mail, lagerFehler: lager < 0 };
+  return { ok: true, bestellung: b, mail: mail, lagerFehler: lager < 0, serienFehler: serienFehler };
 }
 
 // Als versendet markieren, Sendungsnummer speichern, auf Wunsch Versandmail an den Kunden
@@ -245,13 +271,14 @@ function versenden(data) {
   const zeile = zeileFinden(sheet, kopf, data.zeile, data.nr);
   const heute = Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy');
   const setze = function (name, wert) { sheet.getRange(zeile, kopf.indexOf(name) + 1).setValue(wert); };
+  if (data.mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bestellungLesen(sheet, kopf, zeile).email)) throw fehler('keine_email', 'Keine gültige E-Mail-Adresse bei dieser Bestellung');
+  serienEintragen(sheet, kopf, zeile, data);               // zuerst: klappt das nicht, ändert sich nichts
   setze('Sendungsnummer', nummer);
   setze('Versendet am', heute);
   setze('Status', 'Versendet');
   const b = bestellungLesen(sheet, kopf, zeile);
   let mail = false;
   if (data.mail) {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email)) throw fehler('keine_email', 'Keine gültige E-Mail-Adresse bei dieser Bestellung');
     sendeVersandmail(b);
     mail = true;
     setze('Notiz', (b.notiz ? b.notiz + ' · ' : '') + 'Versandmail ' + heute);
@@ -265,15 +292,23 @@ function anlegen(data) {
   if (!pos.length || pos.length > 20 || pos.some(function (p) { return !p || !p.variante; })) throw fehler('ungueltige_positionen', 'Mindestens eine Krone angeben');
   const kanal = String(data.kanal || '').trim().slice(0, 30);
   if (!kanal) throw fehler('kein_kanal', 'Kanal fehlt');
-  const preis = Number(data.preis);
+  const preis = kanal === 'Spende' ? 0 : Number(data.preis);   // Spende = verschenkt/gesponsert: kein Umsatz
   if (!(preis >= 0)) throw fehler('ungueltiger_preis', 'Preis prüfen');
   // Aus welcher Kiste? Ohne Angabe die Kiste des Kanals; „nicht vom Lager“ = auf Bestellung genäht
   const kiste = data.kiste === undefined ? (KANAL_KISTE[kanal] || '') : KISTEN.indexOf(data.kiste) >= 0 ? data.kiste : OHNE_LAGER;
+  // „Schon verschickt“ (Etsy/Amazon) bzw. „schon übergeben“ (Markt): alles in einem Schritt. Erst prüfen, dann anlegen.
+  const direkt = data.direkt === true;
+  const sendung = kanal === 'Markt' ? '' : String(data.sendungsnummer || '').replace(/\s+/g, '').toUpperCase();   // Markt: keine Sendung
+  if (direkt && sendung && !/^[A-Z0-9]{8,40}$/.test(sendung)) throw fehler('ungueltige_sendungsnummer', 'Sendungsnummer prüfen');
+  if (direkt && serienAusDaten(data).length) serienPruefen(serienAusDaten(data));
   const datum = /^\d{2}\.\d{2}\.\d{4}$/.test(data.datum || '') ? data.datum : Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy');
   const sheet = blatt();
   const kopf = spaltenSicherstellen(sheet);
   const nr = neueBestellnr(sheet, kopf, new Date());
   const text = function (x, n) { return String(x == null ? '' : x).trim().slice(0, n || 200); };
+  // Kronen-Angaben ohne Trennzeichen (Komma trennt die Kronen, | die Namen); wichtig für freie Bezeichnungen („Sonstiges“)
+  const feld = function (x, n) { return text(x, n).replace(/\s*,\s*/g, ' / ').replace(/\s*\|\s*/g, ' / '); };
+  pos.forEach(function (p) { p.variante = feld(p.variante, 60); p.farbe = feld(p.farbe, 60); p.groesse = feld(p.groesse, 40); p.pers = feld(p.pers, 40); });
   const zeile = zeileAnhaengen(sheet, kopf, {
     'Datum': datum,
     'Uhrzeit': Utilities.formatDate(new Date(), 'Europe/Berlin', 'HH:mm'),
@@ -291,8 +326,16 @@ function anlegen(data) {
     'Kanal': kanal,
     'Notiz': text(data.notiz, 500),
     'Artikelnr.': artikelListe(pos.map(function (p) { return p.sku; })),
-    'Kiste': kiste || OHNE_LAGER
+    'Kiste': kiste || OHNE_LAGER,
+    'Plattform-Nr.': text(data.plattformNr, 60)
   });
+  if (direkt) {
+    serienEintragen(sheet, kopf, zeile, data);
+    const setze = function (name, wert) { sheet.getRange(zeile, kopf.indexOf(name) + 1).setValue(wert); };
+    const uebergeben = kanal === 'Markt' || (kanal === 'Spende' && !sendung);   // Spende ohne Sendung = persönlich übergeben
+    setze('Status', uebergeben ? 'Übergeben' : 'Versendet');
+    if (!uebergeben) { setze('Sendungsnummer', sendung); setze('Versendet am', Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy')); }
+  }
   const b = bestellungLesen(sheet, kopf, zeile);
   const lager = lagerAbgleichSicher(b.nr, b);
   return { ok: true, bestellung: b, lagerFehler: lager < 0 };
@@ -624,6 +667,136 @@ function sollPreis(b) {
   return { summe: Math.round(summe * 100) / 100, fehlt: fehlt };
 }
 
+/* ---------------- 5) Seriennummern (GPSR) ---------------- */
+function serienBlatt() {
+  const id = PropertiesService.getScriptProperties().getProperty('SERIENLISTE_ID');
+  if (!id) return null;
+  return SpreadsheetApp.openById(id).getSheets()[0];
+}
+
+function serienStatus() {
+  try {
+    const sh = serienBlatt();
+    if (!sh) return 'fehlt';
+    return serienLesen(sh).hoechste || 'leer';
+  } catch (e) { return 'fehler'; }
+}
+
+// Liest Saras Liste: welche Nummern sind vergeben (mit Produkt), welche nur vorbereitet (Nummer ohne Produkt)
+function serienLesen(sh) {
+  const n = sh.getLastRow();
+  const w = n > 1 ? sh.getRange(2, 1, n - 1, 3).getDisplayValues() : [];
+  const vergeben = {}, frei = [];                         // vergeben: laufende Zahl → Nummer (Jahr egal)
+  let max = 0, hoechste = '';
+  w.forEach(function (z, i) {
+    const sn = String(z[0]).trim().toUpperCase();
+    if (!SERIEN_MUSTER.test(sn)) return;
+    const zahl = serienZahl(sn);
+    if (zahl > max) max = zahl;
+    if (String(z[2]).trim()) { vergeben[zahl] = sn; if (!hoechste || zahl >= serienZahl(hoechste)) hoechste = sn; }
+    else frei.push({ sn: sn, zahl: zahl, zeile: i + 2 });
+  });
+  return { vergeben: vergeben, frei: frei.filter(function (f) { return !vergeben[f.zahl]; }).sort(function (a, b) { return a.zahl - b.zahl; }), max: max, hoechste: hoechste };
+}
+
+function serienNaechste(info, anzahl) {
+  const v = serienVorsilbe();
+  const l = info.frei.map(function (f) { return v + String(f.zahl).padStart(3, '0'); });   // vorbereitete Zeilen zuerst, mit aktuellem Jahr
+  let m = info.max;
+  while (l.length < anzahl) { m++; l.push(v + String(m).padStart(3, '0')); }
+  return l.slice(0, anzahl);
+}
+
+// Admin: Vorschlag für die nächsten Nummern (schreibt nichts)
+function serienVorschlag(data) {
+  const sh = serienBlatt();
+  if (!sh) throw fehler('serienliste_fehlt', 'Seriennummernliste ist nicht eingerichtet');
+  const anzahl = Math.max(1, Math.min(20, parseInt(data.anzahl, 10) || 1));
+  const info = serienLesen(sh);
+  return { ok: true, nummern: serienNaechste(info, anzahl), hoechste: info.hoechste };
+}
+
+// Spalte in Saras Liste für alle Zeilen einer Bestellung setzen (Rechnungsnr., Hinweis)
+function serienListeSetzen(nr, spalte, wert) {
+  const sh = serienBlatt();
+  if (!sh) return 0;
+  let k = kopfzeile(sh);
+  if (k.indexOf(spalte) < 0) { sh.getRange(1, k.length + 1).setValue(spalte); k = k.concat([spalte]); }
+  const ib = k.indexOf('Bestellnr.');
+  if (ib < 0) return 0;
+  const n = sh.getLastRow();
+  const w = n > 1 ? sh.getRange(2, ib + 1, n - 1, 1).getDisplayValues() : [];
+  let z = 0;
+  w.forEach(function (r, i) { if (String(r[0]).trim() === nr) { sh.getRange(i + 2, k.indexOf(spalte) + 1).setValue(wert); z++; } });
+  return z;
+}
+
+// Rechnungsnummer nachträglich setzen: bei der Bestellung und in Saras Liste
+function rechnungSetzen(data) {
+  const sheet = blatt();
+  const kopf = spaltenSicherstellen(sheet);
+  const zeile = zeileFinden(sheet, kopf, data.zeile, data.nr);
+  const re = String(data.rechnungsnr || '').trim().slice(0, 60);
+  sheet.getRange(zeile, kopf.indexOf('Rechnungsnr.') + 1).setValue(re);
+  const b = bestellungLesen(sheet, kopf, zeile);
+  const inListe = b.seriennummern ? serienListeSetzen(b.nr, 'Rechnungsnr.', re) : 0;
+  return { ok: true, bestellung: b, inListe: inListe };
+}
+
+// Nummern prüfen, ohne etwas zu schreiben (Format, doppelt, schon vergeben, Liste eingerichtet)
+function serienPruefen(liste) {
+  if (liste.some(function (x) { return !SERIEN_MUSTER.test(x); })) throw fehler('ungueltige_seriennummer', 'Seriennummer prüfen (z. B. MK-2026-310)');
+  const zahlen = liste.map(serienZahl);
+  if (zahlen.some(function (x, i) { return zahlen.indexOf(x) !== i; })) throw fehler('ungueltige_seriennummer', 'Seriennummer doppelt');
+  const sh = serienBlatt();
+  if (!sh) throw fehler('serienliste_fehlt', 'Seriennummernliste ist nicht eingerichtet');
+  const info = serienLesen(sh);
+  const schon = liste.filter(function (x) { return info.vergeben[serienZahl(x)]; });   // die Zahl zählt, nicht das Jahr
+  if (schon.length) {
+    const e = fehler('seriennummer_vergeben', 'Schon vergeben: ' + schon.map(function (x) { return info.vergeben[serienZahl(x)]; }).join(', '));
+    e.vorschlag = serienNaechste(info, liste.length);
+    throw e;
+  }
+  return { sh: sh, info: info };
+}
+function serienAusDaten(data) {
+  return Array.isArray(data.seriennummern) ? data.seriennummern.map(function (x) { return String(x || '').trim().toUpperCase(); }).filter(Boolean) : [];
+}
+
+// Beim Versenden/Übergeben: Nummern prüfen, in Saras Liste schreiben, bei der Bestellung vermerken
+function serienEintragen(sheet, kopf, zeile, data) {
+  const liste = serienAusDaten(data);
+  const rechnung = String(data.rechnungsnr || '').trim().slice(0, 60);
+  if (rechnung) sheet.getRange(zeile, kopf.indexOf('Rechnungsnr.') + 1).setValue(rechnung);
+  if (!liste.length) return [];
+  const pr = serienPruefen(liste), sh = pr.sh, info = pr.info;
+  const b = bestellungLesen(sheet, kopf, zeile);
+  const pos = positionenListe(b);
+  // Spaltenköpfe der Liste: A–F wie bei Sara, Bestellnr./Rechnungsnr. rechts ergänzen
+  let k = kopfzeile(sh);
+  SERIEN_ZUSATZ.forEach(function (name) {
+    if (k.indexOf(name) < 0) { sh.getRange(1, k.length + 1).setValue(name); k = k.concat([name]); }
+  });
+  // Hersteller und Risikoakte wie in der letzten ausgefüllten Zeile
+  const n = sh.getLastRow();
+  const alt = n > 1 ? sh.getRange(2, 1, n - 1, 6).getDisplayValues().filter(function (z) { return String(z[2]).trim(); }) : [];
+  const vorlage = alt.length ? alt[alt.length - 1] : ['', '', '', '', SHOP_NAME + ', ' + SHOP_ADRESSE, ''];
+  const heute = Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy');
+  liste.forEach(function (sn, i) {
+    const p = pos[i] || pos[pos.length - 1] || { name: b.variante, details: '', pers: '' };
+    const bez = [p.name].concat(String(p.details || '').split(' · ')).concat(p.pers ? [p.pers] : []).filter(Boolean).join(', ');
+    const werte = [sn, SERIEN_PLATTFORM[b.kanal] || String(b.kanal || '').toLowerCase(), bez, heute, vorlage[4], vorlage[5]];
+    const frei = info.frei.filter(function (f) { return f.zahl === serienZahl(sn); })[0];   // vorbereitete Zeile, Jahr wird angepasst
+    const z = frei ? frei.zeile : sh.getLastRow() + 1;
+    sh.getRange(z, 1, 1, 6).setValues([werte]);
+    sh.getRange(z, k.indexOf('Bestellnr.') + 1).setValue(b.nr);
+    if (rechnung) sh.getRange(z, k.indexOf('Rechnungsnr.') + 1).setValue(rechnung);
+  });
+  const vorher = String(b.seriennummern || '').split(/\s*,\s*/).filter(Boolean);
+  sheet.getRange(zeile, kopf.indexOf('Seriennummern') + 1).setValue(vorher.concat(liste).join(', '));
+  return liste;
+}
+
 /* ---------------- Mails an Kunden (Bestellbestätigung, Versand) ----------------
    Beide Mails haben dasselbe Layout: schlicht, gut lesbar am Handy (Tabellen, feste Breite höchstens 560 px,
    nur Inline-Styles, keine Bilder nötig). Dazu immer eine Textfassung für Mailprogramme ohne HTML. */
@@ -940,6 +1113,8 @@ function berechtigen() {
   spaltenSicherstellen(blatt());
   // Ab 1.4: Erlaubnis für Anfragen ins Internet (PayPal, katalog.json)
   Logger.log('Katalog erreichbar: ' + (katalogLaden().produkte || []).length + ' Produkte.');
+  const sl = serienStatus();
+  Logger.log(sl === 'fehlt' ? 'Seriennummernliste fehlt noch: SERIENLISTE_ID in den Skript-Eigenschaften eintragen.' : 'Seriennummernliste: zuletzt vergeben ' + sl + '.');
   Logger.log(paypalZugang() ? 'PayPal-Zugang ist eingetragen.' : 'PayPal-Zugang fehlt noch: PAYPAL_CLIENT_ID und PAYPAL_SECRET in den Skript-Eigenschaften eintragen.');
   lagerBlatt(LAGER_BLATT, LAGER_SPALTEN);
   lagerBlatt(MINDEST_BLATT, MINDEST_SPALTEN);

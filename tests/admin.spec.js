@@ -22,10 +22,10 @@ const BESTELLUNGEN = [
 
 // api: true → Admin-Schlüssel ist eingetragen, die Schnittstelle (echter Apps-Script-Code) antwortet
 // lager: Zeilen für das Blatt „Lagerbewegungen“ (ohne Kopf), z. B. [['01.11.2026', '', 'KR-…', '', 'Werkstatt', 2, 'Genäht', '', '']]
-async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null, paypal = null } = {}) {
+async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null, paypal = null, serienliste = null } = {}) {
   await page.addInitScript(() => { localStorage.setItem('mkw_admin_pw', 'test'); localStorage.setItem('mkw_github_token', 'test'); });
   const blaetter = lager ? { Lagerbewegungen: [['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz'], ...lager] } : {};
-  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter, paypal });
+  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter, paypal, serienliste });
   await page.route(/^https?:\/\/(?!localhost)/, route => {
     const u = route.request().url();
     if (u.includes('script.google.com')) {
@@ -902,5 +902,203 @@ test.describe('Admin: Lager – Zahlenkronen ohne Pads', () => {
     await page.click('#lbSpeichern');
     await expect(page.locator('#statusText')).toHaveText(/1 Krone eingebucht/);
     expect(lagerStand(t).bestand[BRAUN_XM]).toEqual({ 'Markt & Webshop': 4 });
+  });
+});
+
+/* ---------------- MK-Seriennummern ---------------- */
+test.describe('Admin: MK-Seriennummern', () => {
+  const HERST = 'Mila’s Kronenwelt, Vogesenweg 8, 75045 Walzbachtal, Deutschland';
+  const liste = () => [['(SN) Seriennnummer', 'Verkaufsplattform', 'Produktbezeichnung / Typ', 'Herstellungsdatum', 'Herstellername & Kontakt', 'Verweis auf Sicherheits-/Risikoakte'],
+    ['MK-2025-309', 'etsy', 'Gross, grün', '10.11.2026', HERST, 'Risikoakte_Hundekrone_2025.xlsx'], ['MK-2025-310', '', '', '', '', '']];
+  const zumVersand = async (page, nr) => {
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();
+    return k;
+  };
+
+  test('Versenden schlägt je Krone die nächste MK-Nummer vor und trägt sie in Saras Liste ein', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
+    const k = await zumVersand(page, 'KW-20261001-003');
+    const felder = k.locator('.serien input[id^="mk-"]');
+    await expect(felder).toHaveCount(2);
+    await expect(felder.nth(0)).toHaveValue('MK-2026-310');
+    await expect(felder.nth(1)).toHaveValue('MK-2026-311');
+    await expect(k.locator('.serien')).toContainText('„FRIDOLIN“');
+    await k.locator('input[id^="re-"]').fill('RE-2026-0042');
+    page.once('dialog', d => d.accept());                                  // ohne Sendungsnummer
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    await expect(page.locator('#statusText')).toHaveText(/MK-Nummern: MK-2026-310, MK-2026-311/);
+    expect(t.serien.map(z => z[0])).toEqual(['(SN) Seriennnummer', 'MK-2025-309', 'MK-2026-310', 'MK-2026-311']);
+    expect(t.serien[2].slice(1, 3)).toEqual(['kronenwelt', 'Einfarbig, Grün, Extra Mini, FRIDOLIN']);
+    expect(t.serien[2].slice(6)).toEqual(['KW-20261001-003', 'RE-2026-0042']);
+    await page.click('#bestFilterLeiste [data-filter="erledigt"]');
+    await expect(k.locator('.best-details .mk')).toHaveText(['MK-2026-310', 'MK-2026-311']);
+    await expect(k.locator('.best-details')).toContainText('Rechnung RE-2026-0042');
+  });
+
+  test('schon vergebene Nummer: freie Nummern werden eingesetzt, nichts ist versendet', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
+    const k = await zumVersand(page, 'KW-20261001-003');
+    await expect(k.locator('input[id^="mk-"]').first()).toHaveValue('MK-2026-310');
+    await k.locator('input[id^="mk-"]').first().fill('MK-2025-309');
+    page.once('dialog', d => d.accept());
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    await expect(page.locator('#statusText')).toContainText('schon vergeben');
+    await expect(k.locator('input[id^="mk-"]').first()).toHaveValue('MK-2026-310');
+    expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen.find(b => b.nr === 'KW-20261001-003').status).toBe('Neu');
+  });
+
+  test('Haken weg: versendet ohne Eintrag in die Liste; leeres Feld wird bemängelt', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
+    const k = await zumVersand(page, 'KW-20261001-003');
+    await expect(k.locator('input[id^="mk-"]').first()).toHaveValue('MK-2026-310');
+    await k.locator('input[id^="mk-"]').nth(1).fill('');
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    await expect(page.locator('#statusText')).toContainText('Bitte bei jeder Krone eine MK-Nummer');
+    await k.locator('input[id^="mkan-"]').uncheck();
+    page.once('dialog', d => d.accept());
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    await expect(page.locator('#statusText')).toHaveText(/^Versendet ✓/);
+    expect(t.serien).toHaveLength(3);
+  });
+
+  test('ohne eingerichtete Liste gibt es keine MK-Felder, Versenden geht wie bisher', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const k = await zumVersand(page, 'KW-20261001-003');
+    await expect(k.locator('.versand-box')).toBeVisible();
+    await expect(k.locator('.serien')).toHaveCount(0);
+  });
+
+  test('Markt: Übergeben mit MK-Nummer', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
+    const nr = t.post({ aktion: 'anlegen', schluessel: 'GEHEIM123', kanal: 'Markt', status: 'Neu', positionen: [{ variante: 'Party', farbe: PARTY.merkmale.farbe[0].wert, groesse: 'Mini', pers: 'BELLA' }], preis: 13, kunde: 'Marktstand' }).bestellung.nr;
+    await page.click('#tab-bestellungen button:has-text("Aktualisieren")');
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await k.locator('summary').first().click();
+    await expect(k.locator('input[id^="mk-"]')).toHaveValue('MK-2026-310');
+    await k.locator('.best-schritt button:has-text("Übergeben")').click();
+    await expect(page.locator('#statusText')).toHaveText(/Übergeben ✓/);
+    expect(t.serien[2].slice(0, 3)).toEqual(['MK-2026-310', 'markt', 'Party, ' + PARTY.merkmale.farbe[0].wert + ', Mini, BELLA']);
+  });
+
+  test('Einstellungen zeigen die zuletzt vergebene MK-Nummer', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#einstellungen', api: true, serienliste: liste() });
+    await page.click('button[onclick="saveSchnittstelle()"]');
+    await expect(page.locator('#schnittstelleStatus')).toContainText('Seriennummernliste: zuletzt MK-2025-309');
+  });
+});
+
+test.describe('Admin: Verkauf über Etsy/Amazon in einem Schritt', () => {
+  const liste = () => [['(SN) Seriennnummer', 'Verkaufsplattform', 'Produktbezeichnung / Typ', 'Herstellungsdatum', 'Herstellername & Kontakt', 'Verweis auf Sicherheits-/Risikoakte'],
+    ['MK-2025-309', 'etsy', 'Gross, grün', '10.11.2026', 'Hersteller', 'Risikoakte_Hundekrone_2025.xlsx'], ['MK-2025-310', '', '', '', '', '']];
+
+  test('Amazon „Schon verschickt“: Bestellnummer, Sendung, MK-Nummer und Rechnung in einem Rutsch', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
+    await page.click('#btnNeueBestellung');
+    await page.selectOption('#bfKanal', 'Amazon');
+    await page.fill('#bfPlattformNr', '302-1234567-1234567');
+    await page.fill('#bfKunde', 'Elly Muster');
+    await page.check('#bfDirekt');
+    await expect(page.locator('#bfMk-0')).toHaveValue('MK-2026-310');
+    await expect(page.locator('#bfStatus')).toHaveCount(0);
+    await page.fill('#bfSendung', '00340434123456789012');
+    await page.fill('#bfRechnung', 'RE-8');
+    await expect(page.locator('#bfSpeichern')).toHaveText('Speichern als versendet');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert ✓ MK-Nummern: MK-2026-310/);
+    const b = t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0];
+    expect(b).toMatchObject({ kanal: 'Amazon', status: 'Versendet', plattformNr: '302-1234567-1234567', sendungsnummer: '00340434123456789012', seriennummern: 'MK-2026-310', rechnungsnr: 'RE-8' });
+    expect(t.serien[2].slice(0, 2)).toEqual(['MK-2026-310', 'amazon']);
+    await expect(page.locator(`.best[data-nr="${b.nr}"] .best-details`)).toContainText('Amazon-Nr. 302-1234567-1234567');
+  });
+
+  test('zwei Kronen: zwei MK-Nummern vorgeschlagen; ohne Haken bleibt die Liste unberührt', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
+    await page.click('#btnNeueBestellung');
+    await page.fill('#bfKunde', 'Etsy Kundin');
+    await page.check('#bfDirekt');
+    await expect(page.locator('#bfMk-0')).toHaveValue('MK-2026-310');
+    await page.click('.bf button:has-text("+ weitere Krone")');
+    await expect(page.locator('#bfMk-1')).toHaveValue('MK-2026-311');
+    await page.uncheck('#bfMkAn');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert ✓$/);
+    expect(t.serien).toHaveLength(3);
+    expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0].status).toBe('Versendet');
+  });
+});
+
+test.describe('Admin: Instagram, Sonstiges, Rechnung nachtragen', () => {
+  const liste = () => [['(SN) Seriennnummer', 'Verkaufsplattform', 'Produktbezeichnung / Typ', 'Herstellungsdatum', 'Herstellername & Kontakt', 'Verweis auf Sicherheits-/Risikoakte'],
+    ['MK-2025-309', 'etsy', 'Gross, grün', '10.11.2026', 'Hersteller', 'Risikoakte_Hundekrone_2025.xlsx']];
+
+  test('Instagram ist ein eigener Kanal, Zahlung PayPal, ohne Plattform-Nummer', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    await page.selectOption('#bfKanal', 'Instagram');
+    await expect(page.locator('#bfPlattformNr')).toHaveCount(0);
+    await page.fill('#bfKunde', 'Insta Kundin');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert ✓/);
+    expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0]).toMatchObject({ kanal: 'Instagram', zahlung: 'PayPal' });
+  });
+
+  test('Sonstiges: freie Bezeichnung und Preis, ohne Bezeichnung wird nicht gespeichert', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    await page.fill('#bfKunde', 'Etsy Kundin');
+    await page.locator('.bf-pos select').first().selectOption('Sonstiges (freie Bezeichnung)');
+    const bez = page.locator('.bf-pos input[placeholder^="z. B. Zahlen-Set"]');
+    await expect(bez).toBeVisible();
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/Bezeichnung eintragen/);
+    await bez.fill('Zahlen-Set 1–9');
+    await page.locator('.bf-pos input[type="number"]').fill('9.5');
+    await page.locator('.bf-pos input[type="number"]').dispatchEvent('change');
+    await expect(page.locator('#bfSumme')).toContainText('9,50');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert ✓/);
+    const b = t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0];
+    expect(b).toMatchObject({ variante: 'Zahlen-Set 1–9', preis: 9.5 });
+    expect(t.post({ aktion: 'lager', schluessel: 'GEHEIM123' }).bewegungen).toEqual([]);
+  });
+
+  test('Rechnungsnummer unter „Weitere Aktionen“ nachtragen, landet auch in Saras Liste', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
+    t.post({ aktion: 'versenden', schluessel: 'GEHEIM123', nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2026-310', 'MK-2026-311'] });
+    await page.reload();
+    await page.click('#bestFilterLeiste [data-filter="erledigt"]');
+    const k = page.locator('.best[data-nr="KW-20261001-003"]');
+    await k.locator('summary').first().click();
+    await k.locator('.best-mehr summary').click();
+    await k.locator('input[id^="re2-"]').fill('RE-2026-0050');
+    await k.locator('.best-mehr button:has-text("Speichern")').click();
+    await expect(page.locator('#statusText')).toHaveText(/Rechnungsnummer gespeichert ✓/);
+    const re = t.serien[0].indexOf('Rechnungsnr.');
+    expect(t.serien.slice(2).map(z => z[re])).toEqual(['RE-2026-0050', 'RE-2026-0050']);
+    await expect(k.locator('.best-details')).toContainText('Rechnung RE-2026-0050');
+  });
+});
+
+test.describe('Admin: Spende', () => {
+  test('Spende: Preis fest 0 €, Zahlung „Keine“, „Persönlich übergeben“ in der Karte', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    await page.click('#btnNeueBestellung');
+    await page.selectOption('#bfKanal', 'Spende');
+    await expect(page.locator('label[for="bfKunde"]')).toHaveText('Beschenkt / gesponsert an');
+    await expect(page.locator('#bfZahlung')).toHaveValue('Keine (Spende)');
+    await expect(page.locator('.bf-pos input[type="number"]')).toBeDisabled();
+    await expect(page.locator('#bfSumme')).toContainText('0,00');
+    await page.fill('#bfKunde', 'Tierheim Bruchsal');
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/KW-\d{8}-\d{3} gespeichert ✓/);
+    const b = t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0];
+    expect(b).toMatchObject({ kanal: 'Spende', preis: 0, zahlung: 'Keine (Spende)' });
+    const k = page.locator(`.best[data-nr="${b.nr}"]`);
+    await k.locator('button:has-text("In Arbeit nehmen")').first().click();
+    await k.locator('button:has-text("Persönlich übergeben")').click();
+    await expect(page.locator('#statusText')).toHaveText(/Übergeben ✓/);
+    expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen[0].status).toBe('Übergeben');
   });
 });

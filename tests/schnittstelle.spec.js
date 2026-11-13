@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.6', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.7', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -50,7 +50,7 @@ test.describe('Schnittstelle: Shop-Bestellung', () => {
       kunde_name: 'A B', kunde_email: 'a@b.de', lieferadresse: 'X 1' });
     expect(r.success).toBe(true);
     expect(daten[0].slice(0, 12)).toEqual(KOPF);                                  // alte Spalten unverändert
-    expect(daten[0].slice(12)).toEqual(['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft']);
+    expect(daten[0].slice(12)).toEqual(['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft', 'Seriennummern', 'Rechnungsnr.', 'Plattform-Nr.']);
     const z = daten.at(-1);
     expect(z.slice(3, 9)).toEqual(['Glitzer', 'Blau', 'Gross', 'LUNA', 17, 'PayPal']);
     expect(z[spalte(daten, 'Status')]).toBe('Neu');
@@ -490,5 +490,176 @@ test.describe('Schnittstelle: Stornomail', () => {
     expect(post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Storniert' })).toMatchObject({ ok: true, mail: false });
     expect(post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Neu', mail: true, nachricht: 'x' }).mail).toBe(false);   // nur bei Storno
     expect(mails).toHaveLength(0);
+  });
+});
+
+/* ---------------- Seriennummern (GPSR) ---------------- */
+const SL_KOPF = ['(SN) Seriennnummer', 'Verkaufsplattform', 'Produktbezeichnung / Typ', 'Herstellungsdatum', 'Herstellername & Kontakt', 'Verweis auf Sicherheits-/Risikoakte'];
+const HERST = 'Mila’s Kronenwelt, Vogesenweg 8, 75045 Walzbachtal, Deutschland';
+const SARAS_LISTE = () => [SL_KOPF,
+  ['MK-2025-308', 'amazon', 'Lila, klein, Lena', '07.11.2026', HERST, 'Risikoakte_Hundekrone_2025.xlsx'],
+  ['MK-2025-309', 'etsy', 'Gross, grün, 1,2,3,8,9, (10)', '10.11.2026', HERST, 'Risikoakte_Hundekrone_2025.xlsx'],
+  ['MK-2025-310', '', '', '', '', '']];                                   // vorbereitete, leere Nummer
+
+test.describe('Schnittstelle: Seriennummern', () => {
+  test('ping meldet die zuletzt vergebene Nummer, Vorschlag beginnt bei der vorbereiteten MK-2026-310', async () => {
+    const { post } = umgebung([ZWEI_KRONEN], S, { serienliste: SARAS_LISTE() });
+    expect(post({ aktion: 'ping', schluessel: S }).serienliste).toBe('MK-2025-309');
+    expect(post({ aktion: 'seriennummern', schluessel: S, anzahl: 3 })).toMatchObject({ ok: true, nummern: ['MK-2026-310', 'MK-2026-311', 'MK-2026-312'] });
+    expect(umgebung([], S).post({ aktion: 'ping', schluessel: S }).serienliste).toBe('fehlt');
+  });
+
+  test('Versenden trägt jede Krone in Saras Liste ein, Spalten wie bei Sara, Bestell- und Rechnungsnummer rechts', async () => {
+    const { post, serien, daten } = umgebung([ZWEI_KRONEN], S, { serienliste: SARAS_LISTE() });
+    const r = post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false,
+      seriennummern: ['MK-2026-310', 'mk-2026-311'], rechnungsnr: 'RE-2026-0042' });
+    expect(r).toMatchObject({ ok: true, bestellung: { status: 'Versendet', seriennummern: 'MK-2026-310, MK-2026-311', rechnungsnr: 'RE-2026-0042' } });
+    expect(serien[0]).toEqual([...SL_KOPF, 'Bestellnr.', 'Rechnungsnr.', 'Hinweis']);
+    expect(serien[3]).toEqual(['MK-2026-310', 'kronenwelt', 'Einfarbig, Grün, Extra Mini, FRIDOLIN', '07.11.2026', HERST, 'Risikoakte_Hundekrone_2025.xlsx', 'KW-20261001-003', 'RE-2026-0042']);
+    expect(serien[4]).toEqual(['MK-2026-311', 'kronenwelt', 'Glitzer, Blau, Gross', '07.11.2026', HERST, 'Risikoakte_Hundekrone_2025.xlsx', 'KW-20261001-003', 'RE-2026-0042']);
+    expect(serien).toHaveLength(5);                                     // vorbereitete Zeile 310 wurde gefüllt, nicht doppelt angelegt
+    expect(daten[1][spalte(daten, 'Seriennummern')]).toBe('MK-2026-310, MK-2026-311');
+    expect(post({ aktion: 'seriennummern', schluessel: S, anzahl: 1 }).nummern).toEqual(['MK-2026-312']);
+  });
+
+  test('schon vergebene Nummer: nichts wird geändert, Vorschlag mit freien Nummern kommt zurück', async () => {
+    const { post, serien, daten } = umgebung([ZWEI_KRONEN], S, { serienliste: SARAS_LISTE() });
+    const r = post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2025-309', 'MK-2026-310'] });
+    expect(r).toMatchObject({ ok: false, fehler: 'seriennummer_vergeben', vorschlag: ['MK-2026-310', 'MK-2026-311'] });
+    expect(r.text).toContain('MK-2025-309');
+    expect(daten[1][spalte(daten, 'Status')] || 'Neu').toBe('Neu');
+    expect(serien).toHaveLength(4);
+    for (const falsch of [['MK-2026-310', 'MK-2026-310'], ['Krone 1']]) {
+      expect(post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: falsch }).fehler).toBe('ungueltige_seriennummer');
+    }
+  });
+
+  test('Markt: „Übergeben“ mit Seriennummer; Plattform „markt“', async () => {
+    const markt = ['06.11.2026', '', 'KW-20261106-001', 'Party', 'Konfetti', 'Mini', 'BELLA', 13, 'Bar', 'Marktkundin', '', '', 'Neu', 'Markt'];
+    const kopf = [...KOPF, 'Status', 'Kanal'];
+    const { post, serien } = umgebung([markt], S, { kopf, serienliste: SARAS_LISTE() });
+    expect(post({ aktion: 'status', schluessel: S, nr: 'KW-20261106-001', status: 'Übergeben', seriennummern: ['MK-2026-310'] }).ok).toBe(true);
+    expect(serien[3].slice(0, 3)).toEqual(['MK-2026-310', 'markt', 'Party, Konfetti, Mini, BELLA']);
+  });
+
+  test('ohne Seriennummern geht Versenden wie bisher; mit Nummern aber ohne Liste: Fehler, nichts geändert', async () => {
+    const ohne = umgebung([ZWEI_KRONEN], S);
+    expect(ohne.post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false }).ok).toBe(true);
+    const u = umgebung([ZWEI_KRONEN], S);
+    expect(u.post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2026-310'] }).fehler).toBe('serienliste_fehlt');
+    expect(u.daten[1][spalte(u.daten, 'Status')] || 'Neu').toBe('Neu');
+  });
+
+  test('Jahreswechsel: Jahr vorne aktuell, Zahl hinten läuft weiter; gleiche Zahl mit anderem Jahr gilt als vergeben', async () => {
+    const { post, serien } = umgebung([ZWEI_KRONEN], S, { serienliste: SARAS_LISTE() });
+    expect(post({ aktion: 'seriennummern', schluessel: S, anzahl: 2 }).nummern).toEqual(['MK-2026-310', 'MK-2026-311']);   // vorbereitete 2025-310 wird 2026-310
+    const r = post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2026-309', 'MK-2026-310'] });
+    expect(r).toMatchObject({ ok: false, fehler: 'seriennummer_vergeben', vorschlag: ['MK-2026-310', 'MK-2026-311'] });
+    expect(r.text).toContain('MK-2025-309');
+    expect(post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2026-310', 'MK-2025-310'] }).fehler).toBe('ungueltige_seriennummer');
+    expect(post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2026-310', 'MK-2026-311'] }).ok).toBe(true);
+    expect(serien.map(z => z[0])).toEqual(['(SN) Seriennnummer', 'MK-2025-308', 'MK-2025-309', 'MK-2026-310', 'MK-2026-311']);
+  });
+
+  test('neue Nummern hinter der höchsten, auch wenn Sara zwischendurch von Hand eingetragen hat', async () => {
+    const liste = SARAS_LISTE().slice(0, 3);                            // ohne vorbereitete 310
+    liste.push(['MK-2025-315', 'etsy', 'von Hand', '11.11.2026', HERST, 'x']);
+    const { post } = umgebung([], S, { serienliste: liste });
+    expect(post({ aktion: 'seriennummern', schluessel: S, anzahl: 2 }).nummern).toEqual(['MK-2026-316', 'MK-2026-317']);
+  });
+});
+
+test.describe('Schnittstelle: Verkauf über Etsy/Amazon in einem Schritt', () => {
+  const pos = [{ variante: 'Party', farbe: 'Rosa', groesse: 'Mini', pers: 'ELLY', sku: 'KR-PARTY-ROSA-MI' }];
+  test('Amazon: angelegt, Lager abgebucht, MK-Nummer in Saras Liste, versendet – ohne Kundenmail', async () => {
+    const { post, serien, mails } = umgebung([], S, { serienliste: SARAS_LISTE() });
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Amazon', positionen: pos, preis: 15, kunde: 'Elly Muster',
+      plattformNr: '302-1234567-1234567', direkt: true, sendungsnummer: '0034 0434 1234 5678 90', seriennummern: ['MK-2026-310'], rechnungsnr: 'RE-7' });
+    expect(r.bestellung).toMatchObject({ status: 'Versendet', kanal: 'Amazon', plattformNr: '302-1234567-1234567', sendungsnummer: '003404341234567890',
+      versendetAm: '07.11.2026', seriennummern: 'MK-2026-310', rechnungsnr: 'RE-7' });
+    expect(serien[3].slice(0, 3)).toEqual(['MK-2026-310', 'amazon', 'Party, Rosa, Mini, ELLY']);
+    expect(post({ aktion: 'lager', schluessel: S }).bestand['KR-PARTY-ROSA-MI']).toEqual({ Amazon: -1 });
+    expect(mails).toHaveLength(0);
+  });
+
+  test('Markt „schon übergeben“: Status Übergeben, keine Sendungsnummer', async () => {
+    const { post } = umgebung([], S, { serienliste: SARAS_LISTE() });
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Markt', positionen: pos, preis: 15, direkt: true, sendungsnummer: '123', seriennummern: ['MK-2026-310'] });
+    expect(r.bestellung).toMatchObject({ status: 'Übergeben', sendungsnummer: '', seriennummern: 'MK-2026-310' });
+  });
+
+  test('MK-Nummer schon vergeben oder Sendungsnummer falsch: es wird gar nichts angelegt', async () => {
+    const { post, daten, serien } = umgebung([], S, { serienliste: SARAS_LISTE() });
+    expect(post({ aktion: 'anlegen', schluessel: S, kanal: 'Etsy', positionen: pos, preis: 15, kunde: 'A', direkt: true, seriennummern: ['MK-2025-309'] }))
+      .toMatchObject({ ok: false, fehler: 'seriennummer_vergeben', vorschlag: ['MK-2026-310'] });
+    expect(post({ aktion: 'anlegen', schluessel: S, kanal: 'Etsy', positionen: pos, preis: 15, kunde: 'A', direkt: true, sendungsnummer: '12<' }).fehler).toBe('ungueltige_sendungsnummer');
+    expect(daten).toHaveLength(1);
+    expect(serien).toHaveLength(4);
+    expect(post({ aktion: 'lager', schluessel: S }).bewegungen).toEqual([]);
+  });
+});
+
+test.describe('Schnittstelle: Instagram, Sonstiges, Rechnung nachtragen, Storno', () => {
+  test('Instagram: eigener Kanal, Plattform „instagram“, Lager aus Markt & Webshop', async () => {
+    const pos = [{ variante: 'Party', farbe: 'Rosa', groesse: 'Mini', pers: 'ELLY', sku: 'KR-PARTY-ROSA-MI' }];
+    const { post, serien } = umgebung([], S, { serienliste: SARAS_LISTE() });
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Instagram', positionen: pos, preis: 15, kunde: 'Insta', direkt: true, seriennummern: ['MK-2026-310'] });
+    expect(r.bestellung).toMatchObject({ kanal: 'Instagram', status: 'Versendet' });
+    expect(serien[3].slice(0, 2)).toEqual(['MK-2026-310', 'instagram']);
+    expect(post({ aktion: 'lager', schluessel: S }).bestand['KR-PARTY-ROSA-MI']).toEqual({ 'Markt & Webshop': -1 });
+  });
+
+  test('Sonstiges: freie Bezeichnung ohne Artikelnummer, Kommas zerstören die Positionen nicht', async () => {
+    const { post } = umgebung([], S);
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Markt', preis: 8,
+      positionen: [{ variante: 'Leine, rosa | Glitzer', farbe: '', groesse: '', pers: '', sku: '' }] });
+    expect(r.ok).toBe(true);
+    expect(r.bestellung.variante).toBe('Leine / rosa / Glitzer');
+    expect(post({ aktion: 'lager', schluessel: S }).bewegungen).toEqual([]);
+  });
+
+  test('Rechnungsnummer nachtragen: in der Bestellung und in Saras Liste', async () => {
+    const { post, serien, daten } = umgebung([ZWEI_KRONEN], S, { serienliste: SARAS_LISTE() });
+    post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2026-310', 'MK-2026-311'] });
+    const r = post({ aktion: 'rechnung', schluessel: S, nr: 'KW-20261001-003', rechnungsnr: 'RE-2026-0050' });
+    expect(r).toMatchObject({ ok: true, bestellung: { rechnungsnr: 'RE-2026-0050' } });
+    expect(daten[1][spalte(daten, 'Rechnungsnr.')]).toBe('RE-2026-0050');
+    const re = serien[0].indexOf('Rechnungsnr.');
+    expect(serien[3][re]).toBe('RE-2026-0050');
+    expect(serien[4][re]).toBe('RE-2026-0050');
+    expect(serien[1][re] || '').toBe('');                               // fremde Zeilen bleiben unberührt
+    expect(post({ aktion: 'rechnung', schluessel: 'falsch', nr: 'KW-20261001-003', rechnungsnr: 'X' }).ok).toBe(false);
+  });
+
+  test('Storno vermerkt „storniert“ in Saras Liste, Zurücksetzen löscht den Hinweis wieder', async () => {
+    const { post, serien } = umgebung([ZWEI_KRONEN], S, { serienliste: SARAS_LISTE() });
+    post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '', mail: false, seriennummern: ['MK-2026-310', 'MK-2026-311'] });
+    const r = post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Storniert', mail: false });
+    expect(r).toMatchObject({ ok: true, serienFehler: false });
+    const h = serien[0].indexOf('Hinweis');
+    expect(h).toBeGreaterThan(5);
+    expect(serien[3][h]).toBe('storniert 07.11.2026');
+    expect(serien[4][h]).toBe('storniert 07.11.2026');
+    expect(serien[3][0]).toBe('MK-2026-310');                           // Nummer bleibt vergeben
+    post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', status: 'Versendet', mail: false });
+    expect(serien[3][h]).toBe('');
+  });
+});
+
+test.describe('Schnittstelle: Spende', () => {
+  const pos = [{ variante: 'Party', farbe: 'Rosa', groesse: 'Mini', pers: 'LUNA', sku: 'KR-PARTY-ROSA-MI' }];
+  test('kein Umsatz (immer 0 €), Lager abgebucht, MK-Nummer mit Plattform „spende“, ohne Sendung = übergeben', async () => {
+    const { post, serien } = umgebung([], S, { serienliste: SARAS_LISTE() });
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Spende', zahlung: 'Keine (Spende)', positionen: pos, preis: 15, kunde: 'Tierheim Bruchsal',
+      direkt: true, seriennummern: ['MK-2026-310'] });
+    expect(r.bestellung).toMatchObject({ kanal: 'Spende', preis: 0, status: 'Übergeben', sendungsnummer: '' });
+    expect(serien[3].slice(0, 2)).toEqual(['MK-2026-310', 'spende']);
+    expect(post({ aktion: 'lager', schluessel: S }).bestand['KR-PARTY-ROSA-MI']).toEqual({ 'Markt & Webshop': -1 });
+  });
+
+  test('mit Sendungsnummer: versendet', async () => {
+    const { post } = umgebung([], S);
+    const r = post({ aktion: 'anlegen', schluessel: S, kanal: 'Spende', positionen: pos, preis: 0, kunde: 'Gewinnerin', direkt: true, sendungsnummer: '00340434123456789012' });
+    expect(r.bestellung).toMatchObject({ preis: 0, status: 'Versendet', sendungsnummer: '00340434123456789012' });
   });
 });
