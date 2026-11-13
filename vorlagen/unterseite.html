@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<!-- ERZEUGT von scripts/seiten.js aus seiten.json + katalog.json – nicht von Hand ändern.
+     Texte: seiten.json · Aufbau: vorlagen/unterseite.html · Preise/Fotos: katalog.json -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="{{beschreibung}}">
+<title>{{titel}}</title>
+<link rel="canonical" href="{{url}}">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="de_DE">
+<meta property="og:site_name" content="Mila's Kronenwelt">
+<meta property="og:url" content="{{url}}">
+<meta property="og:title" content="{{titel}}">
+<meta property="og:description" content="{{beschreibung}}">
+<meta property="og:image" content="{{bildUrl}}">
+<meta property="og:image:alt" content="{{bildAlt}}">
+<script type="application/ld+json">
+{{jsonLd}}
+</script>
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="favicon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#4d6d71">
+<link rel="stylesheet" href="css/shop.css?v=1">
+<link rel="stylesheet" href="css/pastell.css?v=3">
+<link rel="stylesheet" href="css/unterseite.css?v=1">
+</head>
+
+<body class="unterseite">
+
+<nav class="nav" id="nav">
+  <a class="logo-wrap" href="/" aria-label="Zur Startseite von Mila's Kronenwelt">
+    <div class="logo-mark">
+      <div class="logo-bommels">
+        <span class="bml"></span><span class="bml-m"></span><span class="bml"></span>
+      </div>
+      <svg class="logo-shape" viewBox="0 0 44 24" aria-hidden="true">
+        <polygon points="22,1 32,13 42,5 38,22 6,22 2,5 12,13" fill="none" stroke="#729599" stroke-width="2.5" stroke-linejoin="round"/>
+        <polygon points="22,1 32,13 42,5 38,22 6,22 2,5 12,13" fill="rgba(74,144,144,0.08)"/>
+      </svg>
+    </div>
+    <div class="logo-div"></div>
+    <div>
+      <div class="logo-name">Mila's Kronenwelt</div>
+      <div class="logo-sub">HANDMADE · PERSONALISIERT</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <a href="/#kronen">Kronen</a>
+    <a href="/#bestellen">Bestellen</a>
+    <a href="/#galerie">Galerie</a>
+    <a href="/#groessen">Größen</a>
+    <a href="/#about">Über Mila</a>
+  </div>
+  <div class="nav-right">
+    <a class="nav-cta" href="{{knopfLink}}">Jetzt bestellen</a>
+  </div>
+</nav>
+<div class="teal-bar"></div>
+
+<section class="hero">
+  <div class="hero-left">
+    <div class="h-eyebrow">{{eyebrow}}</div>
+    <h1 class="h-title">{{h1}}</h1>
+    <p class="h-desc">{{einleitung}}</p>
+    <a class="btn-dark" href="{{knopfLink}}">{{knopf}}</a>
+    <a class="btn-outline" href="#groessen">Größen ansehen</a>
+  </div>
+  <div class="hero-right">
+    <div class="hero-photo">
+      <img src="{{bildUrl}}" alt="{{bildAlt}}" fetchpriority="high" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
+    </div>
+  </div>
+</section>
+
+<div class="trust-strip">
+  <div class="trust-item"><span class="trust-dot"></span>Handmade</div>
+  <div class="trust-item"><span class="trust-dot"></span>{{abPreisText}}</div>
+  <div class="trust-item"><span class="trust-dot"></span>✓ Kostenloser Versand</div>
+  <div class="trust-item"><span class="trust-dot"></span>Lieferzeit 5–6 Werktage</div>
+</div>
+
+<section class="section section-white section-kronen" id="kronen">
+  <div class="sec-eyebrow">{{kartenEyebrow}}</div>
+  <h2 class="sec-title">{{kartenTitel}}</h2>
+  <div class="sec-line"></div>
+  <div class="prod-grid">
+{{karten}}
+  </div>
+  <dl class="us-produkte">
+{{produktListe}}
+  </dl>
+</section>
+
+{{abschnitte}}
+
+{{zahlenpads}}
+
+{{groessen}}
+
+<section class="section section-white us-hinweise">
+  <details class="safety-info">
+    <summary>Hersteller &amp; Sicherheitshinweise</summary>
+    <p><strong>Hersteller:</strong> Sternenstaubhandmade, Inhaberin Sara Schwarz, Vogesenweg 8, 75045 Walzbachtal, Deutschland · <a href="mailto:m.kronenwelt@gmail.com">m.kronenwelt@gmail.com</a></p>
+    <p><strong>Sicherheitshinweise:</strong> Dekorationsartikel für Fotos und Feiern – kein Spielzeug. Deinen Hund die Krone nur unter Aufsicht und kurzzeitig tragen lassen. Nicht zum Kauen oder Spielen überlassen: Bommel, Zahlenpads und Bänder können abgebissen und verschluckt werden. Band nicht zu eng anlegen. Bei Beschädigung nicht mehr verwenden.</p>
+  </details>
+</section>
+
+{{faq}}
+
+<section class="section section-white us-abschluss">
+  <a class="btn-dark" href="{{knopfLink}}">{{knopf}}</a>
+  <a class="btn-outline" href="/#kronen">Alle Hundekronen ansehen</a>
+</section>
+
+<footer class="footer">
+  <div class="footer-top">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="logo-mark">
+        <div class="logo-bommels"><span class="bml"></span><span class="bml-m"></span><span class="bml"></span></div>
+        <svg class="logo-shape" viewBox="0 0 44 24" aria-hidden="true"><polygon points="22,1 32,13 42,5 38,22 6,22 2,5 12,13" fill="none" stroke="#729599" stroke-width="2.5" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ft-logo-name">Mila's Kronenwelt</div>
+        <span class="ft-logo-sub">HANDMADE SEIT 2024</span>
+      </div>
+    </div>
+    <a class="ft-insta" href="https://www.instagram.com/kronenwelt">
+      <div class="ig-ic"><svg viewBox="0 0 24 24" fill="white" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" stroke="white" stroke-width="2.5" fill="none"/><circle cx="12" cy="12" r="5" stroke="white" stroke-width="2" fill="none"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg></div>
+      <span>@kronenwelt</span>
+    </a>
+  </div>
+  <div class="footer-bot">
+    <div class="ft-links">
+      <a href="/">Startseite</a>
+{{seitenLinks}}
+      <a href="impressum.html">Impressum</a>
+      <a href="datenschutz.html">Datenschutz</a>
+      <a href="agb.html">AGB</a>
+      <a href="widerruf.html">Widerrufsbelehrung</a>
+      <a href="mailto:m.kronenwelt@gmail.com">Kontakt</a>
+    </div>
+    <div class="ft-copy">© 2024 Mila's Kronenwelt · kronenwelt.de · Alle Rechte vorbehalten</div>
+  </div>
+</footer>
+
+</body>
+</html>
