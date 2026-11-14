@@ -222,6 +222,9 @@ function bestellKarte(b) {
           <div><dt>Zahlung</dt><dd>${medienEsc(b.zahlung || '–')} · ${euro(b.preis)}${zOk ? '<br><span class="zahlung-ok">✓ bei PayPal bestätigt</span>' : ''}${b.paypalId ? '<br><span class="leise">PayPal ' + medienEsc(b.paypalId) + '</span>' : ''}</dd></div>
           ${b.notiz ? `<div class="best-artikel"><dt>Notiz</dt><dd>${medienEsc(b.notiz)}</dd></div>` : ''}
         </dl>
+        <div class="aktion-zeile re-aktion">${/^R-\d{5}$/.test(b.rechnungsnr || '')
+          ? `<span class="leise">Rechnung ${medienEsc(b.rechnungsnr)}</span><button class="btn btn-outline btn-sm" onclick="rechnungZurBestellung(${nr})">Rechnung drucken / PDF</button>`
+          : b.status !== 'Storniert' && !b.rechnungsnr ? `<button class="btn btn-outline btn-sm" onclick="rechnungAusBestellung(${nr})">Rechnung erstellen</button>` : ''}</div>
         <details class="best-mehr"><summary>Weitere Aktionen</summary>
           <div class="aktion-zeile"><label class="leise" for="st-${id}">Status von Hand setzen:</label>
             <select id="st-${id}" aria-label="Status ändern" onchange="statusKlick(${nr}, this.value)">
@@ -229,7 +232,7 @@ function bestellKarte(b) {
             </select></div>
           <div class="leise" style="font-size:12px">Zum Beispiel, um eine versehentliche Änderung zurückzunehmen. „Storniert“ bucht die Kronen zurück ins Lager.</div>
           <div class="aktion-zeile" style="margin-top:10px"><label class="leise" for="re2-${id}">Rechnungsnummer:</label>
-            <input type="text" id="re2-${id}" value="${medienEsc(b.rechnungsnr || '')}" placeholder="z. B. aus Papierkram" style="max-width:200px;padding:7px 9px;border:1px solid var(--line2);border-radius:2px;font-size:15px">
+            <input type="text" id="re2-${id}" value="${medienEsc(b.rechnungsnr || '')}" placeholder="nur für alte Papierkram-Rechnungen" style="max-width:200px;padding:7px 9px;border:1px solid var(--line2);border-radius:2px;font-size:15px">
             <button class="btn btn-outline btn-sm" onclick="rechnungKlick(${nr})">Speichern</button></div>
         </details>
       </div>

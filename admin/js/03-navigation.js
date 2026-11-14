@@ -7,11 +7,12 @@
 // = ein neuer Eintrag hier + ein <div id="tab-…" class="content">. Navigation, Unterreiter
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
-const ADMIN_VERSION = '1.4';
-const ADMIN_NEU = 'Etsy-Bestellungen kommen von selbst; „+ Bestellung“ ist jetzt für Amazon, Markt und Instagram gedacht und verhindert doppelte Etsy-Einträge.';
+const ADMIN_VERSION = '1.5';
+const ADMIN_NEU = 'Rechnungen schreiben und drucken direkt im Admin (ersetzt Papierkram, weiter ab R-01272); zweiter Etsy-Shop Sternenstaubhandmade.';
 const ICON = {
   start:    '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/></svg>',
   bestellungen: '<svg viewBox="0 0 24 24"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5"/><path d="M12 12v9"/></svg>',
+  rechnungen: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h7M9 16h7"/></svg>',
   lager:    '<svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13"/><path d="M7 21v-9h10v9"/><path d="M7 16h10"/></svg>',
   produkte: '<svg viewBox="0 0 24 24"><path d="M3 7l5 5 4-7 4 7 5-5-2 12H5z"/><path d="M5 19h14"/></svg>',
   galerie:  '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>',
@@ -20,6 +21,7 @@ const ICON = {
 const BEREICHE = [
   { id: 'start',         titel: 'Start',         seiten: [{ id: 'start' }] },
   { id: 'bestellungen',  titel: 'Bestellungen',  seiten: [{ id: 'bestellungen' }] },
+  { id: 'rechnungen',    titel: 'Rechnungen',    seiten: [{ id: 'rechnungen' }] },
   { id: 'lager',         titel: 'Lager',         seiten: [{ id: 'lager' }] },
   { id: 'produkte',      titel: 'Produkte',      seiten: [{ id: 'preise', titel: 'Preise' }, { id: 'medien', titel: 'Fotos & Video' }] },
   { id: 'galerie',       titel: 'Galerie',       seiten: [{ id: 'galerie' }] },
@@ -51,6 +53,7 @@ function geheZu(ziel, ohneVerlauf) {
   if (seite === 'start') renderUebersicht();
   if (seite === 'bestellungen') { gesehenBeimOeffnen(); ladeBestellungen(); if (bestellungen) bestellungenAktualisiert(); }
   if (seite === 'lager') ladeLager();
+  if (seite === 'rechnungen') ladeRechnungen();
 }
 // Alter Name, falls irgendwo noch benutzt
 function showTab(name) { geheZu(name); }

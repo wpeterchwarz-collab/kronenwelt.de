@@ -37,6 +37,14 @@
       Übernommen werden nur bezahlte Bestellungen ab dem Verbinden, jede nur einmal (Spalte „Plattform-Nr.“).
       Ab 1.10: Blatt „Etsy-Artikel“ – je Etsy-Artikel eine Zeile; in „Krone“ und „Farbe“ steht, welcher
       Katalog-Artikel dazu gehört. Dann bucht bei Etsy-Bestellungen auch das Lager ab.
+      Ab 1.11: zweiter Etsy-Shop (z. B. Sternenstaubhandmade) mit eigener Etsy-App im zweiten Etsy-Konto:
+      Skript-Eigenschaften ETSY2_KEYSTRING und ETSY2_SECRET; verbunden wird ebenfalls in der Admin-Seite.
+      Die Spalte „Shop“ zeigt, aus welchem Shop eine Etsy-Bestellung kommt.
+
+   8) Rechnungen (ab 1.11, ersetzt Papierkram): Blatt „Rechnungen“, je Rechnung eine Zeile, Nummern ab R-01272.
+      Festgeschriebene Rechnungen werden nie geändert; korrigiert wird mit Stornorechnung (<Nr>-S) und neuer Rechnung.
+      Fußzeile: Skript-Eigenschaften RECHNUNG_TELEFON, RECHNUNG_EMAIL, RECHNUNG_BANK, RECHNUNG_IBAN, RECHNUNG_BIC,
+      RECHNUNG_USTID. Gedruckt bzw. als PDF gespeichert wird in der Admin-Seite (Bereich „Rechnungen“).
 
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
    werden rechts angehängt, sobald sie gebraucht werden. Nichts wird umbenannt oder gelöscht.
@@ -46,7 +54,7 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.10';
+const SCHNITTSTELLE_VERSION = '1.11';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
@@ -159,7 +167,7 @@ function adminAnfrage(data) {
     Utilities.sleep(800);                                   // Ausprobieren von Schlüsseln bremsen
     return antwort({ ok: false, fehler: 'nicht_erlaubt' });
   }
-  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung', 'etsyAbruf', 'etsyArtikel'].indexOf(data.aktion) >= 0;
+  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung', 'etsyAbruf', 'etsyArtikel', 'rechnungErstellen', 'rechnungStornieren'].indexOf(data.aktion) >= 0;
   const lock = LockService.getScriptLock();
   try {
     if (schreibt) lock.waitLock(20000);
@@ -189,6 +197,12 @@ function adminAnfrage(data) {
         return antwort(serienVorschlag(data));
       case 'rechnung':
         return antwort(rechnungSetzen(data));
+      case 'rechnungen':
+        return antwort(rechnungenLesen());
+      case 'rechnungErstellen':
+        return antwort(rechnungErstellen(data));
+      case 'rechnungStornieren':
+        return antwort(rechnungStornieren(data));
       case 'bestellungen':
         return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, bestellungen: bestellungenLesen() });
       case 'status':
@@ -1112,6 +1126,153 @@ function schluesselOk(gesendet) {
 
 function antwort(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ---------------- 8) Rechnungen ---------------- */
+// Ersetzt Papierkram. Jede Rechnung ist eine Zeile im Blatt „Rechnungen“; einmal festgeschrieben wird sie nie mehr
+// geändert (GoBD). Korrigiert wird nur über eine Stornorechnung (<Nr>-S) und eine neue Rechnung mit neuer Nummer.
+// Gedruckt wird in der Admin-Seite aus genau diesen Daten. Telefon, E-Mail, Bank und USt-ID stehen in den
+// Skript-Eigenschaften (RECHNUNG_TELEFON, RECHNUNG_EMAIL, RECHNUNG_BANK, RECHNUNG_IBAN, RECHNUNG_BIC, RECHNUNG_USTID).
+const RECHNUNG_BLATT = 'Rechnungen';
+const RECHNUNG_SPALTEN = ['Rechnungsnr.', 'Art', 'Datum', 'Leistungsdatum', 'Bestellnr.', 'Betreff', 'Empfänger',
+  'Positionen', 'Gesamt (€)', 'Hinweis', 'Seriennummern', 'Bezug', 'Storniert durch', 'Erstellt'];
+const RECHNUNG_LETZTE_PAPIERKRAM = 1271;                // letzte Nummer aus Papierkram (R-01271); weiter geht es mit R-01272
+const RECHNUNG_KLEINBETRAG = 250;                       // darüber braucht die Rechnung Name und Anschrift (§ 33 UStDV)
+const RECHNUNG_ABSENDER = { name: 'Sternenstaub Handmade', strasse: 'Vogesenweg 8', ort: '75045 Walzbachtal', inhaber: 'Sara Schwarz' };
+
+function rechnungBlatt() { return lagerBlatt(RECHNUNG_BLATT, RECHNUNG_SPALTEN); }
+
+function rechnungAbsender() {
+  const p = PropertiesService.getScriptProperties();
+  const e = function (n) { return String(p.getProperty('RECHNUNG_' + n) || '').trim(); };
+  return { name: RECHNUNG_ABSENDER.name, strasse: RECHNUNG_ABSENDER.strasse, ort: RECHNUNG_ABSENDER.ort,
+    inhaber: RECHNUNG_ABSENDER.inhaber, ustid: e('USTID'), telefon: e('TELEFON'), email: e('EMAIL'),
+    bank: e('BANK'), iban: e('IBAN'), bic: e('BIC') };
+}
+
+function rechnungAusZeile(o, zeile) {
+  let pos = [];
+  try { pos = JSON.parse(o['Positionen'] || '[]'); } catch (e) { pos = []; }
+  const g = parseFloat(String(o['Gesamt (€)'] || '0').replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.')) || 0;
+  return { zeile: zeile, nr: o['Rechnungsnr.'], art: o['Art'] || 'Rechnung', datum: o['Datum'], leistungsdatum: o['Leistungsdatum'],
+    bestellnr: o['Bestellnr.'], betreff: o['Betreff'], empfaenger: o['Empfänger'], positionen: pos,
+    gesamt: Math.round(g * 100) / 100, hinweis: o['Hinweis'], seriennummern: o['Seriennummern'], bezug: o['Bezug'],
+    storniertDurch: o['Storniert durch'], erstellt: o['Erstellt'] };
+}
+
+function rechnungenAlle() {
+  const t = zeilenLesen(rechnungBlatt());
+  return t.zeilen.map(function (o, i) { return rechnungAusZeile(o, i + 2); }).filter(function (r) { return r.nr; });
+}
+
+function rechnungNaechsteNr(alle) {
+  let max = RECHNUNG_LETZTE_PAPIERKRAM;
+  alle.forEach(function (r) { const m = /^R-(\d+)$/.exec(r.nr); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+  return 'R-' + ('0000' + (max + 1)).slice(-5);
+}
+
+function rechnungenLesen() {
+  const alle = rechnungenAlle();
+  return { ok: true, rechnungen: alle.reverse(), naechste: rechnungNaechsteNr(alle), absender: rechnungAbsender(),
+    kleinbetrag: RECHNUNG_KLEINBETRAG };
+}
+
+const rechnungText = function (x, max) { return String(x == null ? '' : x).replace(/\r/g, '').trim().slice(0, max); };
+const rechnungDatumOk = function (d) { return /^\d{2}\.\d{2}\.\d{4}$/.test(d || ''); };
+const rechnungBetrag = function (x) { return Math.round((parseFloat(x) || 0) * 100) / 100; };
+
+// Positionen prüfen: Text, Menge > 0, Einzelpreis; Gesamt rechnet die Schnittstelle selbst
+function rechnungPositionen(liste) {
+  if (!Array.isArray(liste) || !liste.length || liste.length > 30) throw fehler('rechnung_positionen', 'Mindestens eine Position eintragen');
+  return liste.map(function (p) {
+    const text = rechnungText(p && p.text, 600), menge = Math.round((parseFloat(p && p.menge) || 0) * 100) / 100;
+    const preis = rechnungBetrag(p && p.preis);
+    if (!text) throw fehler('rechnung_positionen', 'Jede Position braucht eine Beschreibung');
+    if (!(menge > 0) || menge > 1000) throw fehler('rechnung_positionen', 'Menge prüfen');
+    if (!isFinite(preis) || Math.abs(preis) > 100000) throw fehler('rechnung_positionen', 'Preis prüfen');
+    return { text: text, menge: menge, preis: preis };
+  });
+}
+const rechnungSumme = function (pos) {
+  return Math.round(pos.reduce(function (s, p) { return s + Math.round(p.menge * p.preis * 100); }, 0)) / 100;
+};
+
+function rechnungZeileSchreiben(sh, r) {
+  const werte = RECHNUNG_SPALTEN.map(function (k) {
+    return { 'Rechnungsnr.': r.nr, 'Art': r.art, 'Datum': r.datum, 'Leistungsdatum': r.leistungsdatum, 'Bestellnr.': r.bestellnr,
+      'Betreff': r.betreff, 'Empfänger': r.empfaenger, 'Positionen': JSON.stringify(r.positionen), 'Gesamt (€)': r.gesamt,
+      'Hinweis': r.hinweis, 'Seriennummern': r.seriennummern, 'Bezug': r.bezug, 'Storniert durch': '',
+      'Erstellt': Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy HH:mm') }[k];
+  });
+  const z = sh.getLastRow() + 1;
+  const g = RECHNUNG_SPALTEN.indexOf('Gesamt (€)');
+  sh.getRange(z, 1, 1, g).setNumberFormat('@');              // Datum, Nummern und Texte als Text, wie eingegeben
+  sh.getRange(z, g + 2, 1, werte.length - g - 1).setNumberFormat('@');
+  sh.getRange(z, g + 1).setNumberFormat('0.00');
+  sh.getRange(z, 1, 1, werte.length).setValues([werte]);
+  r.zeile = z;
+  return r;
+}
+
+// Bei der Bestellung die Rechnungsnummer eintragen (und wie bisher in der Seriennummernliste)
+function rechnungAnBestellung(nr, re) {
+  if (!nr) return 0;
+  const sheet = blatt(), kopf = spaltenSicherstellen(sheet);
+  let zeile;
+  try { zeile = zeileFinden(sheet, kopf, 0, nr); } catch (e) { return 0; }
+  sheet.getRange(zeile, kopf.indexOf('Rechnungsnr.') + 1).setValue(re);
+  const b = bestellungLesen(sheet, kopf, zeile);
+  try { return b.seriennummern && re ? serienListeSetzen(b.nr, 'Rechnungsnr.', re) : 0; } catch (e) { return 0; }
+}
+
+// Rechnung festschreiben: Nummer vergeben, Zeile anhängen – danach unveränderlich
+function rechnungErstellen(data) {
+  const e = data.rechnung || {};
+  const heute = Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy');
+  const pos = rechnungPositionen(e.positionen);
+  const gesamt = rechnungSumme(pos);
+  if (!(gesamt > 0)) throw fehler('rechnung_betrag', 'Der Rechnungsbetrag muss größer als 0 sein');
+  const empfaenger = rechnungText(e.empfaenger, 400);
+  if (!empfaenger) throw fehler('rechnung_empfaenger', 'Empfänger eintragen');
+  if (gesamt > RECHNUNG_KLEINBETRAG && empfaenger.split('\n').filter(function (x) { return x.trim(); }).length < 3) {
+    throw fehler('rechnung_anschrift', 'Über ' + RECHNUNG_KLEINBETRAG + ' € braucht die Rechnung Name und vollständige Anschrift');
+  }
+  const bestellnr = rechnungText(e.bestellnr, 40);
+  const alle = rechnungenAlle();
+  if (bestellnr) {
+    const offen = alle.filter(function (r) { return r.bestellnr === bestellnr && r.art === 'Rechnung' && !r.storniertDurch; });
+    if (offen.length) throw fehler('rechnung_vorhanden', 'Für ' + bestellnr + ' gibt es schon die Rechnung ' + offen[0].nr);
+  }
+  const r = {
+    nr: rechnungNaechsteNr(alle), art: 'Rechnung',
+    datum: rechnungDatumOk(e.datum) ? e.datum : heute,
+    leistungsdatum: rechnungDatumOk(e.leistungsdatum) ? e.leistungsdatum : (rechnungDatumOk(e.datum) ? e.datum : heute),
+    bestellnr: bestellnr, betreff: rechnungText(e.betreff, 200), empfaenger: empfaenger, positionen: pos, gesamt: gesamt,
+    hinweis: rechnungText(e.hinweis, 600), seriennummern: rechnungText(e.seriennummern, 300), bezug: '', storniertDurch: ''
+  };
+  rechnungZeileSchreiben(rechnungBlatt(), r);
+  const inListe = rechnungAnBestellung(bestellnr, r.nr);
+  return { ok: true, rechnung: r, inListe: inListe, absender: rechnungAbsender() };
+}
+
+// Stornorechnung: gleiche Positionen mit negativem Betrag, Nummer <Nr>-S; die alte Rechnung wird als storniert markiert
+function rechnungStornieren(data) {
+  const nr = rechnungText(data.nr, 20);
+  const alle = rechnungenAlle();
+  const alt = alle.filter(function (r) { return r.nr === nr; })[0];
+  if (!alt || alt.art !== 'Rechnung') throw fehler('rechnung_nicht_gefunden', 'Rechnung ' + nr + ' nicht gefunden');
+  if (alt.storniertDurch) throw fehler('rechnung_storniert', nr + ' ist schon storniert');
+  const heute = Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy');
+  const pos = alt.positionen.map(function (p) { return { text: p.text, menge: p.menge, preis: -p.preis }; });
+  const s = { nr: nr + '-S', art: 'Storno', datum: heute, leistungsdatum: alt.leistungsdatum, bestellnr: alt.bestellnr,
+    betreff: 'Storno zur Rechnung ' + nr + (alt.betreff ? ' – ' + alt.betreff : ''), empfaenger: alt.empfaenger,
+    positionen: pos, gesamt: rechnungSumme(pos), hinweis: rechnungText(data.grund, 300), seriennummern: alt.seriennummern,
+    bezug: nr, storniertDurch: '' };
+  const sh = rechnungBlatt();
+  rechnungZeileSchreiben(sh, s);
+  sh.getRange(alt.zeile, RECHNUNG_SPALTEN.indexOf('Storniert durch') + 1).setValue(s.nr);
+  rechnungAnBestellung(alt.bestellnr, '');
+  return { ok: true, rechnung: s, absender: rechnungAbsender() };
 }
 
 /* ---------------- 7) Etsy ---------------- */
