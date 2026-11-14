@@ -118,9 +118,9 @@ async function sha1(str) {
 // Farbnamen müssen exakt wie im Konfigurator der Website heissen
 let MEDIEN_VARIANTEN = {
   'Party':                { slug: 'party',         farben: ['Rosa mit Punkten', 'Grau mit Punkten', 'Mint mit Punkten', 'Lila mit Punkten', 'Petrol mit Punkten', 'Konfetti', 'Weiss/Blau/Grün'] },
-  'Einfarbig':            { slug: 'uni',           farben: ['Berry', 'Blau', 'Grün', 'Orange'] },
+  'Einfarbig':            { slug: 'uni',           farben: ['Berry', 'Blau', 'Dunkelblau', 'Grün', 'Orange'] },
   'Glitzer':              { slug: 'glitzer',       farben: ['Blau', 'Türkis', 'Rosa', 'Pink', 'Silber', 'Weiss', 'Gold'] },
-  'Edel & Wild':          { slug: 'edel',          farben: ['Gold', 'Schwarz', 'Leo Braun', 'Leo Weiss', 'Leopard'] },
+  'Edel & Wild':          { slug: 'edel',          farben: ['Gold', 'Schwarz', 'Rosa', 'Leo Braun', 'Leo Weiss', 'Leopard'] },
   'Zahlenkrone Klassik':  { slug: 'zahl-klassik',  farben: ['Rosa', 'Mint', 'Weiss/bunte Punkte'] },
   'Zahlenkrone Leo':      { slug: 'zahl-leo',      farben: ['Gold / Zahlen schwarz', 'Schwarz / Zahlen gold'] },
   'Zahlenkrone Glitzer':  { slug: 'zahl-glitzer',  farben: ['Zahlen schwarz', 'Zahlen weiss'] },

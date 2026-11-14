@@ -88,7 +88,7 @@ test.describe('Namenskronen', () => {
     await openShop(page);
     await page.click('.chip[data-v="Einfarbig"]');
     const farben = await page.$$eval('#colorChips [data-c]', e => e.map(x => x.dataset.c));
-    expect(farben).toEqual(['Berry', 'Blau', 'Grün', 'Orange']);
+    expect(farben).toEqual(['Berry', 'Blau', 'Dunkelblau', 'Grün', 'Orange']);
   });
 
   test('Leo-Muster ohne Namensaufdruck', async ({ page }) => {
