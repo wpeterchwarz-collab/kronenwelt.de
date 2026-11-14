@@ -46,6 +46,7 @@ let PRODUKT_FOTOS = [
   { key: 'party-weiss-blau-gruen', label: 'Party – Weiss/Blau/Grün',        variant: 'Party'       },
   { key: 'uni-berry',              label: 'Einfarbig – Berry',              variant: 'Einfarbig'   },
   { key: 'uni-blau',               label: 'Einfarbig – Blau',               variant: 'Einfarbig'   },
+  { key: 'uni-dunkelblau',         label: 'Einfarbig – Dunkelblau',         variant: 'Einfarbig'   },
   { key: 'uni-gruen',              label: 'Einfarbig – Grün',               variant: 'Einfarbig'   },
   { key: 'uni-orange',             label: 'Einfarbig – Orange',             variant: 'Einfarbig'   },
   { key: 'glitzer-blau',           label: 'Glitzer – Blau',                 variant: 'Glitzer'     },

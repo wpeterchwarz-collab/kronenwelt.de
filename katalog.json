@@ -201,7 +201,7 @@
       "texte": {
         "kurz": "Einfarbige Hundekrone aus weichem Filz mit Bommeln, personalisiert mit dem Namen deines Hundes.",
         "googleTitel": "Einfarbige Hundekrone mit Namen",
-        "googleText": "Einfarbige Hundekrone aus weichem Filz mit handgefertigten Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen)."
+        "googleText": "Einfarbige Hundekrone aus weichem Filz mit Bommeln, personalisiert mit dem Namen deines Hundes (bis 11 Zeichen)."
       },
       "merkmale": {
         "farbe": [
@@ -225,6 +225,17 @@
               "sc": "#507090",
               "dot": "#6090b0",
               "css": "chip-blau"
+            }
+          },
+          {
+            "wert": "Dunkelblau",
+            "kuerzel": "DBLAU",
+            "foto": "uni-dunkelblau",
+            "anzeige": {
+              "bg": "#e4e7ee",
+              "sc": "#2e3548",
+              "dot": "#3a4258",
+              "css": ""
             }
           },
           {
@@ -436,6 +447,17 @@
               "sc": "#d4b840",
               "dot": "#b89828",
               "css": "chip-royal"
+            }
+          },
+          {
+            "wert": "Rosa",
+            "kuerzel": "ROSA",
+            "foto": "edel-rosa",
+            "anzeige": {
+              "bg": "#f8ecea",
+              "sc": "#9a6a6e",
+              "dot": "#e6c4c2",
+              "css": ""
             }
           },
           {
