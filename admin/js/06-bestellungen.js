@@ -463,8 +463,11 @@ function positionsPreis(p) {
   const auf = isZahlVariante(p.variante) && p.pets !== 3 ? ((currentPrices[AUFPREIS_KEY] || {})[p.pets + ' Pets'] || 0) : 0;
   return Math.round((basis + auf) * 100) / 100;
 }
+// Ist der Etsy-Shop verbunden, kommen Etsy-Bestellungen von selbst – von Hand wird dann vor allem Amazon eingetragen
+const etsyKommtVonSelbst = () => typeof etsyStand !== 'undefined' && etsyStand === 'verbunden';
 function formularOeffnen() {
-  formular = { kanal: 'Etsy', kiste: kisteFuerKanal('Etsy'), datum: heuteIso(), zahlung: 'Etsy', status: 'Neu', kunde: '', email: '', adresse: '', notiz: '', positionen: [neuePosition()],
+  const kanal = etsyKommtVonSelbst() ? 'Amazon' : 'Etsy';
+  formular = { kanal, kiste: kisteFuerKanal(kanal), datum: heuteIso(), zahlung: ZAHLART_JE_KANAL[kanal] || kanal, status: 'Neu', kunde: '', email: '', adresse: '', notiz: '', positionen: [neuePosition()],
     plattformNr: '', direkt: false, sendung: '', mk: [], mkEintragen: true, rechnungsnr: '' };
   renderFormular();
   document.getElementById('bestFormular').scrollIntoView({ block: 'start' });
@@ -497,7 +500,9 @@ function renderFormular() {
   const summe = f.positionen.reduce((n, p) => n + preis(p), 0);
   box.innerHTML = `<div class="card bf">
     <div class="card-title">Bestellung von Hand</div>
-    <div class="card-sub">Für Verkäufe über Etsy, Amazon oder auf dem Markt. Sie landen in derselben Tabelle wie die Webshop-Bestellungen.</div>
+    <div class="card-sub">${etsyKommtVonSelbst() ? 'Für Verkäufe über Amazon, auf dem Markt oder über Instagram' : 'Für Verkäufe über Etsy, Amazon oder auf dem Markt'}. Sie landen in derselben Tabelle wie die Webshop-Bestellungen.</div>
+    ${f.kanal === 'Etsy' && etsyKommtVonSelbst() ? `<div class="hinweis" id="bfEtsyHinweis"><b>Etsy-Bestellungen kommen von selbst.</b> Fehlt eine, hilft meist „Aktualisieren“ über der Liste.
+      Von Hand nur eintragen, wenn die Bestellung vor dem Verbinden mit Etsy einging – dann bitte mit der Etsy-Bestellnummer, damit sie nicht doppelt in die Liste kommt.</div>` : ''}
     <div class="bf-grid">
       <div><label for="bfKanal">Kanal</label><select id="bfKanal" onchange="formularFeld('kanal', this.value)">${opt(KANAELE, f.kanal)}</select></div>
       <div><label for="bfDatum">Datum</label><input id="bfDatum" type="date" value="${f.datum}" onchange="formularFeld('datum', this.value)"></div>
@@ -566,6 +571,11 @@ async function formularSpeichern() {
   const f = formular;
   const preis = p => f.kanal === 'Spende' ? 0 : p.preis != null && !isNaN(p.preis) ? p.preis : positionsPreis(p);
   if (f.kanal !== 'Markt' && !f.kunde.trim()) { showStatus('Bitte den Kundennamen eintragen.', 'error'); return; }
+  // Etsy/Amazon: dieselbe Bestellnummer nie zweimal – sonst zählen Umsatz und Lager doppelt
+  const pNr = (f.kanal === 'Etsy' || f.kanal === 'Amazon') ? String(f.plattformNr || '').trim() : '';
+  if (f.kanal === 'Etsy' && etsyKommtVonSelbst() && !pNr) { showStatus('Bitte die Etsy-Bestellnummer eintragen – sonst kommt die Bestellung beim nächsten Abruf doppelt.', 'error'); return; }
+  const doppelt = pNr && (bestellungen || []).find(b => b.kanal === f.kanal && String(b.plattformNr || '').trim() === pNr);
+  if (doppelt) { showStatus('Diese ' + f.kanal + '-Bestellung steht schon in der Liste (' + doppelt.nr + ').', 'error'); return; }
   const [jj, mm, tt] = (f.datum || heuteIso()).split('-');
   const daten = {
     kanal: f.kanal, kiste: f.kiste || '', datum: tt + '.' + mm + '.' + jj, zahlung: f.zahlung, status: f.status,
