@@ -7,8 +7,8 @@
 // = ein neuer Eintrag hier + ein <div id="tab-…" class="content">. Navigation, Unterreiter
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
-const ADMIN_VERSION = '1.3';
-const ADMIN_NEU = 'Etsy-Artikel lassen sich im Blatt „Etsy-Artikel“ den Kronen zuordnen, dann bucht auch bei Etsy-Bestellungen das Lager ab.';
+const ADMIN_VERSION = '1.4';
+const ADMIN_NEU = 'Etsy-Bestellungen kommen von selbst; „+ Bestellung“ ist jetzt für Amazon, Markt und Instagram gedacht und verhindert doppelte Etsy-Einträge.';
 const ICON = {
   start:    '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/></svg>',
   bestellungen: '<svg viewBox="0 0 24 24"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5"/><path d="M12 12v9"/></svg>',

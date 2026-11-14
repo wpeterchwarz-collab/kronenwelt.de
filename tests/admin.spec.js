@@ -1333,6 +1333,34 @@ test.describe('Admin: Etsy', () => {
     await expect(page.locator('#etsyStatus')).toContainText('nicht erlaubt');
   });
 
+  test('Etsy verbunden: „+ Bestellung“ startet mit Amazon; Etsy von Hand nur mit Bestellnummer und nie doppelt', async ({ page }) => {
+    const etsy = { receipts: [etsyBestellung(98765)] };
+    const t = await openAdmin(page, [], { seite: '#einstellungen', api: true, etsy });
+    await etsySeite(page);
+    await page.getByRole('button', { name: 'Mit Etsy verbinden' }).click();
+    await expect(page.locator('#etsyStatus')).toContainText('Mit dem Etsy-Shop verbunden');
+    await page.goto('/admin.html#bestellungen');
+    await page.getByRole('button', { name: 'Aktualisieren' }).click();
+    await expect(page.locator('#bestListe')).toContainText('Erika Etsy');
+    const zeilen = t.daten.length;
+    await page.click('#btnNeueBestellung');
+    await expect(page.locator('#bfKanal')).toHaveValue('Amazon');
+    await expect(page.locator('#bfEtsyHinweis')).toHaveCount(0);
+    await page.selectOption('#bfKanal', 'Etsy');
+    await expect(page.locator('#bfEtsyHinweis')).toContainText('kommen von selbst');
+    await page.fill('#bfKunde', 'Erika Etsy');
+    await page.click('#bfSpeichern');                                   // ohne Etsy-Nummer
+    await expect(page.locator('#statusText')).toContainText('Etsy-Bestellnummer eintragen');
+    await page.fill('#bfPlattformNr', '98765');                         // schon vom Abruf übernommen
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toContainText('steht schon in der Liste');
+    expect(t.daten.length).toBe(zeilen);
+    await page.fill('#bfPlattformNr', '11111');                         // ältere Bestellung von vor dem Verbinden
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/Bestellung KW-\d{8}-\d{3} gespeichert/);
+    expect(t.daten.length).toBe(zeilen + 1);
+  });
+
   test('„Etsy-Artikel abgleichen“ füllt das Blatt und meldet, wie viele noch offen sind', async ({ page }) => {
     const preis = { amount: 1200, divisor: 100 };
     const etsy = { listings: [{ listing_id: 1, title: 'Personalisierte handgemachte Hundekrone, individuelle Krone, perfekt für Geburtstag und Fotoshooting mit Hund, berry', price: preis },
