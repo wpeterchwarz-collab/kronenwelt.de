@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.9', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.10', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -715,7 +715,7 @@ test.describe('Schnittstelle: GitHub und Cloudinary über das Apps Script (1.8)'
   });
 });
 
-test.describe('Schnittstelle: Etsy (1.9)', () => {
+test.describe('Schnittstelle: Etsy (ab 1.9)', () => {
   const JETZT = Math.floor(Date.now() / 1000);
   const receipt = (id, extra = {}) => Object.assign({
     receipt_id: id, status: 'paid', name: 'Erika Etsy', buyer_email: '', created_timestamp: JETZT + 60,
@@ -866,6 +866,92 @@ test.describe('Schnittstelle: Etsy (1.9)', () => {
     expect(u.daten.length).toBe(2);
     etsy.abgelaufen = true;
     expect(() => u.ctx.etsyAutomatisch()).not.toThrow();
+  });
+
+  // ---- Blatt „Etsy-Artikel“ (1.10) ----
+  const KRONE = 'Personalisierte handgemachte Hundekrone, individuelle Krone, perfekt für Geburtstag und Fotoshooting mit Hund, ';
+  const artikel = (id, titel, preis) => ({ listing_id: id, title: titel, price: { amount: preis * 100, divisor: 100, currency_code: 'EUR' } });
+  const LISTE = [artikel(11, KRONE + 'berry', 12), artikel(12, KRONE + 'rosa', 12), artikel(13, KRONE + 'rosa', 14),
+    artikel(14, KRONE + 'blau', 12), artikel(15, KRONE + 'blau', 12), artikel(16, KRONE + 'blau', 14),
+    artikel(17, 'Krone mit Leo Muster, Hundekrone, Geburtstag', 14), artikel(18, 'Nikolausmütze, Weihnachtsmütze, Hundemütze,  personalisiert', 14),
+    artikel(19, 'Handgemachte Hundekrone Leo,  mit austauschbaren Zahlen nach Wahl,  perfekt für Geburtstag und Fotoshooting mit Hund', 18)];
+  const zeile = (u, id) => { const b = u.blatt('Etsy-Artikel'); const z = b.find(x => x[0] === String(id)); return z && { krone: z[3], farbe: z[4], hinweis: z[5] }; };
+  const position = (id, titel, variations, extra = {}) => Object.assign({ listing_id: id, title: titel, quantity: 1, sku: '', variations }, extra);
+
+  test('Abgleich legt je Etsy-Artikel eine Zeile an; Vorschläge nur, wo Titel (und Preis) eindeutig sind', async () => {
+    const u = umgebung([], S, { etsy: { listings: LISTE, seite: 4 } });
+    verbinden(u);
+    expect(u.post({ aktion: 'etsyArtikel', schluessel: S })).toEqual({ ok: true, neu: 9, gesamt: 9, offen: 3 });
+    expect(u.blatt('Etsy-Artikel')[0]).toEqual(['Etsy-Nr.', 'Titel', 'Preis (€)', 'Krone', 'Farbe', 'Hinweis']);
+    expect(zeile(u, 11)).toMatchObject({ krone: 'Einfarbig', farbe: 'Berry' });
+    expect(zeile(u, 12)).toMatchObject({ krone: 'Party', farbe: 'Rosa mit Punkten' });      // rosa für 12 €
+    expect(zeile(u, 13)).toMatchObject({ krone: 'Edel & Wild', farbe: 'Rosa' });            // rosa für 14 €
+    expect(zeile(u, 14)).toMatchObject({ krone: '', farbe: '' });                           // blau für 12 € gibt es zweimal: kein Vorschlag
+    expect(zeile(u, 15).hinweis).toContain('Bitte Krone und Farbe eintragen');
+    expect(zeile(u, 16)).toMatchObject({ krone: 'Glitzer', farbe: 'Blau' });
+    expect(zeile(u, 18)).toMatchObject({ krone: '' });                                      // nicht im Katalog
+  });
+
+  test('zweiter Abgleich: nichts doppelt, Eingetragenes bleibt, neue Etsy-Artikel kommen dazu', async () => {
+    const etsy = { listings: LISTE.slice(0, 5) };
+    const u = umgebung([], S, { etsy });
+    verbinden(u);
+    u.post({ aktion: 'etsyArtikel', schluessel: S });
+    const b = u.blatt('Etsy-Artikel');
+    b.find(x => x[0] === '14')[3] = 'Einfarbig'; b.find(x => x[0] === '14')[4] = 'Blau';     // Sara trägt ein
+    etsy.listings = LISTE;
+    expect(u.post({ aktion: 'etsyArtikel', schluessel: S })).toEqual({ ok: true, neu: 4, gesamt: 9, offen: 2 });
+    expect(zeile(u, 14)).toMatchObject({ krone: 'Einfarbig', farbe: 'Blau' });
+    expect(b.filter(x => x[0] === '14').length).toBe(1);
+  });
+
+  test('Bestellung zu einem zugeordneten Etsy-Artikel: Krone aus dem Katalog, Lager aus der Etsy-Kiste', async () => {
+    const t = position(11, KRONE + 'berry', [{ formatted_name: 'Größe', formatted_value: 'Extra mini' }, { formatted_name: 'Personalisierung', formatted_value: 'BELLO' }]);
+    const u = umgebung([], S, { etsy: { listings: LISTE, receipts: [receipt(501, { transactions: [t] })] } });
+    verbinden(u); etsyAb(u);
+    u.post({ aktion: 'etsyArtikel', schluessel: S });
+    u.post({ aktion: 'etsyAbruf', schluessel: S });
+    expect(u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0]).toMatchObject({ variante: 'Einfarbig', farbe: 'Berry',
+      groesse: 'Extra Mini', personalisierung: 'BELLO', artikel: 'KR-UNI-BERRY-XM', kiste: 'Etsy', notiz: '' });
+    const lager = u.blatt('Lagerbewegungen');
+    expect(lager.find(x => x.includes('KR-UNI-BERRY-XM'))[lager[0].indexOf('Menge')]).toBe(-1);
+  });
+
+  test('Farbe hängt von der Etsy-Variante ab (Leo Muster); Zahlenkrone: Lager-Nummer BASIS, Pet-Anzahl bleibt lesbar', async () => {
+    const leo = position(17, 'Krone mit Leo Muster, Hundekrone, Geburtstag', [{ formatted_name: 'Größe', formatted_value: 'Klein' }, { formatted_name: 'Leo Muster', formatted_value: 'Großes Muster' }]);
+    const zahl = position(19, LISTE[8].title, [{ formatted_name: 'Größe und Anzahl der Zahlenpets', formatted_value: 'Groß + 6 Pet' }, { formatted_name: 'Farbe der Pets', formatted_value: 'Schwarz/Zahlen gold' }]);
+    const u = umgebung([], S, { etsy: { listings: LISTE, receipts: [receipt(502, { transactions: [leo, zahl] })] } });
+    verbinden(u); etsyAb(u);
+    u.post({ aktion: 'etsyArtikel', schluessel: S });
+    u.post({ aktion: 'etsyAbruf', schluessel: S });
+    const b = u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0];
+    expect(b).toMatchObject({ variante: 'Edel & Wild, Zahlenkrone Leo', farbe: 'Leopard, Schwarz / Zahlen gold', groesse: 'Klein, Gross + 6 Pet', kiste: 'Etsy' });
+    expect(b.artikel).toBe('KR-EDEL-LEOPARD-KL, ' + b.artikel.split(', ')[1]);
+    expect(b.artikel.split(', ')[1]).toMatch(/^KR-[A-Z]+-[A-Z]+-GR$/);
+  });
+
+  test('Krone im Blatt, aber Farbe noch nicht im Katalog (Edel & Wild Rosa): Name steht richtig da, Lager bucht nicht', async () => {
+    const t = position(13, KRONE + 'rosa', [{ formatted_name: 'Größe', formatted_value: 'Mini' }]);
+    const u = umgebung([], S, { etsy: { listings: LISTE, receipts: [receipt(503, { transactions: [t] })] } });
+    verbinden(u); etsyAb(u);
+    u.post({ aktion: 'etsyArtikel', schluessel: S });
+    u.post({ aktion: 'etsyAbruf', schluessel: S });
+    expect(u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0]).toMatchObject({ variante: 'Edel & Wild', farbe: 'Rosa', groesse: 'Mini', artikel: '', kiste: 'nicht vom Lager' });
+    expect(u.blatt('Lagerbewegungen')).toBeUndefined();
+  });
+
+  test('freie Bezeichnung im Blatt (nicht im Katalog) steht in der Bestellung; unbekannter Etsy-Artikel wird im Blatt nachgetragen', async () => {
+    const muetze = position(18, LISTE[7].title, [{ formatted_name: 'Größe', formatted_value: 'Groß' }, { formatted_name: 'Farbe', formatted_value: 'Rot' }]);
+    const fremd = position(99, 'Ganz neuer Artikel, noch nie gesehen', []);
+    const u = umgebung([], S, { etsy: { listings: LISTE, receipts: [receipt(504, { transactions: [muetze, fremd] })] } });
+    verbinden(u); etsyAb(u);
+    u.post({ aktion: 'etsyArtikel', schluessel: S });
+    u.blatt('Etsy-Artikel').find(x => x[0] === '18')[3] = 'Nikolausmütze';
+    u.post({ aktion: 'etsyAbruf', schluessel: S });
+    const b = u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0];
+    expect(b.variante).toBe('Nikolausmütze, Ganz neuer Artikel / noch nie gesehen');
+    expect(b.farbe).toMatch(/^Rot,/);
+    expect(zeile(u, 99)).toMatchObject({ krone: '', hinweis: expect.stringContaining('Bitte Krone') });
   });
 
   test('Trennen löscht die Tokens, der Zugang bleibt eingetragen', async () => {

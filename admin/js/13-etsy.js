@@ -32,7 +32,8 @@ function etsyKarteZeigen() {
   if (!apiKonfiguriert()) { box.textContent = 'Zuerst oben die Verbindung zur Google-Tabelle einrichten.'; knoepfe.innerHTML = ''; return; }
   if (etsyStand === 'verbunden') {
     box.textContent = '✓ Mit dem Etsy-Shop verbunden. Neue Etsy-Bestellungen erscheinen unter „Bestellungen“.';
-    knoepfe.innerHTML = knopf('Jetzt abrufen', 'etsyAbrufKlick()') + knopf('Verbindung trennen', 'etsyTrennenKlick()', 'btn-outline');
+    knoepfe.innerHTML = knopf('Jetzt abrufen', 'etsyAbrufKlick()') + knopf('Etsy-Artikel abgleichen', 'etsyArtikelKlick()')
+      + knopf('Verbindung trennen', 'etsyTrennenKlick()', 'btn-outline');
   } else if (etsyStand === 'eingerichtet') {
     box.textContent = 'Der Etsy-Zugang ist eingetragen. Jetzt einmal bei Etsy den Zugriff auf den Shop erlauben.';
     knoepfe.innerHTML = knopf('Mit Etsy verbinden', 'etsyVerbindenKlick()', 'btn-primary');
@@ -99,6 +100,18 @@ async function etsyHolen(still) {
 
 async function etsyAbrufKlick() {
   if (await etsyHolen(false)) ladeBestellungen(true);
+}
+
+// Blatt „Etsy-Artikel“ in der Google-Tabelle auffüllen: je Etsy-Artikel eine Zeile, in der die passende Krone steht
+async function etsyArtikelKlick() {
+  try {
+    const r = await schnittstelle('etsyArtikel');
+    etsyMeldung = '';
+    showStatus(r.gesamt + ' Etsy-Artikel im Blatt „Etsy-Artikel“' + (r.neu ? ' (' + r.neu + ' neu)' : '')
+      + (r.offen ? ', ' + r.offen + ' noch ohne Krone.' : ', alle zugeordnet ✓'));
+  } catch (e) {
+    showStatus('Etsy: ' + etsyFehlerText(e), 'error');
+  }
 }
 
 async function etsyTrennenKlick() {

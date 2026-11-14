@@ -1333,6 +1333,18 @@ test.describe('Admin: Etsy', () => {
     await expect(page.locator('#etsyStatus')).toContainText('nicht erlaubt');
   });
 
+  test('„Etsy-Artikel abgleichen“ füllt das Blatt und meldet, wie viele noch offen sind', async ({ page }) => {
+    const preis = { amount: 1200, divisor: 100 };
+    const etsy = { listings: [{ listing_id: 1, title: 'Personalisierte handgemachte Hundekrone, individuelle Krone, perfekt für Geburtstag und Fotoshooting mit Hund, berry', price: preis },
+      { listing_id: 2, title: 'Leo Handytasche', price: preis }] };
+    const t = await openAdmin(page, [], { seite: '#einstellungen', api: true, etsy });
+    await etsySeite(page);
+    await page.getByRole('button', { name: 'Mit Etsy verbinden' }).click();
+    await page.getByRole('button', { name: 'Etsy-Artikel abgleichen' }).click();
+    await expect(page.locator('#statusText')).toHaveText(/2 Etsy-Artikel im Blatt „Etsy-Artikel“ \(2 neu\), 1 noch ohne Krone/);
+    expect(t.blatt('Etsy-Artikel').length).toBe(3);
+  });
+
   test('„Aktualisieren“ holt neue Etsy-Bestellungen in die Liste; ein zweites Mal kommt nichts doppelt', async ({ page }) => {
     const etsy = { receipts: [] };
     const t = await openAdmin(page, [], { seite: '#einstellungen', api: true, etsy });

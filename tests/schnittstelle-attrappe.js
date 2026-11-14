@@ -34,7 +34,7 @@ function blattAttrappe(daten, geld, kaputt) {
 // blaetter = weitere Blätter { Name: [Zeilen inkl. Kopf] }, z. B. Lagerbewegungen; kaputt = Blätter, in die nicht geschrieben werden kann
 function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [], paypal = null, eigenschaften = {}, katalogText = null, serienliste = null, github = null, cloudinary = false, etsy = null } = {}) {
   // github = { dateien: { 'katalog.json': '…' } } → GITHUB_TOKEN ist gesetzt; cloudinary: true → CLOUDINARY_KEY/SECRET gesetzt
-  // etsy = { receipts: [Etsy-Bestellungen], shop: 4711, falsch: true (Anmeldung scheitert), abgelaufen: true (Zugriffs-Token ungültig) }
+  // etsy = { receipts: [Etsy-Bestellungen], listings: [Etsy-Artikel], shop: 4711, falsch: true (Anmeldung scheitert), abgelaufen: true (Zugriffs-Token ungültig) }
   //        → ETSY_KEYSTRING/ETSY_SECRET sind gesetzt; etsy.tokenAbrufe zählt die Token-Anfragen
   // paypal = { orders: { ID: PayPal-Antwort }, falsch: true (Anmeldung scheitert) } → PAYPAL_CLIENT_ID/SECRET sind gesetzt
   // serienliste = Zeilen von Saras GPSR-Liste (inkl. Kopf) → eigene Tabelle, SERIENLISTE_ID ist gesetzt
@@ -84,6 +84,11 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
       if (m) {
         const alle = (etsy.receipts || []).filter(r => (r.created_timestamp || 0) >= Number(m[1]));
         return antwortVon(200, { count: alle.length, results: alle.slice(Number(m[2]), Number(m[2]) + (etsy.seite || 100)) });
+      }
+      const l = /^\/application\/shops\/4711\/listings\/active\?limit=100&offset=(\d+)$/.exec(pfad);
+      if (l) {
+        const alle = etsy.listings || [];
+        return antwortVon(200, { count: alle.length, results: alle.slice(Number(l[1]), Number(l[1]) + (etsy.seite || 100)) });
       }
       return antwortVon(404, { error: 'not found' });
     }
