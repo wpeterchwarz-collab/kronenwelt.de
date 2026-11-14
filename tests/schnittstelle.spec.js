@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.10', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.11', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -50,7 +50,7 @@ test.describe('Schnittstelle: Shop-Bestellung', () => {
       kunde_name: 'A B', kunde_email: 'a@b.de', lieferadresse: 'X 1' });
     expect(r.success).toBe(true);
     expect(daten[0].slice(0, 12)).toEqual(KOPF);                                  // alte Spalten unverändert
-    expect(daten[0].slice(12)).toEqual(['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft', 'Seriennummern', 'Rechnungsnr.', 'Plattform-Nr.']);
+    expect(daten[0].slice(12)).toEqual(['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft', 'Seriennummern', 'Rechnungsnr.', 'Plattform-Nr.', 'Shop']);
     const z = daten.at(-1);
     expect(z.slice(3, 9)).toEqual(['Glitzer', 'Blau', 'Gross', 'LUNA', 17, 'PayPal']);
     expect(z[spalte(daten, 'Status')]).toBe('Neu');
@@ -882,7 +882,8 @@ test.describe('Schnittstelle: Etsy (ab 1.9)', () => {
     const u = umgebung([], S, { etsy: { listings: LISTE, seite: 4 } });
     verbinden(u);
     expect(u.post({ aktion: 'etsyArtikel', schluessel: S })).toEqual({ ok: true, neu: 9, gesamt: 9, offen: 3 });
-    expect(u.blatt('Etsy-Artikel')[0]).toEqual(['Etsy-Nr.', 'Titel', 'Preis (€)', 'Krone', 'Farbe', 'Hinweis']);
+    expect(u.blatt('Etsy-Artikel')[0]).toEqual(['Etsy-Nr.', 'Titel', 'Preis (€)', 'Krone', 'Farbe', 'Hinweis', 'Shop']);
+    expect(u.blatt('Etsy-Artikel')[1][6]).toBe('MilasKronenwelt');
     expect(zeile(u, 11)).toMatchObject({ krone: 'Einfarbig', farbe: 'Berry' });
     expect(zeile(u, 12)).toMatchObject({ krone: 'Party', farbe: 'Rosa mit Punkten' });      // rosa für 12 €
     expect(zeile(u, 13)).toMatchObject({ krone: 'Edel & Wild', farbe: 'Rosa' });            // rosa für 14 €
@@ -930,13 +931,14 @@ test.describe('Schnittstelle: Etsy (ab 1.9)', () => {
     expect(b.artikel.split(', ')[1]).toMatch(/^KR-[A-Z]+-[A-Z]+-GR$/);
   });
 
-  test('Krone im Blatt, aber Farbe noch nicht im Katalog (Edel & Wild Rosa): Name steht richtig da, Lager bucht nicht', async () => {
+  test('Krone im Blatt, aber Farbe (noch) nicht im Katalog: Name steht richtig da, Lager bucht nicht', async () => {
     const t = position(13, KRONE + 'rosa', [{ formatted_name: 'Größe', formatted_value: 'Mini' }]);
     const u = umgebung([], S, { etsy: { listings: LISTE, receipts: [receipt(503, { transactions: [t] })] } });
     verbinden(u); etsyAb(u);
     u.post({ aktion: 'etsyArtikel', schluessel: S });
+    u.blatt('Etsy-Artikel').find(x => x[0] === '13')[4] = 'Regenbogen';
     u.post({ aktion: 'etsyAbruf', schluessel: S });
-    expect(u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0]).toMatchObject({ variante: 'Edel & Wild', farbe: 'Rosa', groesse: 'Mini', artikel: '', kiste: 'nicht vom Lager' });
+    expect(u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0]).toMatchObject({ variante: 'Edel & Wild', farbe: 'Regenbogen', groesse: 'Mini', artikel: '', kiste: 'nicht vom Lager' });
     expect(u.blatt('Lagerbewegungen')).toBeUndefined();
   });
 
@@ -954,10 +956,133 @@ test.describe('Schnittstelle: Etsy (ab 1.9)', () => {
     expect(zeile(u, 99)).toMatchObject({ krone: '', hinweis: expect.stringContaining('Bitte Krone') });
   });
 
+  // ---- zweiter Etsy-Shop (1.11) ----
+  const verbindenKonto = (u, konto) => {
+    const start = u.post({ aktion: 'etsyStart', schluessel: S, konto });
+    return u.post({ aktion: 'etsyCode', schluessel: S, code: 'CODE', state: new URL(start.url).searchParams.get('state') });
+  };
+
+  test('zweiter Shop: eigener Zugang, eigener Anmeldelink, Shopname wird gemerkt', async () => {
+    const u = umgebung([], S, { etsy: { zwei: {} } });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsyKonten).toEqual([
+      { konto: '1', status: 'eingerichtet', shop: '' }, { konto: '2', status: 'eingerichtet', shop: '' }]);
+    const start = new URL(u.post({ aktion: 'etsyStart', schluessel: S, konto: '2' }).url);
+    expect(start.searchParams.get('client_id')).toBe('ETSY2-KEY');
+    expect(verbindenKonto(u, '2')).toMatchObject({ ok: true, konto: '2', shopName: 'Sternenstaubhandmade' });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsyKonten).toEqual([
+      { konto: '1', status: 'eingerichtet', shop: '' }, { konto: '2', status: 'verbunden', shop: 'Sternenstaubhandmade' }]);
+    expect(u.props.ETSY_TOKEN).toBeUndefined();                       // Konto 1 bleibt unberührt
+  });
+
+  test('ohne zweiten Zugang: Konto 2 meldet „fehlt“ und nennt die Eigenschaften', async () => {
+    const u = umgebung([], S, { etsy: {} });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsyKonten[1]).toEqual({ konto: '2', status: 'fehlt', shop: '' });
+    expect(u.post({ aktion: 'etsyStart', schluessel: S, konto: '2' })).toMatchObject({ ok: false, fehler: 'etsy_fehlt' });
+  });
+
+  test('Abruf holt aus beiden Shops; der Shopname steht in der Bestellung und im Etsy-Artikel-Blatt', async () => {
+    const a = receipt(701), b = receipt(702, { name: 'Bernd Zwei', transactions: [position(55, 'Krone aus dem zweiten Shop', [])] });
+    const u = umgebung([], S, { etsy: { receipts: [a], zwei: { receipts: [b] } } });
+    verbindenKonto(u, '1'); verbindenKonto(u, '2');
+    u.props.ETSY_AB = String(JETZT); u.props.ETSY2_AB = String(JETZT);
+    expect(u.post({ aktion: 'etsyAbruf', schluessel: S }).neu).toBe(2);
+    const liste = u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen;
+    expect(liste.find(x => x.plattformNr === '701').shop).toBe('MilasKronenwelt');
+    expect(liste.find(x => x.plattformNr === '702')).toMatchObject({ shop: 'Sternenstaubhandmade', kanal: 'Etsy', kiste: 'nicht vom Lager' });
+    expect(u.blatt('Etsy-Artikel').find(x => x[0] === '55')[6]).toBe('Sternenstaubhandmade');
+    expect(u.post({ aktion: 'etsyAbruf', schluessel: S }).neu).toBe(0);
+  });
+
+  test('derselbe Shop kann nicht unter beiden Konten verbunden werden', async () => {
+    const u = umgebung([], S, { etsy: { zwei: { shop: 4711 } } });
+    verbindenKonto(u, '1');
+    expect(verbindenKonto(u, '2')).toMatchObject({ ok: false, fehler: 'etsy_doppelt' });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsyKonten[1].status).toBe('eingerichtet');
+  });
+
+  test('Trennen betrifft nur das gewählte Konto', async () => {
+    const u = umgebung([], S, { etsy: { zwei: {} } });
+    verbindenKonto(u, '1'); verbindenKonto(u, '2');
+    u.post({ aktion: 'etsyTrennen', schluessel: S, konto: '2' });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsyKonten.map(x => x.status)).toEqual(['verbunden', 'eingerichtet']);
+  });
+
   test('Trennen löscht die Tokens, der Zugang bleibt eingetragen', async () => {
     const u = umgebung([], S, { etsy: {} });
     verbinden(u);
-    expect(u.post({ aktion: 'etsyTrennen', schluessel: S })).toEqual({ ok: true, etsy: 'eingerichtet' });
+    expect(u.post({ aktion: 'etsyTrennen', schluessel: S })).toMatchObject({ ok: true, etsy: 'eingerichtet', konto: '1' });
     expect(u.props.ETSY_TOKEN).toBe('');
+  });
+});
+
+// ============================================================
+// Rechnungen (ersetzt Papierkram): Nummern ab R-01272, festgeschrieben unveränderlich, Storno mit -S
+// ============================================================
+test.describe('Schnittstelle: Rechnungen', () => {
+  const ETSY = ['14.11.2026', '10:00', 'KW-20261114-007', 'Zahlenkrone', 'Grün', 'Gross', '1,2,3', 22.5, 'Etsy',
+    'Rebecca Off', '', 'Rebecca Off\nHauptstr. 1\n12345 Musterstadt'];
+  const neu = (extra = {}) => ({ bestellnr: 'KW-20261114-007', datum: '14.11.2026', leistungsdatum: '14.11.2026',
+    betreff: 'Nr. 4232604021 über Etsy (MilasKronenwelt)', empfaenger: 'Rebecca Off\nHauptstr. 1\n12345 Musterstadt',
+    positionen: [{ text: 'Zahlenkrone, Grün, Groß', menge: 1, preis: 22.5 }], hinweis: 'Bezahlt über Etsy Payments am 14.11.2026',
+    seriennummern: 'MK-2025-320', ...extra });
+
+  test('erste Rechnung bekommt R-01272, steht im Blatt und bei der Bestellung', () => {
+    const t = umgebung([BESTELLUNG, ETSY], S, { eigenschaften: { RECHNUNG_IBAN: 'DE00 1234', RECHNUNG_TELEFON: '0170 1' } });
+    const leer = t.post({ aktion: 'rechnungen', schluessel: S });
+    expect(leer).toMatchObject({ ok: true, rechnungen: [], naechste: 'R-01272', absender: { name: 'Sternenstaub Handmade', iban: 'DE00 1234', telefon: '0170 1' } });
+    const r = t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu() });
+    expect(r).toMatchObject({ ok: true, rechnung: { nr: 'R-01272', art: 'Rechnung', gesamt: 22.5, datum: '14.11.2026' } });
+    const sh = t.blatt('Rechnungen');
+    expect(sh[0]).toEqual(['Rechnungsnr.', 'Art', 'Datum', 'Leistungsdatum', 'Bestellnr.', 'Betreff', 'Empfänger',
+      'Positionen', 'Gesamt (€)', 'Hinweis', 'Seriennummern', 'Bezug', 'Storniert durch', 'Erstellt']);
+    expect(sh[1].slice(0, 5)).toEqual(['R-01272', 'Rechnung', '14.11.2026', '14.11.2026', 'KW-20261114-007']);
+    expect(t.daten[2][spalte(t.daten, 'Rechnungsnr.')]).toBe('R-01272');
+    const liste = t.post({ aktion: 'rechnungen', schluessel: S });
+    expect(liste.naechste).toBe('R-01273');
+    expect(liste.rechnungen[0]).toMatchObject({ nr: 'R-01272', positionen: [{ text: 'Zahlenkrone, Grün, Groß', menge: 1, preis: 22.5 }], gesamt: 22.5 });
+  });
+
+  test('Gesamt rechnet die Schnittstelle selbst; Fehler bei leeren Positionen, 0 € und fehlendem Empfänger', () => {
+    const t = umgebung([BESTELLUNG, ETSY], S);
+    const r = t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu({ bestellnr: '', gesamt: 999,
+      positionen: [{ text: 'Krone', menge: 2, preis: 12.5 }, { text: 'Rabatt', menge: 1, preis: -5 }] }) });
+    expect(r.rechnung.gesamt).toBe(20);
+    expect(t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu({ positionen: [] }) }).fehler).toBe('rechnung_positionen');
+    expect(t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu({ positionen: [{ text: '', menge: 1, preis: 5 }] }) }).fehler).toBe('rechnung_positionen');
+    expect(t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu({ positionen: [{ text: 'X', menge: 1, preis: 0 }] }) }).fehler).toBe('rechnung_betrag');
+    expect(t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu({ empfaenger: ' ' }) }).fehler).toBe('rechnung_empfaenger');
+    expect(t.blatt('Rechnungen').length).toBe(2);
+  });
+
+  test('über 250 € braucht die Rechnung die volle Anschrift (Sonderanfertigung)', () => {
+    const t = umgebung([BESTELLUNG], S);
+    const gross = { bestellnr: '', positionen: [{ text: 'Messe-Ausstattung', menge: 1, preis: 485 }] };
+    expect(t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu({ ...gross, empfaenger: 'Firma X' }) }).fehler).toBe('rechnung_anschrift');
+    expect(t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu({ ...gross, empfaenger: 'Firma X\nMesseplatz 1\n68161 Mannheim' }) }).rechnung.nr).toBe('R-01272');
+  });
+
+  test('pro Bestellung nur eine gültige Rechnung; Storno macht -S mit Minusbetrag und gibt die Bestellung frei', () => {
+    const t = umgebung([BESTELLUNG, ETSY], S);
+    t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu() });
+    const vorher = t.blatt('Rechnungen')[1].slice(0, 12);
+    expect(t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu() })).toMatchObject({ ok: false, fehler: 'rechnung_vorhanden' });
+    const s = t.post({ aktion: 'rechnungStornieren', schluessel: S, nr: 'R-01272', grund: 'Falsche Farbe' });
+    expect(s).toMatchObject({ ok: true, rechnung: { nr: 'R-01272-S', art: 'Storno', gesamt: -22.5, bezug: 'R-01272', positionen: [{ preis: -22.5 }] } });
+    expect(t.daten[2][spalte(t.daten, 'Rechnungsnr.')]).toBe('');
+    expect(t.post({ aktion: 'rechnungStornieren', schluessel: S, nr: 'R-01272' }).fehler).toBe('rechnung_storniert');
+    expect(t.post({ aktion: 'rechnungStornieren', schluessel: S, nr: 'R-01272-S' }).fehler).toBe('rechnung_nicht_gefunden');
+    const neue = t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu() });
+    expect(neue.rechnung.nr).toBe('R-01273');                         // Storno zählt nicht als eigene Nummer
+    const liste = t.post({ aktion: 'rechnungen', schluessel: S }).rechnungen;
+    expect(liste.map(r => [r.nr, r.storniertDurch])).toEqual([['R-01273', ''], ['R-01272-S', ''], ['R-01272', 'R-01272-S']]);
+    // Die alte Rechnung selbst ist unverändert geblieben
+    expect(t.blatt('Rechnungen')[1].slice(0, 12)).toEqual(vorher);
+  });
+
+  test('ohne Schlüssel keine Rechnungen', () => {
+    const t = umgebung([BESTELLUNG], S);
+    expect(t.post({ aktion: 'rechnungen', schluessel: 'falsch' }).ok).toBe(false);
+    expect(t.post({ aktion: 'rechnungErstellen', schluessel: 'falsch', rechnung: neu() }).ok).toBe(false);
+    expect(t.blatt('Rechnungen')).toBeUndefined();
   });
 });

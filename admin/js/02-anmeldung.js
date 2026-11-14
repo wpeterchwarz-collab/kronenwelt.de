@@ -125,7 +125,7 @@ async function zugaengePruefen() {
   try {
     const r = await schnittstelle('ping');
     serverZugang = { github: r.github === 'eingerichtet', cloudinary: r.cloudinary === 'eingerichtet' };
-    etsyStand = r.etsy || '';
+    etsyStandSetzen(r);
   } catch (e) {
     return { github: false, cloudinary: false };          // nicht merken: beim nächsten Mal neu fragen
   }

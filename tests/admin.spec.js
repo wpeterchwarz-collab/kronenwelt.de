@@ -87,7 +87,7 @@ test('Admin: Hauptfoto zeigt den festen Namen aus dem Katalog', async ({ page })
   await openAdmin(page);
   await page.click('.subnav-item[data-seite="medien"]');
   const karte = page.locator('#medienList .fv-krone').filter({ has: page.locator('.fv-sum-name', { hasText: /^Glitzer$/ }) });
-  await karte.locator('summary').click();
+  await karte.locator("summary").first().click();
   await expect(karte.locator('.medien-tile.haupt')).toHaveAttribute('data-id', fotos['Glitzer']._default);
   await karte.locator('select').selectOption('Türkis');
   await expect(karte.locator('.medien-tile.haupt')).toHaveAttribute('data-id', fotos['Glitzer']['Türkis']);
@@ -145,7 +145,7 @@ test.describe('Admin: Navigation und Start', () => {
   test('ohne Adresse öffnet die Startseite, die Navigation zeigt alle Bereiche', async ({ page }) => {
     await openAdmin(page, [], { seite: '' });
     await expect(page.locator('#tab-start')).toBeVisible();
-    await expect(page.locator('.nav-item')).toHaveText(['Start', 'Bestellungen', 'Lager', 'Produkte', 'Galerie', 'Einstellungen']);
+    await expect(page.locator('.nav-item')).toHaveText(['Start', 'Bestellungen', 'Rechnungen', 'Lager', 'Produkte', 'Galerie', 'Einstellungen']);
     await expect(page.locator('.nav-item.active')).toHaveText('Start');
   });
 
@@ -417,7 +417,7 @@ test.describe('Admin: Lager', () => {
     await expect(page.locator('#lagerKisten button')).toHaveText([/^\s*Alle Kisten/, /^\s*Markt & Webshop/, /^\s*Etsy/, /^\s*Amazon/, /^\s*Werkstatt/]);
     await expect(page.locator('.lg-produkt')).toHaveCount(katalog.produkte.length);
     const karte = page.locator('.lg-produkt').first();
-    await karte.locator('summary').click();
+    await karte.locator("summary").first().click();
     await expect(karte.locator('tbody tr')).toHaveCount(P0.merkmale.farbe.length);
     await expect(karte.locator('thead th')).toHaveText(['Farbe', ...P0.merkmale.groesse.map(g => g.wert)]);
   });
@@ -1333,6 +1333,34 @@ test.describe('Admin: Etsy', () => {
     await expect(page.locator('#etsyStatus')).toContainText('nicht erlaubt');
   });
 
+  test('Etsy verbunden: „+ Bestellung“ startet mit Amazon; Etsy von Hand nur mit Bestellnummer und nie doppelt', async ({ page }) => {
+    const etsy = { receipts: [etsyBestellung(98765)] };
+    const t = await openAdmin(page, [], { seite: '#einstellungen', api: true, etsy });
+    await etsySeite(page);
+    await page.getByRole('button', { name: 'Mit Etsy verbinden' }).click();
+    await expect(page.locator('#etsyStatus')).toContainText('Mit dem Etsy-Shop verbunden');
+    await page.goto('/admin.html#bestellungen');
+    await page.getByRole('button', { name: 'Aktualisieren' }).click();
+    await expect(page.locator('#bestListe')).toContainText('Erika Etsy');
+    const zeilen = t.daten.length;
+    await page.click('#btnNeueBestellung');
+    await expect(page.locator('#bfKanal')).toHaveValue('Amazon');
+    await expect(page.locator('#bfEtsyHinweis')).toHaveCount(0);
+    await page.selectOption('#bfKanal', 'Etsy');
+    await expect(page.locator('#bfEtsyHinweis')).toContainText('kommen von selbst');
+    await page.fill('#bfKunde', 'Erika Etsy');
+    await page.click('#bfSpeichern');                                   // ohne Etsy-Nummer
+    await expect(page.locator('#statusText')).toContainText('Etsy-Bestellnummer eintragen');
+    await page.fill('#bfPlattformNr', '98765');                         // schon vom Abruf übernommen
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toContainText('steht schon in der Liste');
+    expect(t.daten.length).toBe(zeilen);
+    await page.fill('#bfPlattformNr', '11111');                         // ältere Bestellung von vor dem Verbinden
+    await page.click('#bfSpeichern');
+    await expect(page.locator('#statusText')).toHaveText(/Bestellung KW-\d{8}-\d{3} gespeichert/);
+    expect(t.daten.length).toBe(zeilen + 1);
+  });
+
   test('„Etsy-Artikel abgleichen“ füllt das Blatt und meldet, wie viele noch offen sind', async ({ page }) => {
     const preis = { amount: 1200, divisor: 100 };
     const etsy = { listings: [{ listing_id: 1, title: 'Personalisierte handgemachte Hundekrone, individuelle Krone, perfekt für Geburtstag und Fotoshooting mit Hund, berry', price: preis },
@@ -1360,5 +1388,93 @@ test.describe('Admin: Etsy', () => {
     await page.getByRole('button', { name: 'Aktualisieren' }).click();
     await expect(page.locator('#statusText')).toHaveText(/Bestellungen aktualisiert/);
     expect(t.daten.length).toBe(zeilen);
+  });
+});
+
+// ============================================================
+// Rechnungen (ersetzt Papierkram) und zweiter Etsy-Shop
+// ============================================================
+test.describe('Admin: Rechnungen', () => {
+  test('aus einer Bestellung: Entwurf mit Anschrift und Positionen, festschreiben als R-01272, drucken', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const karte = page.locator('.best[data-nr="KW-20261001-003"]');
+    await karte.locator("summary").first().click();
+    await karte.getByRole('button', { name: 'Rechnung erstellen' }).click();
+    await expect(page).toHaveURL(/#rechnungen$/);
+    await expect(page.locator('#reEntwurf')).toContainText('Bekommt beim Festschreiben die Nummer R-01272');
+    await expect(page.locator('#reEmpfaenger')).toHaveValue('Kim Muster\nMoorblick 4\n24329 Dannau');
+    await expect(page.locator('#reBetreff')).toHaveValue('Bestellung KW-20261001-003');
+    await expect(page.locator('#reHinweis')).toHaveValue('Bezahlt per PayPal am 01.10.2026');
+    // zwei Kronen mit Katalogpreis, Rest als Ausgleich: Summe = Bestellbetrag
+    await expect(page.locator('.re-pos tbody tr').first().locator('textarea')).toHaveValue(/Handgemachte Hundekrone Einfarbig, Grün, Größe Extra Mini\nPersonalisierung: FRIDOLIN/);
+    await expect(page.locator('#reSumme')).toHaveText('€ 29,00');
+    await expect(page.locator('#reHinweise')).toHaveText('');
+    page.once('dialog', d => d.accept());
+    await page.getByRole('button', { name: 'Rechnung festschreiben' }).click();
+    await expect(page.locator('#statusText')).toContainText('Rechnung R-01272 ist festgeschrieben');
+    await expect(page.locator('.re-zeile[data-nr="R-01272"]')).toContainText('€ 29,00');
+    expect(t.daten[3][t.daten[0].indexOf('Rechnungsnr.')]).toBe('R-01272');
+    const [fenster] = await Promise.all([page.waitForEvent('popup'),
+      page.locator('.re-zeile[data-nr="R-01272"]').getByRole('button', { name: 'Drucken / PDF' }).click()]);
+    await expect(fenster.locator('h1')).toHaveText('Rechnung');
+    await expect(fenster.locator('body')).toContainText('R-01272');
+    await expect(fenster.locator('body')).toContainText('Gemäß § 19 UStG');
+    await expect(fenster.locator('.summe')).toContainText('€ 29,00');
+    expect(await fenster.title()).toMatch(/^Rechnung_R-01272_Kim_Muster_2026-/);
+    // zurück bei der Bestellung: kein zweites „Rechnung erstellen“, sondern drucken
+    await page.goto('/admin.html#bestellungen');
+    await page.locator(".best[data-nr=\"KW-20261001-003\"] > summary").click();
+    await expect(page.locator('.best[data-nr="KW-20261001-003"] .re-aktion')).toContainText('Rechnung R-01272');
+    await expect(page.locator('.best[data-nr="KW-20261001-003"]').getByRole('button', { name: 'Rechnung erstellen' })).toHaveCount(0);
+  });
+
+  test('freie Rechnung über 250 € braucht die Anschrift; Storno erzeugt -S und markiert die alte', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#rechnungen', api: true });
+    await expect(page.locator('#reInhalt')).toContainText('die Nummer R-01272');
+    await page.getByRole('button', { name: '+ Rechnung' }).click();
+    await page.fill('#reEmpfaenger', 'Messe GmbH');
+    await page.getByLabel('Beschreibung 1').fill('Sonderanfertigung Messe-Deko');
+    await page.getByLabel('Preis 1').fill('485');
+    await expect(page.locator('#reHinweise')).toContainText('Über 250 € braucht die Rechnung Name und vollständige Anschrift');
+    page.once('dialog', d => d.accept());
+    await page.getByRole('button', { name: 'Rechnung festschreiben' }).click();
+    await expect(page.locator('#statusText')).toContainText('Über 250 €');
+    expect(t.blatt('Rechnungen').length).toBe(1);
+    await page.fill('#reEmpfaenger', 'Messe GmbH\nMesseplatz 1\n68161 Mannheim');
+    page.once('dialog', d => d.accept());
+    await page.getByRole('button', { name: 'Rechnung festschreiben' }).click();
+    await expect(page.locator('.re-zeile[data-nr="R-01272"]')).toContainText('€ 485,00');
+    page.once('dialog', d => d.accept('Doppelt berechnet'));
+    await page.locator('.re-zeile[data-nr="R-01272"]').getByRole('button', { name: 'Stornieren' }).click();
+    await expect(page.locator('.re-zeile[data-nr="R-01272-S"]')).toContainText('€ -485,00');
+    await expect(page.locator('.re-zeile[data-nr="R-01272"]')).toContainText('storniert durch R-01272-S');
+    await expect(page.locator('.re-zeile[data-nr="R-01272"]').getByRole('button', { name: 'Stornieren' })).toHaveCount(0);
+    const [fenster] = await Promise.all([page.waitForEvent('popup'),
+      page.locator('.re-zeile[data-nr="R-01272-S"]').getByRole('button', { name: 'Drucken / PDF' }).click()]);
+    await expect(fenster.locator('h1')).toHaveText('Stornorechnung');
+    await expect(fenster.locator('body')).toContainText('Doppelt berechnet');
+  });
+
+  test('Texte im Druck werden nicht als HTML ausgeführt', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#rechnungen', api: true });
+    const html = await page.evaluate(() => rechnungHtml({ nr: 'R-1', art: 'Rechnung', datum: '14.11.2026', leistungsdatum: '14.11.2026',
+      empfaenger: '<img src=x onerror=alert(1)>', betreff: '<b>x</b>', positionen: [{ text: '<script>x</script>', menge: 1, preis: 5 }], gesamt: 5 }, {}));
+    expect(html).not.toMatch(/<img src=x|<script>x|<b>x/);
+  });
+});
+
+test.describe('Admin: zweiter Etsy-Shop', () => {
+  test('ohne Zugang: Hinweis auf ETSY2_*; mit Zugang: eigener Knopf zum Verbinden', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#einstellungen', api: true, etsy: {} });
+    await expect(page.locator('#etsyStatus2')).toContainText('ETSY2_KEYSTRING');
+    await expect(page.locator('#etsyKnoepfe2 button')).toHaveCount(0);
+  });
+  test('zweiter Zugang eingetragen: „Zweiten Shop verbinden“ startet die Anmeldung für Konto 2', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#einstellungen', api: true, etsy: { zwei: { receipts: [], listings: [], shop: 4712 } } });
+    await expect(page.locator('#etsyStatus2')).toContainText('Zugang ist eingetragen');
+    const ziel = page.waitForRequest(/www\.etsy\.com\/oauth\/connect/);
+    await page.route(/www\.etsy\.com\/oauth\/connect/, r => r.fulfill({ body: 'etsy' }));
+    await page.getByRole('button', { name: 'Zweiten Shop verbinden' }).click();
+    expect(new URL((await ziel).url()).searchParams.get('client_id')).toBe('ETSY2-KEY');
   });
 });

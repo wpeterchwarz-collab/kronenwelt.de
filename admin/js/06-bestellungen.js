@@ -216,12 +216,15 @@ function bestellKarte(b) {
           <div><dt>Lieferadresse</dt><dd>${b.adresse ? medienEsc(b.kunde) + '<br>' + medienEsc(b.adresse).replace(/, /g, '<br>')
             + `<br><button class="kopier-knopf" onclick="adresseKopieren(${nr})">Adresse kopieren</button>` : '–'}</dd></div>
           <div><dt>Kontakt</dt><dd>${b.email ? `<a href="mailto:${medienEsc(b.email)}?subject=${encodeURIComponent('Deine Bestellung ' + b.nr)}">${medienEsc(b.email)}</a>` : '–'}</dd></div>
-          <div><dt>Bestellung</dt><dd>${medienEsc(b.nr)}<br>${medienEsc(b.datum)}${b.uhrzeit ? ' um ' + medienEsc(b.uhrzeit) + ' Uhr' : ''} · ${medienEsc(b.kanal)}${b.plattformNr ? '<br>' + medienEsc(b.kanal) + '-Nr. ' + medienEsc(b.plattformNr) : ''}${b.artikel && b.kiste ? '<br><span class="leise">Lager: ' + medienEsc(b.kiste === 'nicht vom Lager' ? 'nicht vom Lager' : 'aus Kiste ' + b.kiste) + '</span>' : ''}</dd></div>
+          <div><dt>Bestellung</dt><dd>${medienEsc(b.nr)}<br>${medienEsc(b.datum)}${b.uhrzeit ? ' um ' + medienEsc(b.uhrzeit) + ' Uhr' : ''} · ${medienEsc(b.kanal)}${b.plattformNr ? '<br>' + medienEsc(b.kanal) + '-Nr. ' + medienEsc(b.plattformNr) + (b.shop ? ' (' + medienEsc(b.shop) + ')' : '') : ''}${b.artikel && b.kiste ? '<br><span class="leise">Lager: ' + medienEsc(b.kiste === 'nicht vom Lager' ? 'nicht vom Lager' : 'aus Kiste ' + b.kiste) + '</span>' : ''}</dd></div>
           ${b.seriennummern ? `<div><dt>MK-Nummern</dt><dd><span class="serien-zeile">${b.seriennummern.split(/\s*,\s*/).map(x => `<span class="mk">${medienEsc(x)}</span>`).join('')}</span>
             <button class="kopier-knopf" onclick="textKopieren(${jsArg(b.seriennummern)}, 'MK-Nummern kopiert ✓')">Kopieren</button>${b.rechnungsnr ? '<br><span class="leise">Rechnung ' + medienEsc(b.rechnungsnr) + '</span>' : ''}</dd></div>` : ''}
           <div><dt>Zahlung</dt><dd>${medienEsc(b.zahlung || '–')} · ${euro(b.preis)}${zOk ? '<br><span class="zahlung-ok">✓ bei PayPal bestätigt</span>' : ''}${b.paypalId ? '<br><span class="leise">PayPal ' + medienEsc(b.paypalId) + '</span>' : ''}</dd></div>
           ${b.notiz ? `<div class="best-artikel"><dt>Notiz</dt><dd>${medienEsc(b.notiz)}</dd></div>` : ''}
         </dl>
+        <div class="aktion-zeile re-aktion">${/^R-\d{5}$/.test(b.rechnungsnr || '')
+          ? `<span class="leise">Rechnung ${medienEsc(b.rechnungsnr)}</span><button class="btn btn-outline btn-sm" onclick="rechnungZurBestellung(${nr})">Rechnung drucken / PDF</button>`
+          : b.status !== 'Storniert' && !b.rechnungsnr ? `<button class="btn btn-outline btn-sm" onclick="rechnungAusBestellung(${nr})">Rechnung erstellen</button>` : ''}</div>
         <details class="best-mehr"><summary>Weitere Aktionen</summary>
           <div class="aktion-zeile"><label class="leise" for="st-${id}">Status von Hand setzen:</label>
             <select id="st-${id}" aria-label="Status ändern" onchange="statusKlick(${nr}, this.value)">
@@ -229,7 +232,7 @@ function bestellKarte(b) {
             </select></div>
           <div class="leise" style="font-size:12px">Zum Beispiel, um eine versehentliche Änderung zurückzunehmen. „Storniert“ bucht die Kronen zurück ins Lager.</div>
           <div class="aktion-zeile" style="margin-top:10px"><label class="leise" for="re2-${id}">Rechnungsnummer:</label>
-            <input type="text" id="re2-${id}" value="${medienEsc(b.rechnungsnr || '')}" placeholder="z. B. aus Papierkram" style="max-width:200px;padding:7px 9px;border:1px solid var(--line2);border-radius:2px;font-size:15px">
+            <input type="text" id="re2-${id}" value="${medienEsc(b.rechnungsnr || '')}" placeholder="nur für alte Papierkram-Rechnungen" style="max-width:200px;padding:7px 9px;border:1px solid var(--line2);border-radius:2px;font-size:15px">
             <button class="btn btn-outline btn-sm" onclick="rechnungKlick(${nr})">Speichern</button></div>
         </details>
       </div>
@@ -463,8 +466,11 @@ function positionsPreis(p) {
   const auf = isZahlVariante(p.variante) && p.pets !== 3 ? ((currentPrices[AUFPREIS_KEY] || {})[p.pets + ' Pets'] || 0) : 0;
   return Math.round((basis + auf) * 100) / 100;
 }
+// Ist der Etsy-Shop verbunden, kommen Etsy-Bestellungen von selbst – von Hand wird dann vor allem Amazon eingetragen
+const etsyKommtVonSelbst = () => typeof etsyStand !== 'undefined' && etsyStand === 'verbunden';
 function formularOeffnen() {
-  formular = { kanal: 'Etsy', kiste: kisteFuerKanal('Etsy'), datum: heuteIso(), zahlung: 'Etsy', status: 'Neu', kunde: '', email: '', adresse: '', notiz: '', positionen: [neuePosition()],
+  const kanal = etsyKommtVonSelbst() ? 'Amazon' : 'Etsy';
+  formular = { kanal, kiste: kisteFuerKanal(kanal), datum: heuteIso(), zahlung: ZAHLART_JE_KANAL[kanal] || kanal, status: 'Neu', kunde: '', email: '', adresse: '', notiz: '', positionen: [neuePosition()],
     plattformNr: '', direkt: false, sendung: '', mk: [], mkEintragen: true, rechnungsnr: '' };
   renderFormular();
   document.getElementById('bestFormular').scrollIntoView({ block: 'start' });
@@ -497,7 +503,9 @@ function renderFormular() {
   const summe = f.positionen.reduce((n, p) => n + preis(p), 0);
   box.innerHTML = `<div class="card bf">
     <div class="card-title">Bestellung von Hand</div>
-    <div class="card-sub">Für Verkäufe über Etsy, Amazon oder auf dem Markt. Sie landen in derselben Tabelle wie die Webshop-Bestellungen.</div>
+    <div class="card-sub">${etsyKommtVonSelbst() ? 'Für Verkäufe über Amazon, auf dem Markt oder über Instagram' : 'Für Verkäufe über Etsy, Amazon oder auf dem Markt'}. Sie landen in derselben Tabelle wie die Webshop-Bestellungen.</div>
+    ${f.kanal === 'Etsy' && etsyKommtVonSelbst() ? `<div class="hinweis" id="bfEtsyHinweis"><b>Etsy-Bestellungen kommen von selbst.</b> Fehlt eine, hilft meist „Aktualisieren“ über der Liste.
+      Von Hand nur eintragen, wenn die Bestellung vor dem Verbinden mit Etsy einging – dann bitte mit der Etsy-Bestellnummer, damit sie nicht doppelt in die Liste kommt.</div>` : ''}
     <div class="bf-grid">
       <div><label for="bfKanal">Kanal</label><select id="bfKanal" onchange="formularFeld('kanal', this.value)">${opt(KANAELE, f.kanal)}</select></div>
       <div><label for="bfDatum">Datum</label><input id="bfDatum" type="date" value="${f.datum}" onchange="formularFeld('datum', this.value)"></div>
@@ -566,6 +574,11 @@ async function formularSpeichern() {
   const f = formular;
   const preis = p => f.kanal === 'Spende' ? 0 : p.preis != null && !isNaN(p.preis) ? p.preis : positionsPreis(p);
   if (f.kanal !== 'Markt' && !f.kunde.trim()) { showStatus('Bitte den Kundennamen eintragen.', 'error'); return; }
+  // Etsy/Amazon: dieselbe Bestellnummer nie zweimal – sonst zählen Umsatz und Lager doppelt
+  const pNr = (f.kanal === 'Etsy' || f.kanal === 'Amazon') ? String(f.plattformNr || '').trim() : '';
+  if (f.kanal === 'Etsy' && etsyKommtVonSelbst() && !pNr) { showStatus('Bitte die Etsy-Bestellnummer eintragen – sonst kommt die Bestellung beim nächsten Abruf doppelt.', 'error'); return; }
+  const doppelt = pNr && (bestellungen || []).find(b => b.kanal === f.kanal && String(b.plattformNr || '').trim() === pNr);
+  if (doppelt) { showStatus('Diese ' + f.kanal + '-Bestellung steht schon in der Liste (' + doppelt.nr + ').', 'error'); return; }
   const [jj, mm, tt] = (f.datum || heuteIso()).split('-');
   const daten = {
     kanal: f.kanal, kiste: f.kiste || '', datum: tt + '.' + mm + '.' + jj, zahlung: f.zahlung, status: f.status,

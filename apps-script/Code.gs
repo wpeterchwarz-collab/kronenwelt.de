@@ -37,6 +37,14 @@
       Übernommen werden nur bezahlte Bestellungen ab dem Verbinden, jede nur einmal (Spalte „Plattform-Nr.“).
       Ab 1.10: Blatt „Etsy-Artikel“ – je Etsy-Artikel eine Zeile; in „Krone“ und „Farbe“ steht, welcher
       Katalog-Artikel dazu gehört. Dann bucht bei Etsy-Bestellungen auch das Lager ab.
+      Ab 1.11: zweiter Etsy-Shop (z. B. Sternenstaubhandmade) mit eigener Etsy-App im zweiten Etsy-Konto:
+      Skript-Eigenschaften ETSY2_KEYSTRING und ETSY2_SECRET; verbunden wird ebenfalls in der Admin-Seite.
+      Die Spalte „Shop“ zeigt, aus welchem Shop eine Etsy-Bestellung kommt.
+
+   8) Rechnungen (ab 1.11, ersetzt Papierkram): Blatt „Rechnungen“, je Rechnung eine Zeile, Nummern ab R-01272.
+      Festgeschriebene Rechnungen werden nie geändert; korrigiert wird mit Stornorechnung (<Nr>-S) und neuer Rechnung.
+      Fußzeile: Skript-Eigenschaften RECHNUNG_TELEFON, RECHNUNG_EMAIL, RECHNUNG_BANK, RECHNUNG_IBAN, RECHNUNG_BIC,
+      RECHNUNG_USTID. Gedruckt bzw. als PDF gespeichert wird in der Admin-Seite (Bereich „Rechnungen“).
 
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
    werden rechts angehängt, sobald sie gebraucht werden. Nichts wird umbenannt oder gelöscht.
@@ -46,14 +54,14 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.10';
+const SCHNITTSTELLE_VERSION = '1.11';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
   'Preis (€)', 'Zahlung',
   'Kundenname', 'E-Mail', 'Lieferadresse'
 ];
-const ZUSATZ_SPALTEN = ['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft', 'Seriennummern', 'Rechnungsnr.', 'Plattform-Nr.'];
+const ZUSATZ_SPALTEN = ['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft', 'Seriennummern', 'Rechnungsnr.', 'Plattform-Nr.', 'Shop'];
 const STATUS = ['Neu', 'In Arbeit', 'Versendet', 'Übergeben', 'Storniert'];
 
 // Lager: Kisten und aus welcher Kiste jeder Kanal verkauft. Neue Kiste = ein Eintrag hier.
@@ -159,7 +167,7 @@ function adminAnfrage(data) {
     Utilities.sleep(800);                                   // Ausprobieren von Schlüsseln bremsen
     return antwort({ ok: false, fehler: 'nicht_erlaubt' });
   }
-  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung', 'etsyAbruf', 'etsyArtikel'].indexOf(data.aktion) >= 0;
+  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung', 'etsyAbruf', 'etsyArtikel', 'rechnungErstellen', 'rechnungStornieren'].indexOf(data.aktion) >= 0;
   const lock = LockService.getScriptLock();
   try {
     if (schreibt) lock.waitLock(20000);
@@ -168,13 +176,13 @@ function adminAnfrage(data) {
         return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, tabelle: SpreadsheetApp.getActiveSpreadsheet().getName(),
           paypal: paypalZugang() ? 'eingerichtet' : 'fehlt', serienliste: serienStatus(),
           github: githubToken() ? 'eingerichtet' : 'fehlt', cloudinary: cloudinaryZugang() ? 'eingerichtet' : 'fehlt',
-          etsy: etsyStatus() });
+          etsy: etsyStatus('1'), etsyKonten: etsyKontenStand() });
       case 'github':
         return antwort(githubAnfrage(data));
       case 'cloudinary':
         return antwort(cloudinarySignatur(data));
       case 'etsyStart':
-        return antwort(etsyStart());
+        return antwort(etsyStart(data));
       case 'etsyCode':
         return antwort(etsyCode(data));
       case 'etsyAbruf':
@@ -182,13 +190,19 @@ function adminAnfrage(data) {
       case 'etsyArtikel':
         return antwort(etsyArtikelAbgleich());
       case 'etsyTrennen':
-        return antwort(etsyTrennen());
+        return antwort(etsyTrennen(data));
       case 'zahlung':
         return antwort(zahlungNachpruefen(data));
       case 'seriennummern':
         return antwort(serienVorschlag(data));
       case 'rechnung':
         return antwort(rechnungSetzen(data));
+      case 'rechnungen':
+        return antwort(rechnungenLesen());
+      case 'rechnungErstellen':
+        return antwort(rechnungErstellen(data));
+      case 'rechnungStornieren':
+        return antwort(rechnungStornieren(data));
       case 'bestellungen':
         return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, bestellungen: bestellungenLesen() });
       case 'status':
@@ -252,7 +266,7 @@ function bestellungAusZeile(kopf, a, w, zeile) {
     sendungsnummer: feld('Sendungsnummer'), versendetAm: feld('Versendet am'), notiz: feld('Notiz'),
     artikel: feld('Artikelnr.'), kiste: feld('Kiste'),
     paypalId: feld('PayPal-ID'), zahlungGeprueft: feld('Zahlung geprüft'),
-    seriennummern: feld('Seriennummern'), rechnungsnr: feld('Rechnungsnr.'), plattformNr: feld('Plattform-Nr.')
+    seriennummern: feld('Seriennummern'), rechnungsnr: feld('Rechnungsnr.'), plattformNr: feld('Plattform-Nr.'), shop: feld('Shop')
   };
 }
 
@@ -1114,6 +1128,153 @@ function antwort(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
+/* ---------------- 8) Rechnungen ---------------- */
+// Ersetzt Papierkram. Jede Rechnung ist eine Zeile im Blatt „Rechnungen“; einmal festgeschrieben wird sie nie mehr
+// geändert (GoBD). Korrigiert wird nur über eine Stornorechnung (<Nr>-S) und eine neue Rechnung mit neuer Nummer.
+// Gedruckt wird in der Admin-Seite aus genau diesen Daten. Telefon, E-Mail, Bank und USt-ID stehen in den
+// Skript-Eigenschaften (RECHNUNG_TELEFON, RECHNUNG_EMAIL, RECHNUNG_BANK, RECHNUNG_IBAN, RECHNUNG_BIC, RECHNUNG_USTID).
+const RECHNUNG_BLATT = 'Rechnungen';
+const RECHNUNG_SPALTEN = ['Rechnungsnr.', 'Art', 'Datum', 'Leistungsdatum', 'Bestellnr.', 'Betreff', 'Empfänger',
+  'Positionen', 'Gesamt (€)', 'Hinweis', 'Seriennummern', 'Bezug', 'Storniert durch', 'Erstellt'];
+const RECHNUNG_LETZTE_PAPIERKRAM = 1271;                // letzte Nummer aus Papierkram (R-01271); weiter geht es mit R-01272
+const RECHNUNG_KLEINBETRAG = 250;                       // darüber braucht die Rechnung Name und Anschrift (§ 33 UStDV)
+const RECHNUNG_ABSENDER = { name: 'Sternenstaub Handmade', strasse: 'Vogesenweg 8', ort: '75045 Walzbachtal', inhaber: 'Sara Schwarz' };
+
+function rechnungBlatt() { return lagerBlatt(RECHNUNG_BLATT, RECHNUNG_SPALTEN); }
+
+function rechnungAbsender() {
+  const p = PropertiesService.getScriptProperties();
+  const e = function (n) { return String(p.getProperty('RECHNUNG_' + n) || '').trim(); };
+  return { name: RECHNUNG_ABSENDER.name, strasse: RECHNUNG_ABSENDER.strasse, ort: RECHNUNG_ABSENDER.ort,
+    inhaber: RECHNUNG_ABSENDER.inhaber, ustid: e('USTID'), telefon: e('TELEFON'), email: e('EMAIL'),
+    bank: e('BANK'), iban: e('IBAN'), bic: e('BIC') };
+}
+
+function rechnungAusZeile(o, zeile) {
+  let pos = [];
+  try { pos = JSON.parse(o['Positionen'] || '[]'); } catch (e) { pos = []; }
+  const g = parseFloat(String(o['Gesamt (€)'] || '0').replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.')) || 0;
+  return { zeile: zeile, nr: o['Rechnungsnr.'], art: o['Art'] || 'Rechnung', datum: o['Datum'], leistungsdatum: o['Leistungsdatum'],
+    bestellnr: o['Bestellnr.'], betreff: o['Betreff'], empfaenger: o['Empfänger'], positionen: pos,
+    gesamt: Math.round(g * 100) / 100, hinweis: o['Hinweis'], seriennummern: o['Seriennummern'], bezug: o['Bezug'],
+    storniertDurch: o['Storniert durch'], erstellt: o['Erstellt'] };
+}
+
+function rechnungenAlle() {
+  const t = zeilenLesen(rechnungBlatt());
+  return t.zeilen.map(function (o, i) { return rechnungAusZeile(o, i + 2); }).filter(function (r) { return r.nr; });
+}
+
+function rechnungNaechsteNr(alle) {
+  let max = RECHNUNG_LETZTE_PAPIERKRAM;
+  alle.forEach(function (r) { const m = /^R-(\d+)$/.exec(r.nr); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+  return 'R-' + ('0000' + (max + 1)).slice(-5);
+}
+
+function rechnungenLesen() {
+  const alle = rechnungenAlle();
+  return { ok: true, rechnungen: alle.reverse(), naechste: rechnungNaechsteNr(alle), absender: rechnungAbsender(),
+    kleinbetrag: RECHNUNG_KLEINBETRAG };
+}
+
+const rechnungText = function (x, max) { return String(x == null ? '' : x).replace(/\r/g, '').trim().slice(0, max); };
+const rechnungDatumOk = function (d) { return /^\d{2}\.\d{2}\.\d{4}$/.test(d || ''); };
+const rechnungBetrag = function (x) { return Math.round((parseFloat(x) || 0) * 100) / 100; };
+
+// Positionen prüfen: Text, Menge > 0, Einzelpreis; Gesamt rechnet die Schnittstelle selbst
+function rechnungPositionen(liste) {
+  if (!Array.isArray(liste) || !liste.length || liste.length > 30) throw fehler('rechnung_positionen', 'Mindestens eine Position eintragen');
+  return liste.map(function (p) {
+    const text = rechnungText(p && p.text, 600), menge = Math.round((parseFloat(p && p.menge) || 0) * 100) / 100;
+    const preis = rechnungBetrag(p && p.preis);
+    if (!text) throw fehler('rechnung_positionen', 'Jede Position braucht eine Beschreibung');
+    if (!(menge > 0) || menge > 1000) throw fehler('rechnung_positionen', 'Menge prüfen');
+    if (!isFinite(preis) || Math.abs(preis) > 100000) throw fehler('rechnung_positionen', 'Preis prüfen');
+    return { text: text, menge: menge, preis: preis };
+  });
+}
+const rechnungSumme = function (pos) {
+  return Math.round(pos.reduce(function (s, p) { return s + Math.round(p.menge * p.preis * 100); }, 0)) / 100;
+};
+
+function rechnungZeileSchreiben(sh, r) {
+  const werte = RECHNUNG_SPALTEN.map(function (k) {
+    return { 'Rechnungsnr.': r.nr, 'Art': r.art, 'Datum': r.datum, 'Leistungsdatum': r.leistungsdatum, 'Bestellnr.': r.bestellnr,
+      'Betreff': r.betreff, 'Empfänger': r.empfaenger, 'Positionen': JSON.stringify(r.positionen), 'Gesamt (€)': r.gesamt,
+      'Hinweis': r.hinweis, 'Seriennummern': r.seriennummern, 'Bezug': r.bezug, 'Storniert durch': '',
+      'Erstellt': Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy HH:mm') }[k];
+  });
+  const z = sh.getLastRow() + 1;
+  const g = RECHNUNG_SPALTEN.indexOf('Gesamt (€)');
+  sh.getRange(z, 1, 1, g).setNumberFormat('@');              // Datum, Nummern und Texte als Text, wie eingegeben
+  sh.getRange(z, g + 2, 1, werte.length - g - 1).setNumberFormat('@');
+  sh.getRange(z, g + 1).setNumberFormat('0.00');
+  sh.getRange(z, 1, 1, werte.length).setValues([werte]);
+  r.zeile = z;
+  return r;
+}
+
+// Bei der Bestellung die Rechnungsnummer eintragen (und wie bisher in der Seriennummernliste)
+function rechnungAnBestellung(nr, re) {
+  if (!nr) return 0;
+  const sheet = blatt(), kopf = spaltenSicherstellen(sheet);
+  let zeile;
+  try { zeile = zeileFinden(sheet, kopf, 0, nr); } catch (e) { return 0; }
+  sheet.getRange(zeile, kopf.indexOf('Rechnungsnr.') + 1).setValue(re);
+  const b = bestellungLesen(sheet, kopf, zeile);
+  try { return b.seriennummern && re ? serienListeSetzen(b.nr, 'Rechnungsnr.', re) : 0; } catch (e) { return 0; }
+}
+
+// Rechnung festschreiben: Nummer vergeben, Zeile anhängen – danach unveränderlich
+function rechnungErstellen(data) {
+  const e = data.rechnung || {};
+  const heute = Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy');
+  const pos = rechnungPositionen(e.positionen);
+  const gesamt = rechnungSumme(pos);
+  if (!(gesamt > 0)) throw fehler('rechnung_betrag', 'Der Rechnungsbetrag muss größer als 0 sein');
+  const empfaenger = rechnungText(e.empfaenger, 400);
+  if (!empfaenger) throw fehler('rechnung_empfaenger', 'Empfänger eintragen');
+  if (gesamt > RECHNUNG_KLEINBETRAG && empfaenger.split('\n').filter(function (x) { return x.trim(); }).length < 3) {
+    throw fehler('rechnung_anschrift', 'Über ' + RECHNUNG_KLEINBETRAG + ' € braucht die Rechnung Name und vollständige Anschrift');
+  }
+  const bestellnr = rechnungText(e.bestellnr, 40);
+  const alle = rechnungenAlle();
+  if (bestellnr) {
+    const offen = alle.filter(function (r) { return r.bestellnr === bestellnr && r.art === 'Rechnung' && !r.storniertDurch; });
+    if (offen.length) throw fehler('rechnung_vorhanden', 'Für ' + bestellnr + ' gibt es schon die Rechnung ' + offen[0].nr);
+  }
+  const r = {
+    nr: rechnungNaechsteNr(alle), art: 'Rechnung',
+    datum: rechnungDatumOk(e.datum) ? e.datum : heute,
+    leistungsdatum: rechnungDatumOk(e.leistungsdatum) ? e.leistungsdatum : (rechnungDatumOk(e.datum) ? e.datum : heute),
+    bestellnr: bestellnr, betreff: rechnungText(e.betreff, 200), empfaenger: empfaenger, positionen: pos, gesamt: gesamt,
+    hinweis: rechnungText(e.hinweis, 600), seriennummern: rechnungText(e.seriennummern, 300), bezug: '', storniertDurch: ''
+  };
+  rechnungZeileSchreiben(rechnungBlatt(), r);
+  const inListe = rechnungAnBestellung(bestellnr, r.nr);
+  return { ok: true, rechnung: r, inListe: inListe, absender: rechnungAbsender() };
+}
+
+// Stornorechnung: gleiche Positionen mit negativem Betrag, Nummer <Nr>-S; die alte Rechnung wird als storniert markiert
+function rechnungStornieren(data) {
+  const nr = rechnungText(data.nr, 20);
+  const alle = rechnungenAlle();
+  const alt = alle.filter(function (r) { return r.nr === nr; })[0];
+  if (!alt || alt.art !== 'Rechnung') throw fehler('rechnung_nicht_gefunden', 'Rechnung ' + nr + ' nicht gefunden');
+  if (alt.storniertDurch) throw fehler('rechnung_storniert', nr + ' ist schon storniert');
+  const heute = Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy');
+  const pos = alt.positionen.map(function (p) { return { text: p.text, menge: p.menge, preis: -p.preis }; });
+  const s = { nr: nr + '-S', art: 'Storno', datum: heute, leistungsdatum: alt.leistungsdatum, bestellnr: alt.bestellnr,
+    betreff: 'Storno zur Rechnung ' + nr + (alt.betreff ? ' – ' + alt.betreff : ''), empfaenger: alt.empfaenger,
+    positionen: pos, gesamt: rechnungSumme(pos), hinweis: rechnungText(data.grund, 300), seriennummern: alt.seriennummern,
+    bezug: nr, storniertDurch: '' };
+  const sh = rechnungBlatt();
+  rechnungZeileSchreiben(sh, s);
+  sh.getRange(alt.zeile, RECHNUNG_SPALTEN.indexOf('Storniert durch') + 1).setValue(s.nr);
+  rechnungAnBestellung(alt.bestellnr, '');
+  return { ok: true, rechnung: s, absender: rechnungAbsender() };
+}
+
 /* ---------------- 7) Etsy ---------------- */
 // Etsy Open API v3, „Seller App“ (nur der eigene Shop). Anmeldung: OAuth 2 mit PKCE.
 // Das Zugriffs-Token gilt 1 Stunde und wird mit dem Erneuerungs-Token (90 Tage) selbst erneuert.
@@ -1123,60 +1284,85 @@ const ETSY_RUECKKEHR = 'https://kronenwelt.de/admin.html';   // muss bei Etsy ge
 const ETSY_RECHTE = 'transactions_r shops_r';                // nur lesen: Bestellungen und Shop-Nummer
 
 function etsyProps() { return PropertiesService.getScriptProperties(); }
-function etsyZugang() {
-  const p = etsyProps(), key = p.getProperty('ETSY_KEYSTRING'), secret = p.getProperty('ETSY_SECRET');
-  return key && secret ? { key: key, secret: secret } : null;
+
+// Etsy-Konten: Sara hat zwei Etsy-Shops (je ein eigenes Etsy-Konto mit eigener „Seller App“).
+// Konto 1: Eigenschaften ETSY_KEYSTRING, ETSY_SECRET, ETSY_TOKEN …  Konto 2: ETSY2_KEYSTRING, ETSY2_SECRET, ETSY2_TOKEN …
+const ETSY_KONTEN = ['1', '2'];
+function etsyKonto(k) { return ETSY_KONTEN.indexOf(String(k || '1')) >= 0 ? String(k || '1') : '1'; }
+function etsyName(k, name) { return (etsyKonto(k) === '1' ? 'ETSY_' : 'ETSY' + etsyKonto(k) + '_') + name; }
+function etsyEig(k, name) { return etsyProps().getProperty(etsyName(k, name)); }
+function etsySetze(k, name, wert) { etsyProps().setProperty(etsyName(k, name), wert); }
+function etsyZugang(k) {
+  const key = etsyEig(k, 'KEYSTRING'), secret = etsyEig(k, 'SECRET');
+  return key && secret ? { key: key, secret: secret, konto: etsyKonto(k) } : null;
 }
-function etsyTokenLesen() {
-  try { return JSON.parse(etsyProps().getProperty('ETSY_TOKEN') || 'null'); } catch (e) { return null; }
+function etsyTokenLesen(k) {
+  try { return JSON.parse(etsyEig(k, 'TOKEN') || 'null'); } catch (e) { return null; }
 }
 // 'fehlt' = Zugang nicht eingetragen · 'eingerichtet' = Zugang da, Shop noch nicht verbunden · 'verbunden'
-function etsyStatus() {
-  if (!etsyZugang()) return 'fehlt';
-  const t = etsyTokenLesen();
+function etsyStatus(k) {
+  if (!etsyZugang(k)) return 'fehlt';
+  const t = etsyTokenLesen(k);
   return t && t.refresh ? 'verbunden' : 'eingerichtet';
 }
+// Stand aller Konten für die Admin-Seite
+function etsyKontenStand() {
+  return ETSY_KONTEN.map(function (k) { return { konto: k, status: etsyStatus(k), shop: etsyEig(k, 'SHOP_NAME') || '' }; });
+}
+function etsyVerbundene() { return ETSY_KONTEN.filter(function (k) { return etsyStatus(k) === 'verbunden' && etsyEig(k, 'SHOP_ID'); }); }
 function etsyOhnePolster(b64) { return String(b64).replace(/=+$/, ''); }
 
 // Schritt 1: Adresse, auf der Sara bei Etsy den Zugriff erlaubt
-function etsyStart() {
-  const z = etsyZugang();
-  if (!z) throw fehler('etsy_fehlt', 'Etsy-Zugang fehlt (ETSY_KEYSTRING und ETSY_SECRET im Apps Script eintragen)');
+function etsyStart(data) {
+  const k = etsyKonto((data || {}).konto);
+  const z = etsyZugang(k);
+  if (!z) throw fehler('etsy_fehlt', 'Etsy-Zugang fehlt (' + etsyName(k, 'KEYSTRING') + ' und ' + etsyName(k, 'SECRET') + ' im Apps Script eintragen)');
   const pruef = Utilities.getUuid() + Utilities.getUuid();          // 72 Zeichen, erlaubt sind A–Z a–z 0–9 . _ ~ -
   const state = Utilities.getUuid();
   const challenge = etsyOhnePolster(Utilities.base64EncodeWebSafe(
     Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pruef, Utilities.Charset.UTF_8)));
-  etsyProps().setProperty('ETSY_ANMELDUNG', JSON.stringify({ pruef: pruef, state: state, zeit: Date.now() }));
+  etsyProps().setProperty('ETSY_ANMELDUNG', JSON.stringify({ pruef: pruef, state: state, zeit: Date.now(), konto: k }));
   const q = { response_type: 'code', client_id: z.key, redirect_uri: ETSY_RUECKKEHR, scope: ETSY_RECHTE,
     state: state, code_challenge: challenge, code_challenge_method: 'S256' };
-  return { ok: true, url: ETSY_ANMELDUNG + '?' + Object.keys(q).map(function (k) { return k + '=' + encodeURIComponent(q[k]); }).join('&') };
+  return { ok: true, url: ETSY_ANMELDUNG + '?' + Object.keys(q).map(function (x) { return x + '=' + encodeURIComponent(q[x]); }).join('&') };
 }
 
-// Schritt 2: Etsy schickt Sara mit einem Code zurück zur Admin-Seite; hier wird er gegen die Tokens getauscht
+// Schritt 2: Etsy schickt Sara mit einem Code zurück zur Admin-Seite; hier wird er gegen die Tokens getauscht.
+// Welches Konto gemeint ist, steht in der gemerkten Anmeldung (nicht in der Anfrage).
 function etsyCode(data) {
-  const z = etsyZugang();
-  if (!z) throw fehler('etsy_fehlt', 'Etsy-Zugang fehlt');
   let a = null;
   try { a = JSON.parse(etsyProps().getProperty('ETSY_ANMELDUNG') || 'null'); } catch (e) { a = null; }
   if (!a || !data.state || data.state !== a.state || Date.now() - a.zeit > 15 * 60000) {
     throw fehler('etsy_anmeldung_abgelaufen', 'Die Anmeldung bei Etsy ist abgelaufen. Bitte noch einmal „Mit Etsy verbinden“ klicken.');
   }
+  const k = etsyKonto(a.konto);
+  const z = etsyZugang(k);
+  if (!z) throw fehler('etsy_fehlt', 'Etsy-Zugang fehlt');
   etsyProps().setProperty('ETSY_ANMELDUNG', '');
   etsyTokenHolen(z, { grant_type: 'authorization_code', client_id: z.key, redirect_uri: ETSY_RUECKKEHR,
     code: String(data.code || ''), code_verifier: a.pruef });
-  const ich = etsyAbrufen('/application/users/me');
+  const ich = etsyAbrufen('/application/users/me', k);
   if (!ich.shop_id) throw fehler('etsy_kein_shop', 'Zu diesem Etsy-Konto gehört kein Shop.');
-  const p = etsyProps();
-  p.setProperty('ETSY_SHOP_ID', String(ich.shop_id));
+  // Derselbe Shop darf nicht unter beiden Konten hängen (sonst käme jede Bestellung doppelt)
+  ETSY_KONTEN.forEach(function (x) {
+    if (x !== k && etsyEig(x, 'SHOP_ID') === String(ich.shop_id) && etsyStatus(x) === 'verbunden') {
+      etsySetze(k, 'TOKEN', '');
+      throw fehler('etsy_doppelt', 'Dieser Etsy-Shop ist schon verbunden. Bitte mit dem anderen Etsy-Konto anmelden.');
+    }
+  });
+  let name = '';
+  try { name = String(etsyAbrufen('/application/shops/' + encodeURIComponent(ich.shop_id), k).shop_name || ''); } catch (e) { name = ''; }
+  etsySetze(k, 'SHOP_ID', String(ich.shop_id));
+  etsySetze(k, 'SHOP_NAME', name);
   // Nur Bestellungen ab jetzt übernehmen: ältere hat Sara schon von Hand eingetragen
-  if (!p.getProperty('ETSY_AB')) p.setProperty('ETSY_AB', String(Math.floor(Date.now() / 1000)));
-  return { ok: true, etsy: 'verbunden', shop: String(ich.shop_id) };
+  if (!etsyEig(k, 'AB')) etsySetze(k, 'AB', String(Math.floor(Date.now() / 1000)));
+  return { ok: true, etsy: 'verbunden', konto: k, shop: String(ich.shop_id), shopName: name, konten: etsyKontenStand() };
 }
 
-function etsyTrennen() {
-  const p = etsyProps();
-  p.setProperty('ETSY_TOKEN', ''); p.setProperty('ETSY_ANMELDUNG', '');
-  return { ok: true, etsy: etsyStatus() };
+function etsyTrennen(data) {
+  const k = etsyKonto((data || {}).konto);
+  etsySetze(k, 'TOKEN', ''); etsyProps().setProperty('ETSY_ANMELDUNG', '');
+  return { ok: true, etsy: etsyStatus(k), konto: k, konten: etsyKontenStand() };
 }
 
 function etsyTokenHolen(z, felder) {
@@ -1185,24 +1371,24 @@ function etsyTokenHolen(z, felder) {
   let d = {};
   try { d = JSON.parse(r.getContentText()); } catch (e) { d = {}; }
   if (r.getResponseCode() !== 200 || !d.access_token) {
-    if (felder.grant_type === 'refresh_token' && r.getResponseCode() >= 400 && r.getResponseCode() < 500) etsyProps().setProperty('ETSY_TOKEN', '');
+    if (felder.grant_type === 'refresh_token' && r.getResponseCode() >= 400 && r.getResponseCode() < 500) etsySetze(z.konto, 'TOKEN', '');
     throw fehler('etsy_anmeldung', 'Etsy hat die Anmeldung abgelehnt (' + r.getResponseCode() + (d.error_description ? ': ' + d.error_description : d.error ? ': ' + d.error : '') + '). Bitte neu verbinden.');
   }
   const t = { access: d.access_token, refresh: d.refresh_token || felder.refresh_token || '', bis: Date.now() + (Number(d.expires_in) || 3600) * 1000 };
-  etsyProps().setProperty('ETSY_TOKEN', JSON.stringify(t));
+  etsySetze(z.konto, 'TOKEN', JSON.stringify(t));
   return t;
 }
 
 // Gültiges Zugriffs-Token; kurz vor Ablauf wird es erneuert
 function etsyToken(z) {
-  let t = etsyTokenLesen();
+  let t = etsyTokenLesen(z.konto);
   if (!t || !t.refresh) throw fehler('etsy_nicht_verbunden', 'Etsy ist noch nicht verbunden.');
   if (!t.access || Date.now() > t.bis - 120000) t = etsyTokenHolen(z, { grant_type: 'refresh_token', client_id: z.key, refresh_token: t.refresh });
   return t.access;
 }
 
-function etsyAbrufen(pfad) {
-  const z = etsyZugang();
+function etsyAbrufen(pfad, k) {
+  const z = etsyZugang(k);
   if (!z) throw fehler('etsy_fehlt', 'Etsy-Zugang fehlt');
   const r = UrlFetchApp.fetch(ETSY_API + pfad, { method: 'get', muteHttpExceptions: true,
     headers: { 'x-api-key': z.key + ':' + z.secret, 'Authorization': 'Bearer ' + etsyToken(z) } });
@@ -1263,7 +1449,18 @@ function etsyPositionen(receipt, katalog, zuordnung) {
 
 /* ---------------- Blatt „Etsy-Artikel“ ---------------- */
 const ETSY_BLATT = 'Etsy-Artikel';
-const ETSY_BLATT_SPALTEN = ['Etsy-Nr.', 'Titel', 'Preis (€)', 'Krone', 'Farbe', 'Hinweis'];
+const ETSY_BLATT_SPALTEN = ['Etsy-Nr.', 'Titel', 'Preis (€)', 'Krone', 'Farbe', 'Hinweis', 'Shop'];
+// Blatt „Etsy-Artikel“; ältere Blätter ohne Spalte „Shop“ bekommen sie dazu
+function etsyArtikelBlatt() {
+  const sheet = lagerBlatt(ETSY_BLATT, ETSY_BLATT_SPALTEN);
+  const kopf = kopfzeile(sheet);
+  if (kopf.indexOf('Shop') < 0) {
+    const sp = ETSY_BLATT_SPALTEN.indexOf('Shop') + 1;
+    sheet.getRange(1, sp).setValue('Shop');
+    kopfFormat(sheet.getRange(1, sp));
+  }
+  return sheet;
+}
 const ETSY_OFFEN = 'Bitte Krone und Farbe eintragen (wie im Katalog). Leer lassen, wenn es den Artikel im Katalog nicht gibt.';
 const ETSY_KRONE_TITEL = 'Personalisierte handgemachte Hundekrone, individuelle Krone, perfekt für Geburtstag und Fotoshooting mit Hund, ';
 // Vorschläge für die erste Befüllung (Stand 13.11.2026, mit Peter abgestimmt). preis = nur nötig, wo es den Titel zweimal gibt.
@@ -1341,33 +1538,37 @@ function etsyBlattLesen(sheet) {
 }
 
 // Neue Zeile für einen Etsy-Artikel; preis = Grundpreis (aus der Artikelliste) oder null (aus einer Bestellung)
-function etsyBlattZeile(sheet, id, titel, preis) {
+function etsyBlattZeile(sheet, id, titel, preis, shop) {
   const v = etsyVorschlag(titel, preis);
   sheet.appendRow([String(id), String(titel || '').replace(/\s+/g, ' ').trim(), preis == null ? '' : preis,
-    v ? v[1] : '', v ? v[2] : '', v ? 'Vorschlag – bitte prüfen' : ETSY_OFFEN]);
+    v ? v[1] : '', v ? v[2] : '', v ? 'Vorschlag – bitte prüfen' : ETSY_OFFEN, shop || '']);
   return v ? { krone: v[1], farbe: v[2] } : { krone: '', farbe: '' };
 }
 
 // Alle Etsy-Artikel im Verkauf ins Blatt „Etsy-Artikel“ holen. Vorhandene Zeilen (und was Sara eingetragen hat) bleiben.
 function etsyArtikelAbgleich() {
-  const shop = etsyProps().getProperty('ETSY_SHOP_ID');
-  if (etsyStatus() !== 'verbunden' || !shop) throw fehler('etsy_nicht_verbunden', 'Etsy ist noch nicht verbunden.');
-  const sheet = lagerBlatt(ETSY_BLATT, ETSY_BLATT_SPALTEN);
+  const konten = etsyVerbundene();
+  if (!konten.length) throw fehler('etsy_nicht_verbunden', 'Etsy ist noch nicht verbunden.');
+  const sheet = etsyArtikelBlatt();
   const map = etsyBlattLesen(sheet);
-  let offset = 0, gesamt = 0, neu = 0;
-  do {
-    const r = etsyAbrufen('/application/shops/' + encodeURIComponent(shop) + '/listings/active?limit=100&offset=' + offset);
-    const liste = r.results || [];
-    gesamt = Number(r.count) || 0;
-    liste.forEach(function (l) {
-      const id = String(l.listing_id || '');
-      if (!id || map[id]) return;
-      const z = etsyBlattZeile(sheet, id, l.title, l.price ? Math.round(etsyGeld(l.price) * 100) / 100 : null);
-      map[id] = z; neu++;
-    });
-    offset += liste.length;
-    if (!liste.length) break;
-  } while (offset < gesamt && offset < 1000);
+  let neu = 0;
+  konten.forEach(function (k) {
+    const shop = etsyEig(k, 'SHOP_ID'), shopName = etsyEig(k, 'SHOP_NAME') || '';
+    let offset = 0, gesamt = 0;
+    do {
+      const r = etsyAbrufen('/application/shops/' + encodeURIComponent(shop) + '/listings/active?limit=100&offset=' + offset, k);
+      const liste = r.results || [];
+      gesamt = Number(r.count) || 0;
+      liste.forEach(function (l) {
+        const id = String(l.listing_id || '');
+        if (!id || map[id]) return;
+        const z = etsyBlattZeile(sheet, id, l.title, l.price ? Math.round(etsyGeld(l.price) * 100) / 100 : null, shopName);
+        map[id] = z; neu++;
+      });
+      offset += liste.length;
+      if (!liste.length) break;
+    } while (offset < gesamt && offset < 1000);
+  });
   const alle = Object.keys(map);
   return { ok: true, neu: neu, gesamt: alle.length, offen: alle.filter(function (id) { return !map[id].krone; }).length };
 }
@@ -1396,32 +1597,36 @@ function etsyArtikel(sku, katalog) {
 
 // Neue bezahlte Etsy-Bestellungen in die Tabelle übernehmen. Jede Etsy-Nummer nur einmal.
 function etsyAbruf() {
-  const p = etsyProps(), shop = p.getProperty('ETSY_SHOP_ID');
-  if (etsyStatus() !== 'verbunden' || !shop) throw fehler('etsy_nicht_verbunden', 'Etsy ist noch nicht verbunden.');
-  const ab = parseInt(p.getProperty('ETSY_AB'), 10) || Math.floor(Date.now() / 1000);
+  const konten = etsyVerbundene();
+  if (!konten.length) throw fehler('etsy_nicht_verbunden', 'Etsy ist noch nicht verbunden.');
   const sheet = blatt(), kopf = spaltenSicherstellen(sheet);
   const vorhanden = {};
   const sp = kopf.indexOf('Plattform-Nr.') + 1, n = sheet.getLastRow();
   if (n > 1) sheet.getRange(2, sp, n - 1, 1).getDisplayValues().forEach(function (z) { if (z[0]) vorhanden[String(z[0]).trim()] = true; });
   let katalog = null;
   try { katalog = katalogLaden(); } catch (e) { katalog = null; }
-  const artikelBlatt = lagerBlatt(ETSY_BLATT, ETSY_BLATT_SPALTEN);
+  const artikelBlatt = etsyArtikelBlatt();
   const zuordnung = etsyBlattLesen(artikelBlatt);
   const neu = [];
-  let offset = 0, gesamt = 0;
-  do {
-    const r = etsyAbrufen('/application/shops/' + encodeURIComponent(shop) + '/receipts?was_paid=true&min_created=' + ab + '&limit=100&offset=' + offset);
-    const liste = r.results || [];
-    gesamt = Number(r.count) || 0;
-    liste.forEach(function (rc) {
-      const id = String(rc.receipt_id || '');
-      if (!id || vorhanden[id] || /cancel/i.test(String(rc.status || ''))) return;
-      vorhanden[id] = true;
-      neu.push(rc);
-    });
-    offset += liste.length;
-    if (!liste.length) break;
-  } while (offset < gesamt && offset < 500);
+  konten.forEach(function (k) {
+    const shop = etsyEig(k, 'SHOP_ID'), shopName = etsyEig(k, 'SHOP_NAME') || '';
+    const ab = parseInt(etsyEig(k, 'AB'), 10) || Math.floor(Date.now() / 1000);
+    let offset = 0, gesamt = 0;
+    do {
+      const r = etsyAbrufen('/application/shops/' + encodeURIComponent(shop) + '/receipts?was_paid=true&min_created=' + ab + '&limit=100&offset=' + offset, k);
+      const liste = r.results || [];
+      gesamt = Number(r.count) || 0;
+      liste.forEach(function (rc) {
+        const id = String(rc.receipt_id || '');
+        if (!id || vorhanden[id] || /cancel/i.test(String(rc.status || ''))) return;
+        vorhanden[id] = true;
+        rc._shop = shopName;
+        neu.push(rc);
+      });
+      offset += liste.length;
+      if (!liste.length) break;
+    } while (offset < gesamt && offset < 500);
+  });
   // Älteste zuerst, damit die Reihenfolge in der Tabelle stimmt
   neu.sort(function (a, b) { return (a.created_timestamp || a.create_timestamp || 0) - (b.created_timestamp || b.create_timestamp || 0); });
   const angelegt = [];
@@ -1430,7 +1635,7 @@ function etsyAbruf() {
     if (!pos.length) return;
     // Etsy-Artikel, die noch nicht im Blatt stehen, dort eintragen: Sara kann sie dann zuordnen
     pos.forEach(function (x) {
-      if (x.listing && !zuordnung[x.listing]) { etsyBlattZeile(artikelBlatt, x.listing, x.titel, null); zuordnung[x.listing] = { krone: '', farbe: '' }; }
+      if (x.listing && !zuordnung[x.listing]) { etsyBlattZeile(artikelBlatt, x.listing, x.titel, null, rc._shop); zuordnung[x.listing] = { krone: '', farbe: '' }; }
     });
     const zeit = new Date(((rc.created_timestamp || rc.create_timestamp) || Math.floor(Date.now() / 1000)) * 1000);
     const nr = neueBestellnr(sheet, kopf, new Date());
@@ -1455,7 +1660,8 @@ function etsyAbruf() {
         + (rc.message_from_buyer ? 'Nachricht: ' + String(rc.message_from_buyer).replace(/\s+/g, ' ').trim().slice(0, 300) : ''),
       'Artikelnr.': artikelListe(pos.map(function (x) { return x.sku; })),
       'Kiste': alleSkus ? KANAL_KISTE['Etsy'] : OHNE_LAGER,
-      'Plattform-Nr.': String(rc.receipt_id)
+      'Plattform-Nr.': String(rc.receipt_id),
+      'Shop': rc._shop || ''
     });
     if (alleSkus) lagerAbgleichSicher(nr, bestellungLesen(sheet, kopf, zeile));
     angelegt.push(nr);
@@ -1465,7 +1671,7 @@ function etsyAbruf() {
 
 // Läuft per Zeitplan alle 15 Minuten (siehe etsyZeitplan). Fehler landen nur im Protokoll.
 function etsyAutomatisch() {
-  if (etsyStatus() !== 'verbunden') return;
+  if (!etsyVerbundene().length) return;
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(20000);
@@ -1483,7 +1689,7 @@ function etsyAutomatisch() {
 function etsyZeitplan() {
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'etsyAutomatisch') ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('etsyAutomatisch').timeBased().everyMinutes(15).create();
-  Logger.log('Etsy-Zeitplan eingerichtet: alle 15 Minuten. Status: ' + etsyStatus());
+  Logger.log('Etsy-Zeitplan eingerichtet: alle 15 Minuten. Status: ' + etsyKontenStand().map(function (x) { return x.konto + ' ' + x.status; }).join(', '));
 }
 
 /* Einmalig im Editor ausführen: legt einen neuen Admin-Schlüssel an und zeigt ihn im Protokoll.
