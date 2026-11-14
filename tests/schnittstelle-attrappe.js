@@ -36,12 +36,14 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
   // github = { dateien: { 'katalog.json': '…' } } → GITHUB_TOKEN ist gesetzt; cloudinary: true → CLOUDINARY_KEY/SECRET gesetzt
   // etsy = { receipts: [Etsy-Bestellungen], listings: [Etsy-Artikel], shop: 4711, falsch: true (Anmeldung scheitert), abgelaufen: true (Zugriffs-Token ungültig) }
   //        → ETSY_KEYSTRING/ETSY_SECRET sind gesetzt; etsy.tokenAbrufe zählt die Token-Anfragen
+  //        zweiter Shop: etsy.zwei = { receipts, listings, shop: 4712 } → ETSY2_KEYSTRING/ETSY2_SECRET sind gesetzt
   // paypal = { orders: { ID: PayPal-Antwort }, falsch: true (Anmeldung scheitert) } → PAYPAL_CLIENT_ID/SECRET sind gesetzt
   // serienliste = Zeilen von Saras GPSR-Liste (inkl. Kopf) → eigene Tabelle, SERIENLISTE_ID ist gesetzt
   const props = Object.assign({ ADMIN_SCHLUESSEL: schluessel }, paypal ? { PAYPAL_CLIENT_ID: 'CID', PAYPAL_SECRET: 'GEHEIM' } : {},
     serienliste ? { SERIENLISTE_ID: 'SERIEN-ID' } : {}, github ? { GITHUB_TOKEN: 'GH-TOKEN' } : {},
     cloudinary ? { CLOUDINARY_KEY: 'CL-KEY', CLOUDINARY_SECRET: 'CL-SECRET' } : {},
-    etsy ? { ETSY_KEYSTRING: 'ETSY-KEY', ETSY_SECRET: 'ETSY-SECRET' } : {}, eigenschaften);
+    etsy ? { ETSY_KEYSTRING: 'ETSY-KEY', ETSY_SECRET: 'ETSY-SECRET' } : {},
+    etsy && etsy.zwei ? { ETSY2_KEYSTRING: 'ETSY2-KEY', ETSY2_SECRET: 'ETSY2-SECRET' } : {}, eigenschaften);
   if (etsy) etsy.tokenAbrufe = [];
   const gh = github ? { dateien: Object.assign({}, github.dateien || {}), gespeichert: [], falsch: !!github.falsch } : null;
   const serienDaten = serienliste ? serienliste.map(z => z.slice()) : null;
@@ -70,7 +72,10 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
       return antwortVon(200, { content: b64, sha: 'sha-' + datei });
     }
     if (url.startsWith('https://api.etsy.com/v3/')) {
-      if (!etsy || opt.headers['x-api-key'] !== 'ETSY-KEY:ETSY-SECRET') return antwortVon(401, { error: 'invalid_api_key' });
+      const zweit = !!(etsy && etsy.zwei) && opt.headers['x-api-key'] === 'ETSY2-KEY:ETSY2-SECRET';
+      if (!etsy || (opt.headers['x-api-key'] !== 'ETSY-KEY:ETSY-SECRET' && !zweit)) return antwortVon(401, { error: 'invalid_api_key' });
+      const quelle = zweit ? etsy.zwei : etsy;
+      const shopNr = zweit ? (etsy.zwei.shop || 4712) : (etsy.shop === undefined ? 4711 : etsy.shop);
       const pfad = url.slice('https://api.etsy.com/v3'.length);
       if (pfad === '/public/oauth/token') {
         etsy.tokenAbrufe.push(opt.payload);
@@ -79,15 +84,16 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
         return antwortVon(200, { access_token: 'ETSY-AT-' + n, refresh_token: 'ETSY-RT-' + n, expires_in: 3600, token_type: 'Bearer' });
       }
       if (!/^Bearer ETSY-AT-\d+$/.test(opt.headers.Authorization || '') || etsy.abgelaufen) return antwortVon(401, { error: 'invalid_token' });
-      if (pfad === '/application/users/me') return antwortVon(200, { user_id: 1, shop_id: etsy.shop === undefined ? 4711 : etsy.shop });
-      const m = /^\/application\/shops\/4711\/receipts\?was_paid=true&min_created=(\d+)&limit=100&offset=(\d+)$/.exec(pfad);
+      if (pfad === '/application/users/me') return antwortVon(200, { user_id: zweit ? 2 : 1, shop_id: shopNr });
+      if (pfad === '/application/shops/' + shopNr) return antwortVon(200, { shop_id: shopNr, shop_name: zweit ? 'Sternenstaubhandmade' : 'MilasKronenwelt' });
+      const m = /^\/application\/shops\/(?:4711|4712)\/receipts\?was_paid=true&min_created=(\d+)&limit=100&offset=(\d+)$/.exec(pfad);
       if (m) {
-        const alle = (etsy.receipts || []).filter(r => (r.created_timestamp || 0) >= Number(m[1]));
+        const alle = (quelle.receipts || []).filter(r => (r.created_timestamp || 0) >= Number(m[1]));
         return antwortVon(200, { count: alle.length, results: alle.slice(Number(m[2]), Number(m[2]) + (etsy.seite || 100)) });
       }
-      const l = /^\/application\/shops\/4711\/listings\/active\?limit=100&offset=(\d+)$/.exec(pfad);
+      const l = /^\/application\/shops\/(?:4711|4712)\/listings\/active\?limit=100&offset=(\d+)$/.exec(pfad);
       if (l) {
-        const alle = etsy.listings || [];
+        const alle = quelle.listings || [];
         return antwortVon(200, { count: alle.length, results: alle.slice(Number(l[1]), Number(l[1]) + (etsy.seite || 100)) });
       }
       return antwortVon(404, { error: 'not found' });

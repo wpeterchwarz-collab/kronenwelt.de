@@ -50,7 +50,7 @@ test.describe('Schnittstelle: Shop-Bestellung', () => {
       kunde_name: 'A B', kunde_email: 'a@b.de', lieferadresse: 'X 1' });
     expect(r.success).toBe(true);
     expect(daten[0].slice(0, 12)).toEqual(KOPF);                                  // alte Spalten unverändert
-    expect(daten[0].slice(12)).toEqual(['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft', 'Seriennummern', 'Rechnungsnr.', 'Plattform-Nr.']);
+    expect(daten[0].slice(12)).toEqual(['Status', 'Kanal', 'Sendungsnummer', 'Versendet am', 'Notiz', 'Artikelnr.', 'Kiste', 'PayPal-ID', 'Zahlung geprüft', 'Seriennummern', 'Rechnungsnr.', 'Plattform-Nr.', 'Shop']);
     const z = daten.at(-1);
     expect(z.slice(3, 9)).toEqual(['Glitzer', 'Blau', 'Gross', 'LUNA', 17, 'PayPal']);
     expect(z[spalte(daten, 'Status')]).toBe('Neu');
@@ -882,7 +882,8 @@ test.describe('Schnittstelle: Etsy (ab 1.9)', () => {
     const u = umgebung([], S, { etsy: { listings: LISTE, seite: 4 } });
     verbinden(u);
     expect(u.post({ aktion: 'etsyArtikel', schluessel: S })).toEqual({ ok: true, neu: 9, gesamt: 9, offen: 3 });
-    expect(u.blatt('Etsy-Artikel')[0]).toEqual(['Etsy-Nr.', 'Titel', 'Preis (€)', 'Krone', 'Farbe', 'Hinweis']);
+    expect(u.blatt('Etsy-Artikel')[0]).toEqual(['Etsy-Nr.', 'Titel', 'Preis (€)', 'Krone', 'Farbe', 'Hinweis', 'Shop']);
+    expect(u.blatt('Etsy-Artikel')[1][6]).toBe('MilasKronenwelt');
     expect(zeile(u, 11)).toMatchObject({ krone: 'Einfarbig', farbe: 'Berry' });
     expect(zeile(u, 12)).toMatchObject({ krone: 'Party', farbe: 'Rosa mit Punkten' });      // rosa für 12 €
     expect(zeile(u, 13)).toMatchObject({ krone: 'Edel & Wild', farbe: 'Rosa' });            // rosa für 14 €
@@ -930,13 +931,14 @@ test.describe('Schnittstelle: Etsy (ab 1.9)', () => {
     expect(b.artikel.split(', ')[1]).toMatch(/^KR-[A-Z]+-[A-Z]+-GR$/);
   });
 
-  test('Krone im Blatt, aber Farbe noch nicht im Katalog (Edel & Wild Rosa): Name steht richtig da, Lager bucht nicht', async () => {
+  test('Krone im Blatt, aber Farbe (noch) nicht im Katalog: Name steht richtig da, Lager bucht nicht', async () => {
     const t = position(13, KRONE + 'rosa', [{ formatted_name: 'Größe', formatted_value: 'Mini' }]);
     const u = umgebung([], S, { etsy: { listings: LISTE, receipts: [receipt(503, { transactions: [t] })] } });
     verbinden(u); etsyAb(u);
     u.post({ aktion: 'etsyArtikel', schluessel: S });
+    u.blatt('Etsy-Artikel').find(x => x[0] === '13')[4] = 'Regenbogen';
     u.post({ aktion: 'etsyAbruf', schluessel: S });
-    expect(u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0]).toMatchObject({ variante: 'Edel & Wild', farbe: 'Rosa', groesse: 'Mini', artikel: '', kiste: 'nicht vom Lager' });
+    expect(u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0]).toMatchObject({ variante: 'Edel & Wild', farbe: 'Regenbogen', groesse: 'Mini', artikel: '', kiste: 'nicht vom Lager' });
     expect(u.blatt('Lagerbewegungen')).toBeUndefined();
   });
 
@@ -954,10 +956,61 @@ test.describe('Schnittstelle: Etsy (ab 1.9)', () => {
     expect(zeile(u, 99)).toMatchObject({ krone: '', hinweis: expect.stringContaining('Bitte Krone') });
   });
 
+  // ---- zweiter Etsy-Shop (1.11) ----
+  const verbindenKonto = (u, konto) => {
+    const start = u.post({ aktion: 'etsyStart', schluessel: S, konto });
+    return u.post({ aktion: 'etsyCode', schluessel: S, code: 'CODE', state: new URL(start.url).searchParams.get('state') });
+  };
+
+  test('zweiter Shop: eigener Zugang, eigener Anmeldelink, Shopname wird gemerkt', async () => {
+    const u = umgebung([], S, { etsy: { zwei: {} } });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsyKonten).toEqual([
+      { konto: '1', status: 'eingerichtet', shop: '' }, { konto: '2', status: 'eingerichtet', shop: '' }]);
+    const start = new URL(u.post({ aktion: 'etsyStart', schluessel: S, konto: '2' }).url);
+    expect(start.searchParams.get('client_id')).toBe('ETSY2-KEY');
+    expect(verbindenKonto(u, '2')).toMatchObject({ ok: true, konto: '2', shopName: 'Sternenstaubhandmade' });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsyKonten).toEqual([
+      { konto: '1', status: 'eingerichtet', shop: '' }, { konto: '2', status: 'verbunden', shop: 'Sternenstaubhandmade' }]);
+    expect(u.props.ETSY_TOKEN).toBeUndefined();                       // Konto 1 bleibt unberührt
+  });
+
+  test('ohne zweiten Zugang: Konto 2 meldet „fehlt“ und nennt die Eigenschaften', async () => {
+    const u = umgebung([], S, { etsy: {} });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsyKonten[1]).toEqual({ konto: '2', status: 'fehlt', shop: '' });
+    expect(u.post({ aktion: 'etsyStart', schluessel: S, konto: '2' })).toMatchObject({ ok: false, fehler: 'etsy_fehlt' });
+  });
+
+  test('Abruf holt aus beiden Shops; der Shopname steht in der Bestellung und im Etsy-Artikel-Blatt', async () => {
+    const a = receipt(701), b = receipt(702, { name: 'Bernd Zwei', transactions: [position(55, 'Krone aus dem zweiten Shop', [])] });
+    const u = umgebung([], S, { etsy: { receipts: [a], zwei: { receipts: [b] } } });
+    verbindenKonto(u, '1'); verbindenKonto(u, '2');
+    u.props.ETSY_AB = String(JETZT); u.props.ETSY2_AB = String(JETZT);
+    expect(u.post({ aktion: 'etsyAbruf', schluessel: S }).neu).toBe(2);
+    const liste = u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen;
+    expect(liste.find(x => x.plattformNr === '701').shop).toBe('MilasKronenwelt');
+    expect(liste.find(x => x.plattformNr === '702')).toMatchObject({ shop: 'Sternenstaubhandmade', kanal: 'Etsy', kiste: 'nicht vom Lager' });
+    expect(u.blatt('Etsy-Artikel').find(x => x[0] === '55')[6]).toBe('Sternenstaubhandmade');
+    expect(u.post({ aktion: 'etsyAbruf', schluessel: S }).neu).toBe(0);
+  });
+
+  test('derselbe Shop kann nicht unter beiden Konten verbunden werden', async () => {
+    const u = umgebung([], S, { etsy: { zwei: { shop: 4711 } } });
+    verbindenKonto(u, '1');
+    expect(verbindenKonto(u, '2')).toMatchObject({ ok: false, fehler: 'etsy_doppelt' });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsyKonten[1].status).toBe('eingerichtet');
+  });
+
+  test('Trennen betrifft nur das gewählte Konto', async () => {
+    const u = umgebung([], S, { etsy: { zwei: {} } });
+    verbindenKonto(u, '1'); verbindenKonto(u, '2');
+    u.post({ aktion: 'etsyTrennen', schluessel: S, konto: '2' });
+    expect(u.post({ aktion: 'ping', schluessel: S }).etsyKonten.map(x => x.status)).toEqual(['verbunden', 'eingerichtet']);
+  });
+
   test('Trennen löscht die Tokens, der Zugang bleibt eingetragen', async () => {
     const u = umgebung([], S, { etsy: {} });
     verbinden(u);
-    expect(u.post({ aktion: 'etsyTrennen', schluessel: S })).toEqual({ ok: true, etsy: 'eingerichtet' });
+    expect(u.post({ aktion: 'etsyTrennen', schluessel: S })).toMatchObject({ ok: true, etsy: 'eingerichtet', konto: '1' });
     expect(u.props.ETSY_TOKEN).toBe('');
   });
 });
