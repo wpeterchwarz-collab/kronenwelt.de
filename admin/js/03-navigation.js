@@ -7,7 +7,7 @@
 // = ein neuer Eintrag hier + ein <div id="tab-…" class="content">. Navigation, Unterreiter
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
-const ADMIN_VERSION = '1.5';
+const ADMIN_VERSION = '1.7';
 const ADMIN_NEU = 'Rechnungen schreiben und drucken direkt im Admin (ersetzt Papierkram, weiter ab R-01272); zweiter Etsy-Shop Sternenstaubhandmade.';
 const ICON = {
   start:    '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/></svg>',

@@ -14,6 +14,7 @@ let entwurf = null;                                      // Rechnung in Arbeit (
 let rechnungLaeuft = false;
 let rechnungFilter = { jahr: String(new Date().getFullYear()), status: '', suche: '' };
 let zahlungFormFuer = '';                                // Rechnungsnummer, bei der „Als bezahlt markieren“ offen ist
+let menueFuer = '';                                      // Rechnungsnummer, deren ⋮-Menü offen ist
 
 const ZAHLUNGSARTEN = ['Überweisung', 'PayPal', 'Etsy Payments', 'Amazon', 'Bar', 'Karte (SumUp)'];
 const RECHNUNG_STATUS = ['Offen', 'Überfällig', 'Bezahlt', 'Storniert'];
@@ -221,43 +222,60 @@ function rechnungJahre() {
   (rechnungen || []).forEach(r => { const j = String(r.datum || '').slice(6); if (j) jahre.add(j); });
   return [...jahre].sort().reverse();
 }
-function rechnungenGefiltert() {
+// Jahr und Suche (ohne Status) – Grundlage für Kacheln, Reiter-Zahlen und Liste
+function rechnungenImJahr() {
   const f = rechnungFilter, q = f.suche.trim().toLowerCase();
   return rechnungen.filter(r => {
     if (f.jahr && String(r.datum || '').slice(6) !== f.jahr) return false;
-    const st = rStatus(r);
-    if (f.status === 'Offen' && st !== 'Offen' && st !== 'Überfällig') return false;
-    if (f.status === 'Storniert' && st !== 'Storniert' && st !== 'Storno') return false;
-    if (f.status && f.status !== 'Offen' && f.status !== 'Storniert' && st !== f.status) return false;
     if (q && ![r.nr, r.betreff, r.empfaenger, r.bestellnr].some(x => String(x || '').toLowerCase().includes(q))) return false;
     return true;
   });
 }
+const rStatusGruppe = r => { const st = rStatus(r); return st === 'Storno' ? 'Storniert' : st; };
+function rechnungenGefiltert() {
+  return rechnungenImJahr().filter(r => !rechnungFilter.status || rStatusGruppe(r) === rechnungFilter.status);
+}
 function rechnungFilterSetzen(feld, wert) {
   rechnungFilter[feld] = wert;
-  if (feld === 'suche') { const l = document.getElementById('reListe'); if (l) l.outerHTML = listeZeilenHtml(); return; }
+  menueFuer = '';
+  if (feld === 'suche') {                                // Eingabefeld behalten (Fokus), nur Kacheln, Reiter und Liste neu
+    const k = document.getElementById('reUebersicht'); if (k) k.outerHTML = uebersichtHtml();
+    const l = document.getElementById('reListe'); if (l) l.outerHTML = listeZeilenHtml();
+    return;
+  }
   renderRechnungen();
 }
 
 function listeHtml() {
   if (!rechnungen.length) return `<div class="card leise">Noch keine Rechnungen hier. Die nächste bekommt die Nummer ${medienEsc(rechnungInfo.naechste || 'R-01272')}.
     Ältere Rechnungen bleiben in Papierkram.</div>`;
-  const offen = rechnungen.filter(r => ['Offen', 'Überfällig'].includes(rStatus(r)));
-  const ueber = offen.filter(r => rStatus(r) === 'Überfällig');
   const f = rechnungFilter;
-  return `<div class="card">
+  return `<div class="card re-karte">
     <div class="re-filter">
       <label>Jahr <select id="reFJahr" onchange="rechnungFilterSetzen('jahr', this.value)"><option value="">Alle</option>
         ${rechnungJahre().map(j => `<option ${j === f.jahr ? 'selected' : ''}>${j}</option>`).join('')}</select></label>
-      <label>Status <select id="reFStatus" onchange="rechnungFilterSetzen('status', this.value)"><option value="">Alle</option>
-        ${RECHNUNG_STATUS.map(st => `<option ${st === f.status ? 'selected' : ''}>${st}</option>`).join('')}</select></label>
       <input type="search" id="reFSuche" placeholder="Suchen (Nr., Name, Betreff)" aria-label="Rechnungen durchsuchen" value="${medienEsc(f.suche)}" oninput="rechnungFilterSetzen('suche', this.value)">
     </div>
-    <div class="re-offen leise">${offen.length
-      ? `Offen: <b>${offen.length}</b> ${offen.length === 1 ? 'Rechnung' : 'Rechnungen'} · <b>€ ${rBetrag(offen.reduce((s, r) => s + r.gesamt, 0))}</b>${ueber.length ? ` · davon überfällig: <b class="re-rot">${ueber.length}</b>` : ''}`
-      : 'Alle Rechnungen sind bezahlt ✓'}</div>
+    ${uebersichtHtml()}
     ${listeZeilenHtml()}
     <div class="leise" style="font-size:12px;margin-top:10px">Ältere Rechnungen (bis R-01271) sind in Papierkram.</div>
+  </div>`;
+}
+
+// Kacheln (Offen / Überfällig / Bezahlt) und Status-Reiter mit Anzahl
+function uebersichtHtml() {
+  const basis = rechnungenImJahr();
+  const gruppe = st => basis.filter(r => rStatusGruppe(r) === st);
+  const summe = l => l.reduce((s, r) => s + (r.gesamt || 0), 0);
+  const stueck = n => n + (n === 1 ? ' Rechnung' : ' Rechnungen');
+  const kachel = (st, titel, cls) => { const l = gruppe(st).filter(r => r.art !== 'Storno');
+    return `<button type="button" class="re-kachel ${cls}" onclick="rechnungFilterSetzen('status', '${st}')" aria-label="${titel}: € ${rBetrag(summe(l))}">
+      <span class="re-kachel-titel">${titel}</span><span class="re-kachel-summe">€ ${rBetrag(summe(l))}</span><span class="re-kachel-anzahl">${stueck(l.length)}</span></button>`; };
+  const reiter = (st, titel) => `<button type="button" role="tab" aria-selected="${rechnungFilter.status === st}" class="re-reiter ${rechnungFilter.status === st ? 'aktiv' : ''}"
+      onclick="rechnungFilterSetzen('status', '${st}')">${titel} <span>${st ? gruppe(st).length : basis.length}</span></button>`;
+  return `<div id="reUebersicht">
+    <div class="re-kacheln">${kachel('Offen', 'Offen', 're-st-offen')}${kachel('Überfällig', 'Überfällig', 're-st-ueberfaellig')}${kachel('Bezahlt', 'Bezahlt' + (rechnungFilter.jahr ? ' ' + rechnungFilter.jahr : ''), 're-st-bezahlt')}</div>
+    <div class="re-reiterleiste" role="tablist" aria-label="Status">${reiter('', 'Alle')}${RECHNUNG_STATUS.map(st => reiter(st, st)).join('')}</div>
   </div>`;
 }
 
@@ -265,23 +283,30 @@ function listeZeilenHtml() {
   const liste = rechnungenGefiltert();
   if (!liste.length) return '<div id="reListe" class="leise" style="padding:14px 0">Keine Rechnungen für diese Auswahl.</div>';
   return `<div class="re-liste" id="reListe">
-    <div class="re-zeile re-kopfzeile" aria-hidden="true"><div>Nr. / Betreff</div><div>Kunde</div><div>Status</div><div>Datum</div><div>Fällig am</div><div class="re-zahl">Betrag</div></div>
+    <div class="re-zeile re-kopfzeile" aria-hidden="true"><div>Nr. / Betreff</div><div>Kunde</div><div>Status</div><div>Datum</div><div>Fällig am</div><div class="re-zahl">Betrag</div><div></div></div>
     ${liste.map(r => {
     const name = String(r.empfaenger || '').split('\n')[0];
     const nr = jsArg(r.nr), st = rStatus(r);
     const zahlbar = st === 'Offen' || st === 'Überfällig';
-    return `<div class="re-zeile ${r.storniertDurch ? 'storniert' : ''}" data-nr="${medienEsc(r.nr)}">
-      <div><b>${medienEsc(r.nr)}</b>${r.storniertDurch ? ' <span class="leise">storniert durch ' + medienEsc(r.storniertDurch) + '</span>' : ''}
-        ${r.betreff ? `<div class="leise">${medienEsc(r.betreff)}</div>` : ''}</div>
+    const menue = [
+      zahlbar ? `<button type="button" onclick="zahlungFormZeigen(${nr})">✓ Als bezahlt markieren</button>` : '',
+      st === 'Bezahlt' ? `<button type="button" onclick="rechnungBezahltKlick(${nr}, true)">↺ Zahlung zurücksetzen</button>` : '',
+      `<button type="button" onclick="rechnungAnsehen(${nr})">Ansehen</button>`,
+      r.art === 'Rechnung' && !r.storniertDurch ? `<button type="button" class="re-menue-rot" onclick="rechnungStornoKlick(${nr})">Stornieren</button>` : ''
+    ].join('');
+    return `<div class="re-zeile ${r.storniertDurch ? "storniert" : ""} re-z-${({ 'Überfällig': 'ueberfaellig' })[st] || st.toLowerCase()}" data-nr="${medienEsc(r.nr)}">
+      <div class="re-nr"><b>${medienEsc(r.nr)}</b>
+        <div class="leise">${r.storniertDurch ? 'storniert durch ' + medienEsc(r.storniertDurch) : medienEsc(r.betreff || '')}</div></div>
       <div class="re-kunde">${medienEsc(name)}</div>
-      <div>${rStatusBadge(st)}${st === 'Bezahlt' ? `<div class="leise re-klein">${medienEsc(r.bezahltAm)}${r.zahlungsart ? ' · ' + medienEsc(r.zahlungsart) : ''}</div>` : ''}</div>
-      <div><span class="re-mobil leise">Datum </span>${medienEsc(r.datum)}</div>
-      <div class="${st === 'Überfällig' ? 're-rot' : ''}">${r.faellig ? '<span class="re-mobil leise">fällig </span>' + medienEsc(r.faellig) : ''}</div>
-      <div class="re-zahl"><b>€ ${rBetrag(r.gesamt)}</b></div>
-      <div class="btn-row"><button class="btn btn-teal btn-sm" onclick="rechnungDrucken(${nr})">Drucken / PDF</button>
-        ${zahlbar && zahlungFormFuer !== r.nr ? `<button class="btn btn-primary btn-sm" onclick="zahlungFormZeigen(${nr})">Als bezahlt markieren</button>` : ''}
-        ${st === 'Bezahlt' ? `<button class="btn btn-outline btn-sm" onclick="rechnungBezahltKlick(${nr}, true)">Zahlung zurücksetzen</button>` : ''}
-        ${r.art === 'Rechnung' && !r.storniertDurch ? `<button class="btn btn-outline btn-sm" onclick="rechnungStornoKlick(${nr})">Stornieren</button>` : ''}</div>
+      <div class="re-st">${rStatusBadge(st)}${st === 'Bezahlt' ? `<div class="leise re-klein">${medienEsc(r.bezahltAm)}${r.zahlungsart ? ' · ' + medienEsc(r.zahlungsart) : ''}</div>` : ''}</div>
+      <div class="re-datum"><span class="re-mobil leise">Datum </span>${medienEsc(r.datum)}</div>
+      <div class="re-faellig ${st === 'Überfällig' ? 're-rot' : ''}">${r.faellig && st !== 'Storniert' && st !== 'Storno' ? '<span class="re-mobil leise">fällig </span>' + medienEsc(r.faellig) : ''}</div>
+      <div class="re-zahl re-betrag"><b>€ ${rBetrag(r.gesamt)}</b></div>
+      <div class="re-symbole">
+        <button type="button" class="re-symbol" title="Drucken / PDF" aria-label="Drucken / PDF" onclick="rechnungDrucken(${nr})">${RE_DRUCKER}</button>
+        <div class="re-menue-wrap"><button type="button" class="re-symbol" title="Weitere Aktionen" aria-label="Weitere Aktionen zu ${medienEsc(r.nr)}" aria-expanded="${menueFuer === r.nr}" onclick="event.stopPropagation();menueUmschalten(${nr})">⋮</button>
+          ${menueFuer === r.nr ? `<div class="re-menue" role="menu" onclick="event.stopPropagation()">${menue}</div>` : ''}</div>
+      </div>
       ${zahlungFormFuer === r.nr ? `<div class="re-zahlung-form">
         <label class="re-feld">Bezahlt am<input type="date" id="reZAm" value="${datumZuIso(rHeute())}"></label>
         <label class="re-feld">Zahlungsart<select id="reZArt">${zahlungsOptionen(/Bezahlt über Etsy/.test(r.hinweis || '') ? 'Etsy Payments' : 'Überweisung')}</select></label>
@@ -291,7 +316,21 @@ function listeZeilenHtml() {
   }).join('')}</div>`;
 }
 
-function zahlungFormZeigen(nr) { zahlungFormFuer = nr; renderRechnungen(); }
+const RE_DRUCKER = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="1.5"/><path d="M7 14h10v7H7z"/></svg>';
+
+function menueUmschalten(nr) { menueFuer = menueFuer === nr ? '' : nr; renderRechnungen(); }
+document.addEventListener('click', () => { if (menueFuer) { menueFuer = ''; renderRechnungen(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && menueFuer) { menueFuer = ''; renderRechnungen(); } });
+
+// Ansehen: dieselbe Rechnung im neuen Fenster, ohne Druckdialog
+function rechnungAnsehen(nr) {
+  menueFuer = '';
+  const r = (rechnungen || []).find(x => x.nr === nr);
+  if (r) druckFenster(rechnungHtml(r, rechnungInfo.absender), false);
+  renderRechnungen();
+}
+
+function zahlungFormZeigen(nr) { zahlungFormFuer = nr; menueFuer = ''; renderRechnungen(); }
 
 // Zahlung eintragen (oder mit zuruecksetzen=true wieder auf offen stellen); die Rechnung selbst bleibt unverändert
 async function rechnungBezahltKlick(nr, zuruecksetzen) {
@@ -345,6 +384,7 @@ async function rechnungFestschreiben() {
 }
 
 async function rechnungStornoKlick(nr) {
+  menueFuer = ''; renderRechnungen();
   const grund = prompt('Rechnung ' + nr + ' stornieren? Es entsteht die Stornorechnung ' + nr + '-S.\nGrund (optional, steht auf der Stornorechnung):', '');
   if (grund === null) return;
   try {
