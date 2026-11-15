@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.11', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.12', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -1034,7 +1034,7 @@ test.describe('Schnittstelle: Rechnungen', () => {
     expect(r).toMatchObject({ ok: true, rechnung: { nr: 'R-01272', art: 'Rechnung', gesamt: 22.5, datum: '14.11.2026' } });
     const sh = t.blatt('Rechnungen');
     expect(sh[0]).toEqual(['Rechnungsnr.', 'Art', 'Datum', 'Leistungsdatum', 'Bestellnr.', 'Betreff', 'Empfänger',
-      'Positionen', 'Gesamt (€)', 'Hinweis', 'Seriennummern', 'Bezug', 'Storniert durch', 'Erstellt']);
+      'Positionen', 'Gesamt (€)', 'Hinweis', 'Seriennummern', 'Bezug', 'Storniert durch', 'Erstellt', 'Fällig am', 'Bezahlt am', 'Zahlungsart']);
     expect(sh[1].slice(0, 5)).toEqual(['R-01272', 'Rechnung', '14.11.2026', '14.11.2026', 'KW-20261114-007']);
     expect(t.daten[2][spalte(t.daten, 'Rechnungsnr.')]).toBe('R-01272');
     const liste = t.post({ aktion: 'rechnungen', schluessel: S });
@@ -1077,6 +1077,37 @@ test.describe('Schnittstelle: Rechnungen', () => {
     expect(liste.map(r => [r.nr, r.storniertDurch])).toEqual([['R-01273', ''], ['R-01272-S', ''], ['R-01272', 'R-01272-S']]);
     // Die alte Rechnung selbst ist unverändert geblieben
     expect(t.blatt('Rechnungen')[1].slice(0, 12)).toEqual(vorher);
+  });
+
+  test('Zahlungsstatus: Fällig am Standard +14 Tage, bezahlt setzen und zurücksetzen ändert nur die Zahlungsspalten', () => {
+    const t = umgebung([BESTELLUNG, ETSY], S);
+    const a = t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu({ bezahltAm: '14.11.2026', zahlungsart: 'Etsy Payments' }) });
+    expect(a.rechnung).toMatchObject({ faellig: '28.11.2026', bezahltAm: '14.11.2026', zahlungsart: 'Etsy Payments' });
+    const b = t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu({ bestellnr: '', faellig: '01.12.2026', zahlungsart: 'PayPal' }) });
+    expect(b.rechnung).toMatchObject({ nr: 'R-01273', faellig: '01.12.2026', bezahltAm: '', zahlungsart: '' });
+    const vorher = t.blatt('Rechnungen')[2].slice(0, 15);
+    expect(t.post({ aktion: 'rechnungBezahlt', schluessel: S, nr: 'R-01273', bezahltAm: '2026-12-01' }).fehler).toBe('rechnung_datum');
+    expect(t.post({ aktion: 'rechnungBezahlt', schluessel: S, nr: 'R-01273', bezahltAm: '03.12.2026', zahlungsart: 'Überweisung' }))
+      .toMatchObject({ ok: true, rechnung: { bezahltAm: '03.12.2026', zahlungsart: 'Überweisung' } });
+    expect(t.blatt('Rechnungen')[2].slice(0, 15)).toEqual(vorher);
+    expect(t.blatt('Rechnungen')[2].slice(15)).toEqual(['03.12.2026', 'Überweisung']);
+    t.post({ aktion: 'rechnungBezahlt', schluessel: S, nr: 'R-01273', bezahltAm: '' });
+    expect(t.post({ aktion: 'rechnungen', schluessel: S }).rechnungen[0]).toMatchObject({ nr: 'R-01273', bezahltAm: '', zahlungsart: '' });
+    t.post({ aktion: 'rechnungStornieren', schluessel: S, nr: 'R-01273' });
+    expect(t.post({ aktion: 'rechnungBezahlt', schluessel: S, nr: 'R-01273', bezahltAm: '03.12.2026' }).fehler).toBe('rechnung_storniert');
+    expect(t.post({ aktion: 'rechnungBezahlt', schluessel: S, nr: 'R-01273-S', bezahltAm: '03.12.2026' }).fehler).toBe('rechnung_nicht_gefunden');
+  });
+
+  test('altes Blatt ohne Zahlungsspalten bekommt sie rechts angehängt; alte Zeilen gelten als fällig nach 14 Tagen', () => {
+    const t = umgebung([BESTELLUNG], S);
+    t.post({ aktion: 'rechnungErstellen', schluessel: S, rechnung: neu({ bestellnr: '' }) });
+    const sh = t.blatt('Rechnungen');
+    sh[0].length = 14; sh[1].length = 14;                                  // Stand von Version 1.11
+    const r = t.post({ aktion: 'rechnungen', schluessel: S }).rechnungen[0];
+    expect(r).toMatchObject({ nr: 'R-01272', faellig: '28.11.2026', bezahltAm: '' });
+    t.post({ aktion: 'rechnungBezahlt', schluessel: S, nr: 'R-01272', bezahltAm: '20.11.2026', zahlungsart: 'Bar' });
+    expect(t.blatt('Rechnungen')[0].slice(14)).toEqual(['Fällig am', 'Bezahlt am', 'Zahlungsart']);
+    expect(t.blatt('Rechnungen')[1].slice(15)).toEqual(['20.11.2026', 'Bar']);
   });
 
   test('ohne Schlüssel keine Rechnungen', () => {
