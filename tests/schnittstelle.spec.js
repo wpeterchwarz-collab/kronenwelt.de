@@ -1163,6 +1163,14 @@ test.describe('Schnittstelle: alte Rechnungen aus Papierkram', () => {
     expect(t.post({ aktion: 'rechnungen', schluessel: S })).toMatchObject({ papierkramOrdner: true });
   });
 
+  test('ohne Eigenschaft: Ordner „Rechnungen_Papierkram“ wird per Name gefunden und gemerkt', () => {
+    const t = umgebung([], S, { drive: { name: 'Rechnungen_Papierkram', dateien: ['R-01271.pdf'] } });
+    t.post({ aktion: 'altrechnungenImport', schluessel: S, rechnungen: [alt('R-01271')] });
+    expect(t.post({ aktion: 'rechnungen', schluessel: S }).papierkramOrdner).toBe(true);
+    expect(t.props.PAPIERKRAM_ORDNER).toBe('PK-ORDNER-1234');
+    expect(t.post({ aktion: 'altrechnungPdf', schluessel: S, nr: 'R-01271' }).url).toContain('R-01271.pdf');
+  });
+
   test('ohne eingetragenen Ordner: verständliche Meldung', () => {
     const t = umgebung([], S);
     t.post({ aktion: 'altrechnungenImport', schluessel: S, rechnungen: [alt('R-01271')] });

@@ -48,7 +48,7 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
     cloudinary ? { CLOUDINARY_KEY: 'CL-KEY', CLOUDINARY_SECRET: 'CL-SECRET' } : {},
     etsy ? { ETSY_KEYSTRING: 'ETSY-KEY', ETSY_SECRET: 'ETSY-SECRET' } : {},
     etsy && etsy.zwei ? { ETSY2_KEYSTRING: 'ETSY2-KEY', ETSY2_SECRET: 'ETSY2-SECRET' } : {},
-    drive ? { PAPIERKRAM_ORDNER: 'https://drive.google.com/drive/folders/PK-ORDNER-1234?usp=sharing' } : {}, eigenschaften);
+    drive && !drive.name ? { PAPIERKRAM_ORDNER: 'https://drive.google.com/drive/folders/PK-ORDNER-1234?usp=sharing' } : {}, eigenschaften);
   const iter = l => { let i = 0; return { hasNext: () => i < l.length, next: () => l[i++] }; };
   const ordnerAttrappe = (name, dateien, unter = {}) => ({
     getName: () => name,
@@ -137,7 +137,8 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
       openById: id => { if (id !== 'SERIEN-ID' || !serienSheet) throw new Error('Datei nicht gefunden'); return { getSheets: () => [serienSheet] }; } },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] == null ? null : props[k], setProperty: (k, v) => { props[k] = v; } }) },
     UrlFetchApp: { fetch: fetchAttrappe },
-    DriveApp: { getFolderById: id => { if (!drive || id !== 'PK-ORDNER-1234') throw new Error('Kein Zugriff'); return ordnerAttrappe('Papierkram', drive.dateien || [], drive.unter || {}); } },
+    DriveApp: { getFoldersByName: n => iter(drive && drive.name === n ? [{ getId: () => 'PK-ORDNER-1234' }] : []),
+      getFolderById: id => { if (!drive || id !== 'PK-ORDNER-1234') throw new Error('Kein Zugriff'); return ordnerAttrappe('Papierkram', drive.dateien || [], drive.unter || {}); } },
     CacheService: { getScriptCache: () => ({ get: k => cache[k] || null, put: (k, v) => { cache[k] = v; } }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: t => ({ setMimeType: () => ({ text: t }) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },

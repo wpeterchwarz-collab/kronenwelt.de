@@ -50,8 +50,9 @@
       (Aktion „rechnungBezahlt“), der Inhalt der Rechnung selbst nie.
       Ab 1.13: alte Rechnungen aus Papierkram (bis R-01271) im Blatt „Rechnungen Papierkram“, nur zum Nachschlagen.
       Eingelesen wird der CSV-Export von Papierkram in der Admin-Seite (Aktion „altrechnungenImport“, ersetzt das Blatt).
-      Die Original-PDFs liegen in einem Google-Drive-Ordner (Skript-Eigenschaft PAPIERKRAM_ORDNER = Link oder ID
-      des Ordners, Unterordner z. B. je Jahr sind erlaubt); im Dateinamen muss die Rechnungsnummer stehen.
+      Die Original-PDFs liegen im Google-Drive-Ordner „Rechnungen_Papierkram“ (Meine Ablage) – oder in dem Ordner,
+      dessen Link/ID in der Skript-Eigenschaft PAPIERKRAM_ORDNER steht. Unterordner (z. B. je Jahr) sind erlaubt;
+      im Dateinamen muss die Rechnungsnummer stehen.
       Nach dem Einfügen einmal „papierkramOrdnerPruefen“ im Editor ausführen (erlaubt den Zugriff auf Drive).
 
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
@@ -1388,10 +1389,18 @@ function altrechnungenRoh(sh) {
   return zeilenLesen(sh).zeilen.map(function (o, i) { return { nr: String(o['Rechnungsnr.'] || ''), pdf: String(o['PDF'] || ''), zeile: i + 2 }; });
 }
 
+const PAPIERKRAM_ORDNER_NAME = 'Rechnungen_Papierkram';
+// Ordner-ID: aus der Skript-Eigenschaft (Link oder ID), sonst den Ordner „Rechnungen_Papierkram“ suchen und merken
 function papierkramOrdnerId() {
-  const v = String(PropertiesService.getScriptProperties().getProperty('PAPIERKRAM_ORDNER') || '').trim();
+  const props = PropertiesService.getScriptProperties();
+  const v = String(props.getProperty('PAPIERKRAM_ORDNER') || '').trim();
   const m = /folders\/([\w-]{10,})/.exec(v) || /^([\w-]{10,})$/.exec(v);
-  return m ? m[1] : '';
+  if (m) return m[1];
+  try {
+    const it = DriveApp.getFoldersByName(v || PAPIERKRAM_ORDNER_NAME);
+    if (it.hasNext()) { const id = it.next().getId(); props.setProperty('PAPIERKRAM_ORDNER', id); return id; }
+  } catch (e) { /* noch kein Drive-Zugriff erlaubt */ }
+  return '';
 }
 
 // Datei zur Rechnungsnummer im Ordner (und in Unterordnern) suchen; R-01025 findet nicht R-01025-2 oder R-01025-S
@@ -1419,7 +1428,7 @@ function altrechnungPdf(data) {
   if (!z) throw fehler('rechnung_nicht_gefunden', 'Rechnung ' + nr + ' nicht gefunden');
   if (z.pdf) return { ok: true, url: z.pdf };
   const id = papierkramOrdnerId();
-  if (!id) throw fehler('alt_ordner_fehlt', 'Der Drive-Ordner mit den Papierkram-PDFs ist noch nicht eingetragen (Skript-Eigenschaft PAPIERKRAM_ORDNER).');
+  if (!id) throw fehler('alt_ordner_fehlt', 'Der Drive-Ordner „' + PAPIERKRAM_ORDNER_NAME + '“ wurde nicht gefunden. Bitte im Apps Script einmal „papierkramOrdnerPruefen“ ausführen.');
   let f = null;
   try { f = altPdfSuchen(DriveApp.getFolderById(id), nr, 2); }
   catch (e) { throw fehler('alt_ordner', 'Kein Zugriff auf den Drive-Ordner. Bitte im Editor einmal „papierkramOrdnerPruefen“ ausführen.'); }
@@ -1433,7 +1442,7 @@ function altrechnungPdf(data) {
    und zeigt im Protokoll, wie viele PDFs im Ordner liegen. */
 function papierkramOrdnerPruefen() {
   const id = papierkramOrdnerId();
-  if (!id) { Logger.log('Bitte zuerst die Skript-Eigenschaft PAPIERKRAM_ORDNER eintragen (Link zum Drive-Ordner).'); return; }
+  if (!id) { Logger.log('Ordner „' + PAPIERKRAM_ORDNER_NAME + '“ nicht gefunden. Bitte den Ordner so nennen oder den Link in der Skript-Eigenschaft PAPIERKRAM_ORDNER eintragen.'); return; }
   const ordner = DriveApp.getFolderById(id);
   let n = 0;
   const zaehlen = function (o, tiefe) {

@@ -359,7 +359,7 @@ function papierkramHtml() {
     In Papierkram unter Rechnungen mit Jahr „Alle“ auf „CSV“ klicken und die Datei hier einlesen: ${knopf('Aus Papierkram übernehmen')}</div>`;
   const nrs = papierkram.map(r => r.nr).filter(n => /^R-\d{5}$/.test(n)).sort();
   return `<div class="re-pk leise">Enthält ${papierkram.length.toLocaleString('de-DE')} Rechnungen aus Papierkram (${medienEsc(nrs[0] || '')} bis ${medienEsc(nrs[nrs.length - 1] || '')}). ${knopf('CSV neu einlesen')}
-    ${papierkramOrdner ? '' : '<div>Für die Original-PDFs fehlt noch der Drive-Ordner (Skript-Eigenschaft PAPIERKRAM_ORDNER).</div>'}</div>`;
+    ${papierkramOrdner ? '' : '<div>Original-PDFs: Ordner „Rechnungen_Papierkram“ in Google Drive noch nicht gefunden (im Apps Script einmal „papierkramOrdnerPruefen“ ausführen).</div>'}</div>`;
 }
 
 // CSV aus Papierkram lesen (Windows-1252 oder UTF-8, Semikolon getrennt)
