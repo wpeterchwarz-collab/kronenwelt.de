@@ -7,7 +7,7 @@
 // = ein neuer Eintrag hier + ein <div id="tab-…" class="content">. Navigation, Unterreiter
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
-const ADMIN_VERSION = '1.10';
+const ADMIN_VERSION = '1.11';
 const ADMIN_NEU = 'Bestellungen und Rechnungen nach Shop und Kanal filtern (die Auswahl gilt in beiden Listen); alte Papierkram-Rechnungen blau markiert.';
 
 // Shops: jede Bestellung gehört zu einem Shop (Farbe in Listen). Ein weiterer Shop = ein Eintrag hier.
@@ -32,13 +32,14 @@ function filterPasst(x, shopFn, kanalFn) {
 // basis = Liste vor dem Shop-/Kanal-Filter (Zahlen an den Knöpfen); neuZeichnen = JS, das danach läuft
 function filterLeisteHtml(basis, shopFn, kanalFn, neuZeichnen) {
   const mitKanal = basis.filter(x => !kanalFilter || kanalFn(x) === kanalFilter);
+  // „Alle Shops“ ohne Zahl (sonst liest sich „Alle Shops 3“ wie „3 Shops“); bei den Shops = Anzahl Bestellungen bzw. Rechnungen
   const chip = (id, inhalt, n) => `<button type="button" class="shop-chip ${shopFilter === id ? 'active' : ''}" aria-pressed="${shopFilter === id}"
-    onclick="shopFilter='${id}';${neuZeichnen}">${inhalt}<span>${n}</span></button>`;
+    onclick="shopFilter='${id}';${neuZeichnen}">${inhalt}${n == null ? '' : `<span class="anzahl" title="${n} ${n === 1 ? 'Eintrag' : 'Einträge'}">${n}</span>`}</button>`;
   const vorhanden = new Set(basis.map(kanalFn));
   if (kanalFilter) vorhanden.add(kanalFilter);
   const kanaele = [...vorhanden].filter(Boolean).sort((a, b) => (KANAL_REIHENFOLGE.indexOf(a) + 99) % 99 - (KANAL_REIHENFOLGE.indexOf(b) + 99) % 99 || a.localeCompare(b));
   return `<div class="filter-leiste" role="group" aria-label="Nach Shop und Kanal filtern">
-    ${chip('', 'Alle Shops', mitKanal.length)}
+    ${chip('', 'Alle Shops', null)}
     ${SHOPS.map(s => chip(s.id, `<span class="shop-punkt" style="background:${s.farbe}" aria-hidden="true"></span>${medienEsc(s.kurz)}`,
       mitKanal.filter(x => shopFn(x).id === s.id).length)).join('')}
     <select class="kanal-wahl ${kanalFilter ? 'active' : ''}" aria-label="Kanal" onchange="kanalFilter=this.value;${neuZeichnen}">
