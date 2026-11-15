@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kronenwelt Admin</title>
+<title>Shop-Manager · Sternenstaubhandmade</title>
 <!-- Der Admin liegt öffentlich auf kronenwelt.de, enthält aber keine Zugangsdaten: Bestellungen gibt es nur mit dem
      Admin-Schlüssel, GitHub- und Cloudinary-Zugang liegen im Apps Script. Suchmaschinen sollen ihn nicht aufnehmen. -->
 <meta name="robots" content="noindex, nofollow">
@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#263234">
 <!-- Tab-Symbol: dieselbe Krone wie im Shop, aber orange, damit man den Admin-Tab sofort erkennt -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M12 50 L13 25 L24 39 L32 17 L40 39 L51 25 L52 50 Z' fill='%23e8a33d' stroke='%23263234' stroke-width='4' stroke-linejoin='round'/><circle cx='13' cy='17' r='4.5' fill='%23e8a33d' stroke='%23263234' stroke-width='3.5'/><circle cx='32' cy='9' r='4.5' fill='%23e8a33d' stroke='%23263234' stroke-width='3.5'/><circle cx='51' cy='17' r='4.5' fill='%23e8a33d' stroke='%23263234' stroke-width='3.5'/></svg>">
-<link rel="stylesheet" href="admin/admin.css?v=1.8">
+<link rel="stylesheet" href="admin/admin.css?v=1.9">
 </head>
 <body>
 
@@ -29,9 +29,9 @@
         <svg class="logo-shape" viewBox="0 0 44 24"><polygon points="22,1 32,13 42,5 38,22 6,22 2,5 12,13" fill="rgba(114,149,153,0.08)" stroke="#729599" stroke-width="2.5" stroke-linejoin="round"/></svg>
       </div>
       <div class="logo-div"></div>
-      <div><div class="logo-name">Mila's Kronenwelt</div><div class="logo-sub">Handmade · Personalisiert</div></div>
+      <div><div class="logo-name">Shop-Manager</div><div class="logo-sub">Mila's Kronenwelt · Sternenstaubhandmade</div></div>
     </div>
-    <h1>Admin</h1>
+    <h1>Shop-Manager</h1>
     <p id="loginText">Bitte melde dich an, um den Shop zu verwalten.</p>
     <input type="password" id="loginPassword" placeholder="Passwort" autocomplete="current-password" onkeydown="if(event.key==='Enter')tryLogin()">
     <input type="password" id="loginPassword2" placeholder="Passwort wiederholen" autocomplete="new-password" style="display:none" onkeydown="if(event.key==='Enter')tryLogin()">
@@ -52,10 +52,10 @@
         <svg class="logo-shape" viewBox="0 0 44 24"><polygon points="22,1 32,13 42,5 38,22 6,22 2,5 12,13" fill="rgba(114,149,153,0.08)" stroke="#729599" stroke-width="2.5" stroke-linejoin="round"/></svg>
       </div>
       <div class="logo-div"></div>
-      <div><div class="logo-name">Mila's Kronenwelt</div><div class="logo-sub">Handmade · Personalisiert</div></div>
+      <div><div class="logo-name">Shop-Manager</div><div class="logo-sub">Mila's Kronenwelt · Sternenstaubhandmade</div></div>
     </div>
     <div class="topbar-right">
-      <span class="topbar-badge">Admin</span>
+      <button class="topbar-einst" aria-label="Einstellungen" title="Einstellungen" onclick="geheZu('einstellungen')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></button>
       <button onclick="logout()">Abmelden</button>
     </div>
   </div>
@@ -285,19 +285,19 @@
   <span id="statusText"></span>
 </div>
 
-<script src="admin/js/01-grundlagen.js?v=1.8"></script>
-<script src="admin/js/02-anmeldung.js?v=1.8"></script>
-<script src="admin/js/03-navigation.js?v=1.8"></script>
-<script src="admin/js/04-start.js?v=1.8"></script>
-<script src="admin/js/05-schnittstelle.js?v=1.8"></script>
-<script src="admin/js/06-bestellungen.js?v=1.8"></script>
-<script src="admin/js/07-lager.js?v=1.8"></script>
-<script src="admin/js/08-daten.js?v=1.8"></script>
-<script src="admin/js/09-produkte.js?v=1.8"></script>
-<script src="admin/js/10-galerie.js?v=1.8"></script>
-<script src="admin/js/11-einstellungen.js?v=1.8"></script>
-<script src="admin/js/12-meldungen.js?v=1.8"></script>
-<script src="admin/js/13-etsy.js?v=1.8"></script>
-<script src="admin/js/14-rechnungen.js?v=1.8"></script>
+<script src="admin/js/01-grundlagen.js?v=1.9"></script>
+<script src="admin/js/02-anmeldung.js?v=1.9"></script>
+<script src="admin/js/03-navigation.js?v=1.9"></script>
+<script src="admin/js/04-start.js?v=1.9"></script>
+<script src="admin/js/05-schnittstelle.js?v=1.9"></script>
+<script src="admin/js/06-bestellungen.js?v=1.9"></script>
+<script src="admin/js/07-lager.js?v=1.9"></script>
+<script src="admin/js/08-daten.js?v=1.9"></script>
+<script src="admin/js/09-produkte.js?v=1.9"></script>
+<script src="admin/js/10-galerie.js?v=1.9"></script>
+<script src="admin/js/11-einstellungen.js?v=1.9"></script>
+<script src="admin/js/12-meldungen.js?v=1.9"></script>
+<script src="admin/js/13-etsy.js?v=1.9"></script>
+<script src="admin/js/14-rechnungen.js?v=1.9"></script>
 </body>
 </html>

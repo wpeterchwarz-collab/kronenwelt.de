@@ -7,8 +7,20 @@
 // = ein neuer Eintrag hier + ein <div id="tab-…" class="content">. Navigation, Unterreiter
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
-const ADMIN_VERSION = '1.8';
-const ADMIN_NEU = 'Rechnungen schreiben und drucken direkt im Admin (ersetzt Papierkram, weiter ab R-01272); zweiter Etsy-Shop Sternenstaubhandmade.';
+const ADMIN_VERSION = '1.9';
+const ADMIN_NEU = 'Neuer Name „Shop-Manager“ für beide Shops; fünf Bereiche (Galerie liegt jetzt unter Produkte); farbiger Punkt zeigt, aus welchem Shop eine Bestellung kommt.';
+
+// Shops: jede Bestellung gehört zu einem Shop (Farbe in Listen). Ein weiterer Shop = ein Eintrag hier.
+// etsy = Name des Etsy-Shops, so wie er in der Spalte „Shop“ steht; der erste Shop ist der Standard (Webshop, Amazon, Markt …)
+const SHOPS = [
+  { id: 'kronenwelt', name: "Mila's Kronenwelt", kurz: 'Kronenwelt', farbe: '#e3bfc4', etsy: 'MilasKronenwelt' },
+  { id: 'sternenstaub', name: 'Sternenstaubhandmade', kurz: 'Sternenstaub', farbe: '#b9a5cf', etsy: 'Sternenstaubhandmade' }
+];
+function shopVon(b) {
+  const s = String((b && b.shop) || '').toLowerCase().replace(/\s+/g, '');
+  return SHOPS.find(x => s && (x.etsy.toLowerCase() === s || x.name.toLowerCase().replace(/\s+/g, '') === s)) || SHOPS[0];
+}
+const shopPunkt = b => { const s = shopVon(b); return `<span class="shop-punkt" style="background:${s.farbe}" title="${medienEsc(s.name)}" aria-label="${medienEsc(s.name)}" role="img"></span>`; };
 const ICON = {
   start:    '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/></svg>',
   bestellungen: '<svg viewBox="0 0 24 24"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5"/><path d="M12 12v9"/></svg>',
@@ -19,12 +31,11 @@ const ICON = {
   einstellungen: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
 };
 const BEREICHE = [
-  { id: 'start',         titel: 'Start',         seiten: [{ id: 'start' }] },
+  { id: 'start',         titel: 'Heute',         seiten: [{ id: 'start' }] },
   { id: 'bestellungen',  titel: 'Bestellungen',  seiten: [{ id: 'bestellungen' }] },
   { id: 'rechnungen',    titel: 'Rechnungen',    seiten: [{ id: 'rechnungen' }] },
   { id: 'lager',         titel: 'Lager',         seiten: [{ id: 'lager' }] },
-  { id: 'produkte',      titel: 'Produkte',      seiten: [{ id: 'preise', titel: 'Preise' }, { id: 'medien', titel: 'Fotos & Video' }] },
-  { id: 'galerie',       titel: 'Galerie',       seiten: [{ id: 'galerie' }] },
+  { id: 'produkte',      titel: 'Produkte',      seiten: [{ id: 'preise', titel: 'Preise' }, { id: 'medien', titel: 'Fotos & Video' }, { id: 'galerie', titel: 'Galerie' }] },
   { id: 'einstellungen', titel: 'Einstellungen', seiten: [{ id: 'einstellungen' }] }
 ];
 const bereichVon = seite => BEREICHE.find(b => b.seiten.some(s => s.id === seite)) || BEREICHE[0];

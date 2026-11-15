@@ -142,15 +142,28 @@ test('Admin: Preise speichern ändert in katalog.json nur die Preise', async ({ 
 });
 
 test.describe('Admin: Navigation und Start', () => {
+  test('Shop-Punkt: Etsy-Bestellung aus Sternenstaubhandmade lila, sonst Kronenwelt', async ({ page }) => {
+    await openAdmin(page, [], { seite: '' });
+    expect(await page.evaluate(() => [shopVon({ kanal: 'Etsy', shop: 'Sternenstaubhandmade' }).id, shopVon({ kanal: 'Etsy', shop: 'MilasKronenwelt' }).id,
+      shopVon({ kanal: 'Webshop' }).id, shopVon({ kanal: 'Etsy', shop: 'sternenstaub handmade' }).id])).toEqual(['sternenstaub', 'kronenwelt', 'kronenwelt', 'sternenstaub']);
+  });
+
   test('ohne Adresse öffnet die Startseite, die Navigation zeigt alle Bereiche', async ({ page }) => {
     await openAdmin(page, [], { seite: '' });
     await expect(page.locator('#tab-start')).toBeVisible();
-    await expect(page.locator('.nav-item')).toHaveText(['Start', 'Bestellungen', 'Rechnungen', 'Lager', 'Produkte', 'Galerie', 'Einstellungen']);
-    await expect(page.locator('.nav-item.active')).toHaveText('Start');
+    await expect(page.locator('.nav-item')).toHaveText(['Heute', 'Bestellungen', 'Rechnungen', 'Lager', 'Produkte', 'Einstellungen']);
+    await expect(page.locator('.nav-item.active')).toHaveText('Heute');
+    await expect(page.locator('.topbar .logo-name')).toHaveText('Shop-Manager');
   });
 
   test('Navigation liegt am Laptop links und am Handy unten', async ({ page }, info) => {
     await openAdmin(page, [], { seite: '' });
+    if (info.project.name === 'handy') {                                 // Handy: 5 Bereiche unten, Einstellungen oben rechts
+      await expect(page.locator('.nav-item:visible')).toHaveCount(5);
+      await page.getByRole('button', { name: 'Einstellungen' }).click();
+      await expect(page.locator('#tab-einstellungen')).toBeVisible();
+      await page.click('.nav-item[data-nav="start"]');
+    }
     const box = await page.locator('#hauptNav').boundingBox();
     const vp = page.viewportSize();
     if (info.project.name === 'handy') expect(box.y + box.height).toBeGreaterThanOrEqual(vp.height - 1);
@@ -165,12 +178,15 @@ test.describe('Admin: Navigation und Start', () => {
     await page.click('.subnav-item[data-seite="medien"]');
     await expect(page).toHaveURL(/#produkte\/medien$/);
     await expect(page.locator('#medienList')).toBeVisible();
-    await page.click('.nav-item[data-nav="galerie"]');
-    await expect(page.locator('#subNav')).toBeHidden();
+    await page.click('.subnav-item[data-seite="galerie"]');             // Galerie liegt unter Produkte
+    await expect(page).toHaveURL(/#produkte\/galerie$/);
+    await page.click('.nav-item[data-nav="bestellungen"]');
     await page.click('.nav-item[data-nav="produkte"]');               // merkt sich die letzte Unterseite
-    await expect(page.locator('.subnav-item.active')).toHaveText('Fotos & Video');
+    await expect(page.locator('.subnav-item.active')).toHaveText('Galerie');
     await page.goBack();
-    await expect(page.locator('.nav-item.active')).toHaveText('Galerie');
+    await expect(page.locator('.nav-item.active')).toHaveText('Bestellungen');
+    await page.goto('/admin.html#galerie');                             // alte Adresse geht weiter
+    await expect(page.locator('.subnav-item.active')).toHaveText('Galerie');
   });
 
   test('Start zeigt Zahlen aus Katalog und medien.json', async ({ page }) => {
