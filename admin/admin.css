@@ -664,7 +664,20 @@ code { background: var(--petrol-l) !important; color: var(--petrol-dd); border-r
 .re-zahlung-form { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; background: var(--petrol-l); padding: 10px; margin-top: 6px; }
 .re-zahlung-form .re-feld { min-width: 160px; }
 .re-feld select { padding: 8px 9px; border: 1px solid var(--line2); border-radius: 2px; font-family: var(--f-sans); font-size: 15px; background: #fff; }
-.re-quelle { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line2); border-radius: 2px; padding: 1px 5px; margin-left: 4px; vertical-align: 1px; }
+.re-quelle { font-size: 11px; font-weight: 600; letter-spacing: .02em; color: #24548a; background: #dfeaf6; border-radius: 3px; padding: 2px 7px; margin-left: 6px; vertical-align: 1px; }
+.re-papierkram .re-nr b { color: #24548a; }
+.re-papierkram { background: #f6f9fd; }
+.re-papierkram:hover { background: #eef4fb !important; }
+/* Filter nach Shop und Kanal (Bestellungen und Rechnungen) */
+.filter-leiste { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 0 0 12px; }
+.shop-chip { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border: 1px solid var(--line2); background: #fff; color: var(--ink);
+  border-radius: 18px; font-family: var(--f-sans); font-size: 13px; cursor: pointer; }
+.shop-chip span:last-child { opacity: .65; margin-left: 6px; }
+.shop-chip .shop-punkt { margin-right: 6px; }
+.shop-chip.active { border-color: var(--petrol-d); background: var(--petrol-l); color: var(--petrol-dd); font-weight: 600; }
+.kanal-wahl { min-height: 36px; padding: 0 10px; border: 1px solid var(--line2); border-radius: 18px; background: #fff; font-family: var(--f-sans); font-size: 13px; color: var(--ink); cursor: pointer; }
+.kanal-wahl.active { border-color: var(--petrol-d); background: var(--petrol-l); color: var(--petrol-dd); font-weight: 600; }
+.filter-weg { border: none; background: none; color: var(--petrol-d); text-decoration: underline; font-family: var(--f-sans); font-size: 13px; cursor: pointer; min-height: 36px; padding: 0 4px; }
 .re-symbol-platz { display: inline-block; width: 32px; }
 .re-mehr { text-align: center; padding: 12px 0 4px; border-top: 1px solid var(--line); }
 .re-pk { font-size: 12px; margin-top: 12px; line-height: 1.7; }

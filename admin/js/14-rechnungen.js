@@ -229,13 +229,40 @@ function rechnungJahre() {
   return [...jahre].sort().reverse();
 }
 // Jahr und Suche (ohne Status) – Grundlage für Kacheln, Reiter-Zahlen und Liste
-function rechnungenImJahr() {
+// Zu welchem Shop / Kanal gehört eine Rechnung? Erst über die Bestellung, sonst aus dem Betreff (auch bei Papierkram)
+let reBestMap = null, reBestQuelle = null;
+function rechnungBestellung(r) {
+  if (!r.bestellnr || !bestellungen) return null;
+  if (reBestQuelle !== bestellungen) { reBestMap = new Map(bestellungen.map(b => [b.nr, b])); reBestQuelle = bestellungen; }
+  return reBestMap.get(r.bestellnr) || null;
+}
+function rechnungShop(r) {
+  const b = rechnungBestellung(r);
+  if (b) return shopVon(b);
+  const m = /über Etsy \(([^)]+)\)/i.exec(r.betreff || '');
+  return shopVon({ shop: m ? m[1] : '' });
+}
+function rechnungKanal(r) {
+  const b = rechnungBestellung(r);
+  if (b && b.kanal) return b.kanal;
+  const t = (r.betreff || '') + ' ' + (r.zahlungsart || '');
+  if (/über Etsy|Etsy Payments/i.test(t)) return 'Etsy';
+  if (/^Bestellnummer: #|Amazon/i.test(t)) return 'Amazon';
+  if (/Markt/i.test(t)) return 'Markt';
+  return 'Sonstiges';
+}
+// Jahr und Suche – Grundlage für die Shop-/Kanal-Knöpfe
+function rechnungenJahrSuche() {
   const f = rechnungFilter, q = f.suche.trim().toLowerCase();
   return alleRechnungen().filter(r => {
     if (f.jahr && String(r.datum || '').slice(6) !== f.jahr) return false;
-    if (q && ![r.nr, r.betreff, r.empfaenger, r.bestellnr].some(x => String(x || '').toLowerCase().includes(q))) return false;
+    if (q && ![r.nr, r.betreff, r.empfaenger, r.bestellnr, r.quelle].some(x => String(x || '').toLowerCase().includes(q))) return false;
     return true;
   });
+}
+// … plus Shop und Kanal – Grundlage für Kacheln, Reiter-Zahlen und Liste
+function rechnungenImJahr() {
+  return rechnungenJahrSuche().filter(r => filterPasst(r, rechnungShop, rechnungKanal));
 }
 const rStatusGruppe = r => { const st = rStatus(r); return st === 'Storno' ? 'Storniert' : st; };
 function rechnungenGefiltert() {
@@ -281,6 +308,7 @@ function uebersichtHtml() {
   const reiter = (st, titel) => `<button type="button" role="tab" aria-selected="${rechnungFilter.status === st}" class="re-reiter ${rechnungFilter.status === st ? 'aktiv' : ''}"
       onclick="rechnungFilterSetzen('status', '${st}')">${titel} <span>${st ? gruppe(st).length : basis.length}</span></button>`;
   return `<div id="reUebersicht">
+    ${filterLeisteHtml(rechnungenJahrSuche(), rechnungShop, rechnungKanal, 'listeMax=200;renderRechnungen()')}
     <div class="re-kacheln">${kachel('Offen', 'Offen', 're-st-offen')}${kachel('Überfällig', 'Überfällig', 're-st-ueberfaellig')}${kachel('Bezahlt', 'Bezahlt' + (rechnungFilter.jahr ? ' ' + rechnungFilter.jahr : ''), 're-st-bezahlt')}</div>
     <div class="re-reiterleiste" role="tablist" aria-label="Status">${reiter('', 'Alle')}${RECHNUNG_STATUS.map(st => reiter(st, st)).join('')}</div>
   </div>`;
@@ -305,7 +333,7 @@ function listeZeilenHtml() {
       r.art === 'Rechnung' && !r.storniertDurch ? `<button type="button" class="re-menue-rot" onclick="rechnungStornoKlick(${nr})">Stornieren</button>` : ''
     ].join('');
     return `<div class="re-zeile ${r.storniertDurch ? "storniert" : ""} re-z-${({ 'Überfällig': 'ueberfaellig' })[st] || st.toLowerCase()}" data-nr="${medienEsc(r.nr)}">
-      <div class="re-nr"><b>${medienEsc(r.nr)}</b>
+      <div class="re-nr">${shopPunkt({ shop: rechnungShop(r).etsy })}<b>${medienEsc(r.nr)}</b>
         <div class="leise">${r.storniertDurch ? 'storniert durch ' + medienEsc(r.storniertDurch) : medienEsc(r.betreff || '')}</div></div>
       <div class="re-kunde">${medienEsc(name)}</div>
       <div class="re-st">${rStatusBadge(st)}${st === 'Bezahlt' ? `<div class="leise re-klein">${medienEsc(r.bezahltAm)}${r.zahlungsart ? ' · ' + medienEsc(r.zahlungsart) : ''}</div>` : ''}</div>
@@ -331,7 +359,7 @@ function listeZeilenHtml() {
 function papierkramZeileHtml(r, nr, st, name) {
   const cls = ({ 'Überfällig': 'ueberfaellig' })[st] || st.toLowerCase();
   return `<div class="re-zeile re-papierkram ${r.storniertDurch ? 'storniert' : ''} re-z-${cls}" data-nr="${medienEsc(r.nr)}">
-      <div class="re-nr"><b>${medienEsc(r.nr)}</b> <span class="re-quelle" title="aus Papierkram übernommen">Papierkram</span>
+      <div class="re-nr">${shopPunkt({ shop: rechnungShop(r).etsy })}<b>${medienEsc(r.nr)}</b> <span class="re-quelle" title="Alte Rechnung, aus Papierkram übernommen">Papierkram</span>
         <div class="leise">${r.storniertDurch && r.storniertDurch !== 'Papierkram' ? 'storniert durch ' + medienEsc(r.storniertDurch) : medienEsc(r.betreff || '')}</div></div>
       <div class="re-kunde">${medienEsc(name)}</div>
       <div class="re-st">${rStatusBadge(st)}${st === 'Bezahlt' ? `<div class="leise re-klein">${medienEsc(r.bezahltAm)}${r.zahlungsart ? ' · ' + medienEsc(r.zahlungsart) : ''}</div>` : ''}</div>

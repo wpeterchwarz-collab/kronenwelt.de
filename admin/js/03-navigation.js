@@ -7,8 +7,8 @@
 // = ein neuer Eintrag hier + ein <div id="tab-…" class="content">. Navigation, Unterreiter
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
-const ADMIN_VERSION = '1.9';
-const ADMIN_NEU = 'Neuer Name „Shop-Manager“ für beide Shops; fünf Bereiche (Galerie liegt jetzt unter Produkte); farbiger Punkt zeigt, aus welchem Shop eine Bestellung kommt.';
+const ADMIN_VERSION = '1.10';
+const ADMIN_NEU = 'Bestellungen und Rechnungen nach Shop und Kanal filtern (die Auswahl gilt in beiden Listen); alte Papierkram-Rechnungen blau markiert.';
 
 // Shops: jede Bestellung gehört zu einem Shop (Farbe in Listen). Ein weiterer Shop = ein Eintrag hier.
 // etsy = Name des Etsy-Shops, so wie er in der Spalte „Shop“ steht; der erste Shop ist der Standard (Webshop, Amazon, Markt …)
@@ -20,6 +20,33 @@ function shopVon(b) {
   const s = String((b && b.shop) || '').toLowerCase().replace(/\s+/g, '');
   return SHOPS.find(x => s && (x.etsy.toLowerCase() === s || x.name.toLowerCase().replace(/\s+/g, '') === s)) || SHOPS[0];
 }
+// ---------- Filter nach Shop und Kanal (gemeinsam für Bestellungen und Rechnungen) ----------
+// Die Auswahl gilt in beiden Listen: wer „Sternenstaub“ wählt, sieht dort nur dessen Bestellungen und Rechnungen.
+let shopFilter = '';                          // '' = alle Shops, sonst SHOPS[].id
+let kanalFilter = '';                         // '' = alle Kanäle, sonst z. B. 'Etsy'
+const KANAL_REIHENFOLGE = ['Etsy', 'Webshop', 'Amazon', 'Markt', 'Instagram', 'Spende', 'Sonstiges'];
+const filterAktiv = () => !!(shopFilter || kanalFilter);
+function filterPasst(x, shopFn, kanalFn) {
+  return (!shopFilter || shopFn(x).id === shopFilter) && (!kanalFilter || kanalFn(x) === kanalFilter);
+}
+// basis = Liste vor dem Shop-/Kanal-Filter (Zahlen an den Knöpfen); neuZeichnen = JS, das danach läuft
+function filterLeisteHtml(basis, shopFn, kanalFn, neuZeichnen) {
+  const mitKanal = basis.filter(x => !kanalFilter || kanalFn(x) === kanalFilter);
+  const chip = (id, inhalt, n) => `<button type="button" class="shop-chip ${shopFilter === id ? 'active' : ''}" aria-pressed="${shopFilter === id}"
+    onclick="shopFilter='${id}';${neuZeichnen}">${inhalt}<span>${n}</span></button>`;
+  const vorhanden = new Set(basis.map(kanalFn));
+  if (kanalFilter) vorhanden.add(kanalFilter);
+  const kanaele = [...vorhanden].filter(Boolean).sort((a, b) => (KANAL_REIHENFOLGE.indexOf(a) + 99) % 99 - (KANAL_REIHENFOLGE.indexOf(b) + 99) % 99 || a.localeCompare(b));
+  return `<div class="filter-leiste" role="group" aria-label="Nach Shop und Kanal filtern">
+    ${chip('', 'Alle Shops', mitKanal.length)}
+    ${SHOPS.map(s => chip(s.id, `<span class="shop-punkt" style="background:${s.farbe}" aria-hidden="true"></span>${medienEsc(s.kurz)}`,
+      mitKanal.filter(x => shopFn(x).id === s.id).length)).join('')}
+    <select class="kanal-wahl ${kanalFilter ? 'active' : ''}" aria-label="Kanal" onchange="kanalFilter=this.value;${neuZeichnen}">
+      <option value="">Alle Kanäle</option>${kanaele.map(k => `<option ${k === kanalFilter ? 'selected' : ''}>${medienEsc(k)}</option>`).join('')}</select>
+    ${filterAktiv() ? `<button type="button" class="filter-weg" onclick="shopFilter='';kanalFilter='';${neuZeichnen}">Filter zurücksetzen</button>` : ''}
+  </div>`;
+}
+
 const shopPunkt = b => { const s = shopVon(b); return `<span class="shop-punkt" style="background:${s.farbe}" title="${medienEsc(s.name)}" aria-label="${medienEsc(s.name)}" role="img"></span>`; };
 const ICON = {
   start:    '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/></svg>',

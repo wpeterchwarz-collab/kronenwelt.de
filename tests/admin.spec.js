@@ -1572,6 +1572,53 @@ test.describe('Admin: Rechnungen', () => {
     await expect.poll(() => geoeffnet[0] || '').toContain('drive.google.com/file/d/Rechnung%20R-01271.pdf');
   });
 
+  test('Filter nach Shop und Kanal: in Rechnungen und Bestellungen, Auswahl gilt in beiden; Papierkram blau', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#rechnungen', api: true });
+    await page.evaluate(() => {
+      papierkramSetzen([
+        { nr: 'R-01271', art: 'Rechnung', datum: '10.11.2026', betreff: 'Nr. 1 über Etsy (MilasKronenwelt)', empfaenger: 'Tanja', gesamt: 24, status: 'Bezahlt', bezahltAm: '10.11.2026', zahlungsart: 'Etsy Payments' },
+        { nr: 'R-01266', art: 'Rechnung', datum: '02.11.2026', betreff: 'Nr. 2 über Etsy (Sternenstaubhandmade)', empfaenger: 'Veronika', gesamt: 12, status: 'Bezahlt', bezahltAm: '02.11.2026', zahlungsart: 'Etsy Payments' },
+        { nr: 'R-01270', art: 'Rechnung', datum: '07.11.2026', betreff: 'Bestellnummer: # 302-1', empfaenger: 'Kristina', gesamt: 14, status: 'Bezahlt', bezahltAm: '07.11.2026', zahlungsart: 'Amazon' }]);
+      renderRechnungen();
+    });
+    const pk = page.locator('.re-zeile[data-nr="R-01271"]');
+    await expect(pk.locator('.re-quelle')).toHaveText('Papierkram');
+    await expect(pk).toHaveClass(/re-papierkram/);
+    expect(await pk.locator('.re-quelle').evaluate(e => getComputedStyle(e).backgroundColor)).toBe('rgb(223, 234, 246)');
+    const leiste = page.locator('#tab-rechnungen .filter-leiste');
+    await expect(leiste.locator('.shop-chip')).toHaveText(['Alle Shops3', 'Kronenwelt2', 'Sternenstaub1']);
+    await leiste.locator('.shop-chip', { hasText: 'Sternenstaub' }).click();
+    await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(1);
+    await expect(page.locator('.re-zeile[data-nr="R-01266"]')).toBeVisible();
+    await expect(page.locator('.re-kachel.re-st-bezahlt')).toContainText('€ 12,00');
+    await page.locator('#tab-rechnungen .shop-chip', { hasText: 'Alle Shops' }).click();
+    await page.locator('#tab-rechnungen .kanal-wahl').selectOption('Amazon');
+    await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(1);
+    await expect(page.locator('.re-zeile[data-nr="R-01270"]')).toBeVisible();
+    await page.locator('#tab-rechnungen .filter-weg').click();
+    await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(3);
+    // Bestellungen: gleiche Leiste, Auswahl bleibt erhalten
+    await page.locator('#tab-rechnungen .shop-chip', { hasText: 'Sternenstaub' }).click();
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    await expect(page.locator('#bestSumme')).not.toHaveText('');          // echte Liste ist geladen
+    await page.evaluate(() => {
+      bestellungen = [
+        { nr: 'KW-1', datum: '14.11.2026', status: 'Neu', kanal: 'Etsy', shop: 'Sternenstaubhandmade', kunde: 'Veronika', preis: 12, variante: 'Party', farbe: 'Hellblau', groesse: 'S' },
+        { nr: 'KW-2', datum: '13.11.2026', status: 'Neu', kanal: 'Etsy', shop: 'MilasKronenwelt', kunde: 'Rebecca', preis: 22.5, variante: 'Edel & Wild', farbe: 'Gold', groesse: 'M' },
+        { nr: 'KW-3', datum: '12.11.2026', status: 'Neu', kanal: 'Webshop', kunde: 'Kristina', preis: 29, variante: 'Klassik', farbe: 'Mint', groesse: 'L' }];
+      renderBestellungen();
+    });
+    const bl = page.locator('#bestFilter2 .filter-leiste');
+    await expect(bl.locator('.shop-chip.active')).toContainText('Sternenstaub');
+    await expect(page.locator('#bestListe .best')).toHaveCount(1);
+    await expect(page.locator('#bestSumme')).toHaveText('1 Bestellung · 12,00 €');
+    await bl.locator('.shop-chip', { hasText: 'Kronenwelt' }).click();
+    await expect(page.locator('#bestListe .best')).toHaveCount(2);
+    await page.locator('#bestFilter2 .kanal-wahl').selectOption('Webshop');
+    await expect(page.locator('#bestListe .best')).toHaveCount(1);
+    await expect(page.locator('#bestListe .best')).toContainText('Kristina');
+  });
+
   test('Papierkram: falsche Datei wird abgelehnt; viele Rechnungen mit „Weitere anzeigen“', async ({ page }) => {
     await openAdmin(page, [], { seite: '#rechnungen', api: true });
     await page.locator('.re-csv input').setInputFiles({ name: 'x.csv', mimeType: 'text/csv', buffer: Buffer.from('a;b\n1;2\n') });

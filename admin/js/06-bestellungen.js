@@ -70,6 +70,7 @@ function renderBestellungen(laedt) {
       <input class="best-suche" id="bestSuche" type="search" placeholder="Suchen: Name, Nr., Krone, Ort …"
         value="${medienEsc(bestellSuche)}" oninput="bestellSuche=this.value;renderBestellListe()">
     </div>
+    <div id="bestFilter2"></div>
     <div class="best-summe" id="bestSumme"></div>
     <div class="best-liste" id="bestListe"></div>`;
   renderBestellListe();
@@ -93,14 +94,22 @@ const statusKlasse = st => 'status status-' + String(st || '').toLowerCase().rep
 const bestellungNachNr = nr => (bestellungen || []).find(b => b.nr === nr);
 const jsArg = x => JSON.stringify(x).replace(/"/g, '&quot;');
 
+const bestellKanal = b => b.kanal || 'Sonstiges';
 function renderBestellListe() {
-  const alle = bestellungen || [];
+  const ungefiltert = bestellungen || [];
+  const alle = ungefiltert.filter(b => filterPasst(b, shopVon, bestellKanal));      // Shop/Kanal wirken auf alles darunter
   const q = bestellSuche.trim().toLowerCase();
   const filterId = bestellFilter || (alle.some(FILTER[0].passt) ? 'offen' : 'alle');
   const f = FILTER.find(x => x.id === filterId) || FILTER[3];
   const gesucht = q ? alle.filter(b => [b.nr, b.kunde, b.email, b.adresse, b.variante, b.farbe, b.personalisierung, b.datum, b.kanal, b.sendungsnummer, b.notiz]
     .join(' ').toLowerCase().includes(q)) : alle;
   const treffer = q ? gesucht : gesucht.filter(f.passt);          // Suche geht immer über alle
+  const f2 = document.getElementById('bestFilter2');
+  if (f2) {
+    const basis = (q ? ungefiltert.filter(b => [b.nr, b.kunde, b.email, b.adresse, b.variante, b.farbe, b.personalisierung, b.datum, b.kanal, b.sendungsnummer, b.notiz]
+      .join(' ').toLowerCase().includes(q)) : ungefiltert.filter(f.passt));
+    f2.innerHTML = filterLeisteHtml(basis, shopVon, bestellKanal, 'renderBestellListe()');
+  }
   const jahr = String(new Date().getFullYear());
   const imJahr = alle.filter(b => (b.datum || '').endsWith(jahr) && b.status !== 'Storniert');
   const summe = l => l.reduce((n, b) => n + (b.preis || 0), 0);
@@ -109,13 +118,13 @@ function renderBestellListe() {
   if (fbox) fbox.innerHTML = q ? '' : FILTER.map(x =>
     `<button class="${x.id === filterId ? 'active' : ''}" data-filter="${x.id}" onclick="bestellFilter='${x.id}';renderBestellListe()">${x.titel}<span>${alle.filter(x.passt).length}</span></button>`).join('');
   const s = document.getElementById('bestSumme');
-  if (s) s.textContent = q
-    ? treffer.length + ' von ' + alle.length + ' Bestellungen · ' + euro(summe(treffer))
+  if (s) s.textContent = q || filterAktiv()
+    ? treffer.length + (treffer.length === 1 ? ' Bestellung · ' : ' Bestellungen · ') + euro(summe(treffer))
     : jahr + ': ' + imJahr.length + (imJahr.length === 1 ? ' Bestellung' : ' Bestellungen') + ' für ' + euro(summe(imJahr));
   const liste = document.getElementById('bestListe');
   if (!liste) return;
   if (!treffer.length) {
-    liste.innerHTML = `<div class="card best-leer"><p>${q ? 'Keine Bestellung passt zur Suche.' : f.id === 'offen' ? 'Keine offenen Bestellungen. Alles erledigt!' : 'Hier ist nichts.'}</p></div>`;
+    liste.innerHTML = `<div class="card best-leer"><p>${q ? 'Keine Bestellung passt zur Suche.' : filterAktiv() && !alle.length ? 'Keine Bestellung für diesen Shop bzw. Kanal.' : f.id === 'offen' ? 'Keine offenen Bestellungen. Alles erledigt!' : 'Hier ist nichts.'}</p></div>`;
     return;
   }
   // Unter „Offen“ nach Arbeitsschritt gruppieren: erst Neues, dann Angefangenes
