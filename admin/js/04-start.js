@@ -156,7 +156,7 @@ function todoHtml(p) {
   const liste = (p.liste || []).slice(0, 5).map(b => {
     const wt = werktageSeit(b.datum), warn = wt != null && wt >= LIEFERZEIT_WARNUNG && b.kanal !== 'Markt';
     return `<button class="todo-best" onclick="oeffneBestellung(${jsArg(b.nr)})">
-      <span>${istUngesehen(b) ? '<span class="frisch-punkt" title="Neu seit deinem letzten Besuch"></span>' : ''}${medienEsc(b.kunde || b.kanal)} <small>· ${medienEsc(positionen(b).map(x => x.variante).join(', '))} · ${medienEsc(b.kanal)}</small></span>
+      <span>${istUngesehen(b) ? '<span class="frisch-punkt" title="Neu seit deinem letzten Besuch"></span>' : ''}${shopPunkt(b)}${medienEsc(b.kunde || b.kanal)} <small>· ${medienEsc(positionen(b).map(x => x.variante).join(', '))} · ${medienEsc(b.kanal)}</small></span>
       <span class="alter ${warn ? 'warn' : ''}">${wt == null ? '' : wt === 0 ? 'heute' : wt + (wt === 1 ? ' Werktag' : ' Werktage')}</span></button>`;
   }).join('') + ((p.liste || []).length > 5 ? `<div class="leise" style="padding:4px 0 0 21px">und ${p.liste.length - 5} weitere</div>` : '');
   return `<button class="todo" ${klick}>

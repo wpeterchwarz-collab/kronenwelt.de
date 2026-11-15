@@ -78,6 +78,10 @@ code { background: var(--petrol-l) !important; color: var(--petrol-dd); border-r
 .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .nav-item:hover { background: var(--paper2); color: var(--ink); }
 .nav-item.active { background: var(--petrol-l); color: var(--petrol-dd); }
+.nav-item[data-nav="einstellungen"] { margin-top: auto; }
+.shop-punkt { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; box-shadow: 0 0 0 1px rgba(0,0,0,.06); }
+.topbar .topbar-einst { display: none; width: 44px; height: 44px; padding: 0; border: none; align-items: center; justify-content: center; }
+.topbar-einst svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
 .admin-main { margin-left: 212px; min-height: calc(100vh - 70px); }
 .subnav { display: none; gap: 4px; background: #fff; border-bottom: 1px solid var(--line); padding: 0 28px;
   position: sticky; top: 70px; z-index: 97; overflow-x: auto; }
@@ -577,6 +581,8 @@ code { background: var(--petrol-l) !important; color: var(--petrol-dd); border-r
   .nav-item { position: relative; }
   .nav-zahl { position: absolute; top: 4px; left: 50%; margin-left: 6px; min-width: 18px; height: 18px; font-size: 11px; padding: 0 5px; }
   .admin-main { margin-left: 0; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+  .nav-item[data-nav="einstellungen"] { display: none; }
+  .topbar .topbar-einst { display: inline-flex; }
   .status-bar { bottom: calc(78px + env(safe-area-inset-bottom)); }
 }
 @media(max-width:600px) {
