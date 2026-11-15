@@ -1586,7 +1586,7 @@ test.describe('Admin: Rechnungen', () => {
     await expect(pk).toHaveClass(/re-papierkram/);
     expect(await pk.locator('.re-quelle').evaluate(e => getComputedStyle(e).backgroundColor)).toBe('rgb(223, 234, 246)');
     const leiste = page.locator('#tab-rechnungen .filter-leiste');
-    await expect(leiste.locator('.shop-chip')).toHaveText(['Alle Shops3', 'Kronenwelt2', 'Sternenstaub1']);
+    await expect(leiste.locator('.shop-chip')).toHaveText(['Alle Shops', 'Kronenwelt2', 'Sternenstaub1']);
     await leiste.locator('.shop-chip', { hasText: 'Sternenstaub' }).click();
     await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(1);
     await expect(page.locator('.re-zeile[data-nr="R-01266"]')).toBeVisible();

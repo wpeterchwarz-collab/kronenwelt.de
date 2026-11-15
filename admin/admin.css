@@ -672,7 +672,7 @@ code { background: var(--petrol-l) !important; color: var(--petrol-dd); border-r
 .filter-leiste { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 0 0 12px; }
 .shop-chip { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border: 1px solid var(--line2); background: #fff; color: var(--ink);
   border-radius: 18px; font-family: var(--f-sans); font-size: 13px; cursor: pointer; }
-.shop-chip span:last-child { opacity: .65; margin-left: 6px; }
+.shop-chip .anzahl { opacity: .65; margin-left: 6px; }
 .shop-chip .shop-punkt { margin-right: 6px; }
 .shop-chip.active { border-color: var(--petrol-d); background: var(--petrol-l); color: var(--petrol-dd); font-weight: 600; }
 .kanal-wahl { min-height: 36px; padding: 0 10px; border: 1px solid var(--line2); border-radius: 18px; background: #fff; font-family: var(--f-sans); font-size: 13px; color: var(--ink); cursor: pointer; }
