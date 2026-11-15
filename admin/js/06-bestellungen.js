@@ -184,8 +184,12 @@ function bestellKarte(b) {
           <span>Versandmail mit Sendungsverfolgung an ${medienEsc(b.email)} schicken${b.kanal !== 'Webshop' ? ` <span class="leise">(${medienEsc(b.kanal)} schickt meist selbst eine Mail)</span>` : ''}</span></label>`
           : '<div class="leise">Keine E-Mail-Adresse hinterlegt, es geht keine Versandmail raus.</div>'}
         ${serienFelder(b, pos)}
-        <div class="aktion-zeile"><button class="btn btn-primary" onclick="versendenKlick(${nr})">Als versendet markieren</button>
+        <div class="aktion-zeile">${mitRechnungMoeglich(b)
+          ? `<button class="btn btn-primary" onclick="versendenKlick(${nr}, true)">Versenden + Rechnung</button>
+          <button class="btn btn-outline" onclick="versendenKlick(${nr})">Als versendet markieren</button>`
+          : `<button class="btn btn-primary" onclick="versendenKlick(${nr})">Als versendet markieren</button>`}
           ${b.kanal === 'Spende' ? `<button class="btn btn-outline" onclick="uebergebenKlick(${nr})">Persönlich übergeben</button>` : ''}</div>
+        ${mitRechnungMoeglich(b) ? '<div class="leise" style="font-size:12px;margin-top:6px">„Versenden + Rechnung“ markiert als versendet, schreibt die Rechnung fest und öffnet gleich den Druck.</div>' : ''}
       </div>`;
   // Zahlung: PRÜFEN = verdächtig (nicht versenden, bevor in PayPal nachgesehen), NICHT GEPRÜFT = Prüfung lief nicht
   const zg = b.zahlungGeprueft || '';
@@ -368,18 +372,29 @@ async function zahlungKlick(nr) {
   }
 }
 
-async function versendenKlick(nr) {
+// Rechnung beim Versenden gleich mit? Nur wenn es noch keine gibt und etwas zu berechnen ist (keine Spende)
+const mitRechnungMoeglich = b => !b.rechnungsnr && b.kanal !== 'Spende' && (b.preis || 0) > 0 && b.status !== 'Storniert';
+
+// mitRechnung = true: „Versenden + Rechnung“ – danach Rechnung festschreiben und Druck öffnen
+async function versendenKlick(nr, mitRechnung) {
   const b = bestellungNachNr(nr);
   if (!b) return;
-  if (/^PRÜFEN/.test(b.zahlungGeprueft || '') && !confirm('Die Zahlung dieser Bestellung ist nicht bestätigt:\n' + b.zahlungGeprueft.replace(/^PRÜFEN:\s*/, '') + '\n\nHast du in PayPal nachgesehen und willst trotzdem versenden?')) return;
+  // Druckfenster gleich im Klick öffnen, sonst blockiert der Browser es
+  let w = null;
+  const abbrechen = () => { if (w) w.close(); };
+  if (mitRechnung) {
+    w = window.open('', '_blank');
+    if (w) w.document.write('<p style="font-family:Arial;padding:20px">Rechnung wird erstellt …</p>');
+  }
+  if (/^PRÜFEN/.test(b.zahlungGeprueft || '') && !confirm('Die Zahlung dieser Bestellung ist nicht bestätigt:\n' + b.zahlungGeprueft.replace(/^PRÜFEN:\s*/, '') + '\n\nHast du in PayPal nachgesehen und willst trotzdem versenden?')) { abbrechen(); return; }
   const sn = (document.getElementById('sn-' + nr) || {}).value || '';
   const mailEl = document.getElementById('mail-' + nr);
   const mail = !!(mailEl && mailEl.checked);
   const nummer = sn.replace(/\s+/g, '').toUpperCase();
-  if (nummer && !/^[A-Z0-9]{8,40}$/.test(nummer)) { showStatus('Die Sendungsnummer sieht nicht richtig aus. Bitte prüfen.', 'error'); return; }
+  if (nummer && !/^[A-Z0-9]{8,40}$/.test(nummer)) { abbrechen(); showStatus('Die Sendungsnummer sieht nicht richtig aus. Bitte prüfen.', 'error'); return; }
   const serien = serienAusFormular(nr);                  // erst die MK-Nummern prüfen, dann nachfragen
-  if (serien === null) return;
-  if (!nummer && !confirm('Ohne Sendungsnummer als versendet markieren?')) return;
+  if (serien === null) { abbrechen(); return; }
+  if (!nummer && !confirm('Ohne Sendungsnummer als versendet markieren?')) { abbrechen(); return; }
   showStatus(mail ? 'Wird gespeichert und Versandmail verschickt …' : 'Wird gespeichert …', 'loading');
   try {
     const r = await schnittstelle('versenden', Object.assign({ nr, zeile: b.zeile, sendungsnummer: nummer, mail }, serien));
@@ -388,7 +403,9 @@ async function versendenKlick(nr) {
     bestellungErsetzen(r.bestellung);
     showStatus((r.mail ? 'Versendet ✓ Versandmail an ' + r.bestellung.email + ' ist raus.' : 'Als versendet markiert ✓')
       + (r.bestellung.seriennummern ? ' MK-Nummern: ' + r.bestellung.seriennummern : ''));
+    if (mitRechnung) await rechnungBeimVersand(r.bestellung, w);
   } catch (e) {
+    abbrechen();
     if (serienFehler(nr, e)) return;
     showStatus(e.message === 'keine_email' ? 'Keine gültige E-Mail-Adresse bei dieser Bestellung.'
       : e.message === 'ungueltige_sendungsnummer' ? 'Die Sendungsnummer sieht nicht richtig aus. Bitte prüfen.' : apiFehlerText(e), 'error');

@@ -113,15 +113,50 @@ function rechnungPositionenAus(b) {
 function rechnungAusBestellung(nr) {
   const b = (bestellungen || []).find(x => x.nr === nr);
   if (!b) return;
-  entwurf = {
-    bestellnr: b.nr, bestellPreis: b.preis, datum: rHeute(), leistungsdatum: b.versendetAm || b.datum || rHeute(),
+  entwurf = Object.assign({ bestellPreis: b.preis }, rechnungDatenAus(b));
+  geheZu('rechnungen');
+}
+// Rechnungsdaten aus einer Bestellung (für den Entwurf und für „Versenden + Rechnung“)
+function rechnungDatenAus(b) {
+  const d = {
+    bestellnr: b.nr, datum: rHeute(), leistungsdatum: b.versendetAm || b.datum || rHeute(),
     betreff: rechnungBetreff(b), empfaenger: rechnungEmpfaenger(b), positionen: rechnungPositionenAus(b),
     hinweis: rechnungZahlungstext(b), seriennummern: b.seriennummern || '', zahlungsart: rechnungZahlungsart(b)
   };
-  entwurf.faellig = rDatumPlus(entwurf.datum, 14);
-  entwurf.bezahltAm = entwurf.zahlungsart ? (b.datum || rHeute()) : '';
-  geheZu('rechnungen');
+  d.faellig = rDatumPlus(d.datum, 14);
+  d.bezahltAm = d.zahlungsart ? (b.datum || rHeute()) : '';
+  return d;
 }
+
+// „Versenden + Rechnung“: Rechnung ohne Entwurf festschreiben und im schon geöffneten Fenster drucken.
+// Klappt etwas nicht (z. B. fehlende Anschrift über 250 €), öffnet sich der Entwurf zum Nachtragen.
+async function rechnungBeimVersand(b, w) {
+  const d = rechnungDatenAus(b);
+  const zumEntwurf = text => {
+    if (w) w.close();
+    entwurf = Object.assign({ bestellPreis: b.preis }, d);
+    geheZu('rechnungen');
+    showStatus('Versendet ✓ ' + text + ' Bitte im Entwurf prüfen und dann festschreiben.', 'error');
+  };
+  if (!d.empfaenger || d.positionen.some(p => !p.text) || !(rSumme(d.positionen) > 0)) { zumEntwurf('Für die Rechnung fehlen Angaben.'); return; }
+  try {
+    const r = await schnittstelle('rechnungErstellen', { rechnung: d });
+    if (r.absender) rechnungInfo.absender = r.absender;
+    b.rechnungsnr = r.rechnung.nr;
+    const best = (bestellungen || []).find(x => x.nr === b.nr); if (best) best.rechnungsnr = r.rechnung.nr;
+    if (rechnungen) { rechnungen.unshift(r.rechnung); rechnungInfo.naechste = 'R-' + String(parseInt(r.rechnung.nr.slice(2), 10) + 1).padStart(5, '0'); }
+    renderBestellListe();
+    if (w) {
+      w.document.open(); w.document.write(rechnungHtml(r.rechnung, rechnungInfo.absender)); w.document.close();
+      setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* Nutzerin druckt selbst */ } }, 300);
+    }
+    showStatus('Versendet ✓ Rechnung ' + r.rechnung.nr + ' ist festgeschrieben' + (w ? ' und im Druckfenster.' : '. Pop-ups sind blockiert – „Rechnung drucken / PDF“ in der Bestellung.')
+      + (b.seriennummern ? ' MK-Nummern: ' + b.seriennummern : ''));
+  } catch (e) {
+    zumEntwurf((e.daten && e.daten.text) || apiFehlerText(e));
+  }
+}
+
 function rechnungNeu() {
   entwurf = { bestellnr: '', bestellPreis: null, datum: rHeute(), leistungsdatum: rHeute(), betreff: '', empfaenger: '',
     positionen: [{ text: '', menge: 1, preis: 0 }], hinweis: 'Bitte überweisen Sie den Betrag bis zum ' + rDatumPlus(rHeute(), 14) + ' auf das unten angegebene Konto.', seriennummern: '',

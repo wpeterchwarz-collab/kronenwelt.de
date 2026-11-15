@@ -313,6 +313,42 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     await expect(k.locator('a[href*="piececode=003404341234567890"]')).toBeVisible();
   });
 
+  test('„Versenden + Rechnung“: ein Klick versendet, schreibt die Rechnung fest und öffnet den Druck', async ({ page }) => {
+    const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const k = karte(page, 'KW-20261001-003');
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();
+    await k.locator('input[id^="sn-"]').fill('0034 0434 1234 5678 90');
+    await k.locator('input[id^="mail-"]').uncheck();
+    const [druck] = await Promise.all([page.waitForEvent('popup'), k.getByRole('button', { name: 'Versenden + Rechnung' }).click()]);
+    await expect(page.locator('#statusText')).toContainText('Rechnung R-01272 ist festgeschrieben');
+    await expect(druck.locator('body')).toContainText('R-01272');
+    await expect(druck.locator('body')).toContainText('Kim Muster');
+    const blatt = tabelle.blatt('Rechnungen');
+    expect(blatt).toHaveLength(2);                                             // Kopf + eine Rechnung
+    expect(blatt[1][0]).toBe('R-01272');
+    // Bestellung kennt jetzt ihre Rechnung, kein zweiter Rechnungs-Knopf
+    await page.click('#bestFilterLeiste [data-filter="erledigt"]');
+    await expect(k).toHaveAttribute('open', '');                              // bleibt aufgeklappt
+    await expect(k).toContainText('Rechnung R-01272');
+    await expect(k.getByRole('button', { name: 'Rechnung erstellen' })).toHaveCount(0);
+    await expect(k.getByRole('button', { name: 'Rechnung drucken / PDF' })).toBeVisible();
+  });
+
+  test('„Versenden + Rechnung“ abgebrochen (falsche Sendungsnummer): nichts versendet, keine Rechnung', async ({ page }) => {
+    const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const k = karte(page, 'KW-20261001-003');
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();
+    await k.locator('input[id^="sn-"]').fill('xx');
+    const popup = page.waitForEvent('popup');
+    await k.getByRole('button', { name: 'Versenden + Rechnung' }).click();
+    const f = await popup;
+    await expect(page.locator('#statusText')).toContainText('Sendungsnummer sieht nicht richtig aus');
+    await expect.poll(() => f.isClosed()).toBe(true);
+    expect(tabelle.blatt('Rechnungen')).toBeUndefined();
+  });
+
   test('Versenden ohne Mail: Haken abwählen, es geht keine Mail raus', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
     const k = karte(page, 'KW-20261001-003');
