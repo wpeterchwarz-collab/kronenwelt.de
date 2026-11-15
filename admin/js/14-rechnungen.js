@@ -12,6 +12,11 @@ let rechnungInfo = { naechste: '', absender: {}, kleinbetrag: 250 };
 let rechnungFehler = '';
 let entwurf = null;                                      // Rechnung in Arbeit (noch ohne Nummer)
 let rechnungLaeuft = false;
+let rechnungFilter = { jahr: String(new Date().getFullYear()), status: '', suche: '' };
+let zahlungFormFuer = '';                                // Rechnungsnummer, bei der „Als bezahlt markieren“ offen ist
+
+const ZAHLUNGSARTEN = ['Überweisung', 'PayPal', 'Etsy Payments', 'Amazon', 'Bar', 'Karte (SumUp)'];
+const RECHNUNG_STATUS = ['Offen', 'Überfällig', 'Bezahlt', 'Storniert'];
 
 const RECHNUNG_19 = 'Gemäß § 19 UStG wird aufgrund der Kleinunternehmerregelung keine Umsatzsteuer erhoben.';
 const RECHNUNG_LOGO = `<svg viewBox="0 0 200 200" width="110" height="110" xmlns="http://www.w3.org/2000/svg" aria-label="Sternenstaub Handmade">
@@ -35,6 +40,16 @@ const rSumme = pos => Math.round(pos.reduce((s, p) => s + Math.round((parseFloat
 const isoZuDatum = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? m[3] + '.' + m[2] + '.' + m[1] : ''; };
 const datumZuIso = d => { const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(d || ''); return m ? m[3] + '-' + m[2] + '-' + m[1] : ''; };
 
+// Zahlungsstatus wie in Papierkram: Storno-Belege, stornierte, bezahlte, überfällige und offene Rechnungen
+function rStatus(r) {
+  if (r.art === 'Storno') return 'Storno';
+  if (r.storniertDurch) return 'Storniert';
+  if (r.bezahltAm) return 'Bezahlt';
+  const f = datumZuIso(r.faellig || rDatumPlus(r.datum, 14));
+  return f && f < datumZuIso(rHeute()) ? 'Überfällig' : 'Offen';
+}
+const rStatusBadge = st => `<span class="re-status re-st-${({ 'Überfällig': 'ueberfaellig' })[st] || st.toLowerCase()}">${medienEsc(st)}</span>`;
+
 async function ladeRechnungen(neu) {
   if (!apiKonfiguriert()) { renderRechnungen(); return; }
   if (rechnungen && !neu) { renderRechnungen(); return; }
@@ -44,7 +59,7 @@ async function ladeRechnungen(neu) {
     rechnungInfo = { naechste: r.naechste, absender: r.absender || {}, kleinbetrag: r.kleinbetrag || 250 };
     rechnungFehler = '';
   } catch (e) {
-    rechnungFehler = e.message === 'unbekannte_aktion' ? 'Das Apps Script kennt Rechnungen noch nicht. Bitte Code.gs ab Version 1.11 bereitstellen.' : apiFehlerText(e);
+    rechnungFehler = e.message === 'unbekannte_aktion' ? 'Das Apps Script kennt Rechnungen noch nicht. Bitte Code.gs ab Version 1.12 bereitstellen.' : apiFehlerText(e);
   }
   renderRechnungen();
 }
@@ -68,6 +83,13 @@ function rechnungZahlungstext(b) {
   if (b.kanal === 'Webshop') return 'Bezahlt per ' + (b.zahlung || 'PayPal') + am;
   return b.zahlung ? 'Bezahlt (' + b.zahlung + ')' + am : '';
 }
+// Wie wurde die Bestellung bezahlt? (leer = unbekannt, dann bleibt die Rechnung offen)
+function rechnungZahlungsart(b) {
+  if (b.kanal === 'Etsy') return 'Etsy Payments';
+  if (b.kanal === 'Amazon') return 'Amazon';
+  if (b.kanal === 'Webshop') return b.zahlung || 'PayPal';
+  return b.zahlung || '';
+}
 function rechnungPositionenAus(b) {
   const pos = positionen(b);
   const liste = pos.map(p => {
@@ -87,15 +109,33 @@ function rechnungAusBestellung(nr) {
   entwurf = {
     bestellnr: b.nr, bestellPreis: b.preis, datum: rHeute(), leistungsdatum: b.versendetAm || b.datum || rHeute(),
     betreff: rechnungBetreff(b), empfaenger: rechnungEmpfaenger(b), positionen: rechnungPositionenAus(b),
-    hinweis: rechnungZahlungstext(b), seriennummern: b.seriennummern || ''
+    hinweis: rechnungZahlungstext(b), seriennummern: b.seriennummern || '', zahlungsart: rechnungZahlungsart(b)
   };
+  entwurf.faellig = rDatumPlus(entwurf.datum, 14);
+  entwurf.bezahltAm = entwurf.zahlungsart ? (b.datum || rHeute()) : '';
   geheZu('rechnungen');
 }
 function rechnungNeu() {
   entwurf = { bestellnr: '', bestellPreis: null, datum: rHeute(), leistungsdatum: rHeute(), betreff: '', empfaenger: '',
-    positionen: [{ text: '', menge: 1, preis: 0 }], hinweis: 'Bitte überweisen Sie den Betrag bis zum ' + rDatumPlus(rHeute(), 14) + ' auf das unten angegebene Konto.', seriennummern: '' };
+    positionen: [{ text: '', menge: 1, preis: 0 }], hinweis: 'Bitte überweisen Sie den Betrag bis zum ' + rDatumPlus(rHeute(), 14) + ' auf das unten angegebene Konto.', seriennummern: '',
+    faellig: rDatumPlus(rHeute(), 14), bezahltAm: '', zahlungsart: '' };
   renderRechnungen();
   const f = document.getElementById('reEmpfaenger'); if (f) f.focus();
+}
+// Fällig-Datum ändern; steht noch der Standard-Überweisungstext im Hinweis, zieht das Datum dort mit
+function entwurfFaellig(iso) {
+  const neu = isoZuDatum(iso);
+  const alt = 'Bitte überweisen Sie den Betrag bis zum ' + entwurf.faellig + ' ';
+  if (neu && entwurf.hinweis.startsWith(alt)) {
+    entwurf.hinweis = 'Bitte überweisen Sie den Betrag bis zum ' + neu + ' ' + entwurf.hinweis.slice(alt.length);
+    const h = document.getElementById('reHinweis'); if (h) h.value = entwurf.hinweis;
+  }
+  entwurf.faellig = neu;
+}
+function entwurfZahlung(art) {
+  entwurf.zahlungsart = art;
+  entwurf.bezahltAm = art ? (entwurf.bezahltAm || rHeute()) : '';
+  renderRechnungen();
 }
 function rechnungVerwerfen() {
   if (entwurf && !confirm('Entwurf verwerfen?')) return;
@@ -128,6 +168,10 @@ function entwurfHtml() {
       ${feld('reBetreff', 'Betreff', e.betreff, 'text', 'oninput="entwurf.betreff=this.value"')}
       ${feld('reDatum', 'Rechnungsdatum', datumZuIso(e.datum), 'date', 'onchange="entwurf.datum=isoZuDatum(this.value)"')}
       ${feld('reLeistung', 'Leistungsdatum', datumZuIso(e.leistungsdatum), 'date', 'onchange="entwurf.leistungsdatum=isoZuDatum(this.value)"')}
+      ${feld('reFaellig', 'Fällig am', datumZuIso(e.faellig), 'date', 'onchange="entwurfFaellig(this.value)"')}
+      <label class="re-feld">Zahlung<select id="reZahlung" onchange="entwurfZahlung(this.value)">
+        <option value="">Noch offen</option>${zahlungsOptionen(e.zahlungsart)}</select></label>
+      ${e.zahlungsart ? feld('reBezahltAm', 'Bezahlt am', datumZuIso(e.bezahltAm), 'date', 'onchange="entwurf.bezahltAm=isoZuDatum(this.value)"') : ''}
     </div>
     <table class="re-pos">
       <thead><tr><th>Beschreibung</th><th>Menge</th><th>Einzelpreis €</th><th>Gesamt</th><th></th></tr></thead>
@@ -167,26 +211,117 @@ function entwurfSummeZeigen() {
   const box = document.getElementById('reHinweise'); if (box) box.textContent = h.join(' ');
 }
 
+function zahlungsOptionen(gewaehlt) {
+  const liste = ZAHLUNGSARTEN.indexOf(gewaehlt) < 0 && gewaehlt ? ZAHLUNGSARTEN.concat([gewaehlt]) : ZAHLUNGSARTEN;
+  return liste.map(z => `<option ${z === gewaehlt ? 'selected' : ''}>${medienEsc(z)}</option>`).join('');
+}
+
+function rechnungJahre() {
+  const jahre = new Set([String(new Date().getFullYear())]);
+  (rechnungen || []).forEach(r => { const j = String(r.datum || '').slice(6); if (j) jahre.add(j); });
+  return [...jahre].sort().reverse();
+}
+function rechnungenGefiltert() {
+  const f = rechnungFilter, q = f.suche.trim().toLowerCase();
+  return rechnungen.filter(r => {
+    if (f.jahr && String(r.datum || '').slice(6) !== f.jahr) return false;
+    const st = rStatus(r);
+    if (f.status === 'Offen' && st !== 'Offen' && st !== 'Überfällig') return false;
+    if (f.status === 'Storniert' && st !== 'Storniert' && st !== 'Storno') return false;
+    if (f.status && f.status !== 'Offen' && f.status !== 'Storniert' && st !== f.status) return false;
+    if (q && ![r.nr, r.betreff, r.empfaenger, r.bestellnr].some(x => String(x || '').toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+function rechnungFilterSetzen(feld, wert) {
+  rechnungFilter[feld] = wert;
+  if (feld === 'suche') { const l = document.getElementById('reListe'); if (l) l.outerHTML = listeZeilenHtml(); return; }
+  renderRechnungen();
+}
+
 function listeHtml() {
   if (!rechnungen.length) return `<div class="card leise">Noch keine Rechnungen hier. Die nächste bekommt die Nummer ${medienEsc(rechnungInfo.naechste || 'R-01272')}.
     Ältere Rechnungen bleiben in Papierkram.</div>`;
-  return `<div class="card"><div class="card-title">Rechnungen</div><div class="re-liste">${rechnungen.map(r => {
+  const offen = rechnungen.filter(r => ['Offen', 'Überfällig'].includes(rStatus(r)));
+  const ueber = offen.filter(r => rStatus(r) === 'Überfällig');
+  const f = rechnungFilter;
+  return `<div class="card">
+    <div class="re-filter">
+      <label>Jahr <select id="reFJahr" onchange="rechnungFilterSetzen('jahr', this.value)"><option value="">Alle</option>
+        ${rechnungJahre().map(j => `<option ${j === f.jahr ? 'selected' : ''}>${j}</option>`).join('')}</select></label>
+      <label>Status <select id="reFStatus" onchange="rechnungFilterSetzen('status', this.value)"><option value="">Alle</option>
+        ${RECHNUNG_STATUS.map(st => `<option ${st === f.status ? 'selected' : ''}>${st}</option>`).join('')}</select></label>
+      <input type="search" id="reFSuche" placeholder="Suchen (Nr., Name, Betreff)" aria-label="Rechnungen durchsuchen" value="${medienEsc(f.suche)}" oninput="rechnungFilterSetzen('suche', this.value)">
+    </div>
+    <div class="re-offen leise">${offen.length
+      ? `Offen: <b>${offen.length}</b> ${offen.length === 1 ? 'Rechnung' : 'Rechnungen'} · <b>€ ${rBetrag(offen.reduce((s, r) => s + r.gesamt, 0))}</b>${ueber.length ? ` · davon überfällig: <b class="re-rot">${ueber.length}</b>` : ''}`
+      : 'Alle Rechnungen sind bezahlt ✓'}</div>
+    ${listeZeilenHtml()}
+    <div class="leise" style="font-size:12px;margin-top:10px">Ältere Rechnungen (bis R-01271) sind in Papierkram.</div>
+  </div>`;
+}
+
+function listeZeilenHtml() {
+  const liste = rechnungenGefiltert();
+  if (!liste.length) return '<div id="reListe" class="leise" style="padding:14px 0">Keine Rechnungen für diese Auswahl.</div>';
+  return `<div class="re-liste" id="reListe">
+    <div class="re-zeile re-kopfzeile" aria-hidden="true"><div>Nr. / Betreff</div><div>Kunde</div><div>Status</div><div>Datum</div><div>Fällig am</div><div class="re-zahl">Betrag</div></div>
+    ${liste.map(r => {
     const name = String(r.empfaenger || '').split('\n')[0];
-    const nr = jsArg(r.nr);
+    const nr = jsArg(r.nr), st = rStatus(r);
+    const zahlbar = st === 'Offen' || st === 'Überfällig';
     return `<div class="re-zeile ${r.storniertDurch ? 'storniert' : ''}" data-nr="${medienEsc(r.nr)}">
-      <div><b>${medienEsc(r.nr)}</b>${r.art === 'Storno' ? ' <span class="badge-pruefen">Storno</span>' : ''}${r.storniertDurch ? ' <span class="leise">storniert durch ' + medienEsc(r.storniertDurch) + '</span>' : ''}
-        <div class="leise">${medienEsc(r.datum)} · ${medienEsc(name)}${r.betreff ? ' · ' + medienEsc(r.betreff) : ''}</div></div>
+      <div><b>${medienEsc(r.nr)}</b>${r.storniertDurch ? ' <span class="leise">storniert durch ' + medienEsc(r.storniertDurch) + '</span>' : ''}
+        ${r.betreff ? `<div class="leise">${medienEsc(r.betreff)}</div>` : ''}</div>
+      <div class="re-kunde">${medienEsc(name)}</div>
+      <div>${rStatusBadge(st)}${st === 'Bezahlt' ? `<div class="leise re-klein">${medienEsc(r.bezahltAm)}${r.zahlungsart ? ' · ' + medienEsc(r.zahlungsart) : ''}</div>` : ''}</div>
+      <div><span class="re-mobil leise">Datum </span>${medienEsc(r.datum)}</div>
+      <div class="${st === 'Überfällig' ? 're-rot' : ''}">${r.faellig ? '<span class="re-mobil leise">fällig </span>' + medienEsc(r.faellig) : ''}</div>
       <div class="re-zahl"><b>€ ${rBetrag(r.gesamt)}</b></div>
       <div class="btn-row"><button class="btn btn-teal btn-sm" onclick="rechnungDrucken(${nr})">Drucken / PDF</button>
+        ${zahlbar && zahlungFormFuer !== r.nr ? `<button class="btn btn-primary btn-sm" onclick="zahlungFormZeigen(${nr})">Als bezahlt markieren</button>` : ''}
+        ${st === 'Bezahlt' ? `<button class="btn btn-outline btn-sm" onclick="rechnungBezahltKlick(${nr}, true)">Zahlung zurücksetzen</button>` : ''}
         ${r.art === 'Rechnung' && !r.storniertDurch ? `<button class="btn btn-outline btn-sm" onclick="rechnungStornoKlick(${nr})">Stornieren</button>` : ''}</div>
+      ${zahlungFormFuer === r.nr ? `<div class="re-zahlung-form">
+        <label class="re-feld">Bezahlt am<input type="date" id="reZAm" value="${datumZuIso(rHeute())}"></label>
+        <label class="re-feld">Zahlungsart<select id="reZArt">${zahlungsOptionen(/Bezahlt über Etsy/.test(r.hinweis || '') ? 'Etsy Payments' : 'Überweisung')}</select></label>
+        <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="rechnungBezahltKlick(${nr})">Speichern</button>
+          <button class="btn btn-outline btn-sm" onclick="zahlungFormZeigen('')">Abbrechen</button></div></div>` : ''}
     </div>`;
-  }).join('')}</div></div>`;
+  }).join('')}</div>`;
+}
+
+function zahlungFormZeigen(nr) { zahlungFormFuer = nr; renderRechnungen(); }
+
+// Zahlung eintragen (oder mit zuruecksetzen=true wieder auf offen stellen); die Rechnung selbst bleibt unverändert
+async function rechnungBezahltKlick(nr, zuruecksetzen) {
+  if (rechnungLaeuft) return;
+  let bezahltAm = '', zahlungsart = '';
+  if (zuruecksetzen) {
+    if (!confirm('Zahlung bei ' + nr + ' zurücksetzen? Die Rechnung gilt dann wieder als offen.')) return;
+  } else {
+    bezahltAm = isoZuDatum((document.getElementById('reZAm') || {}).value);
+    zahlungsart = (document.getElementById('reZArt') || {}).value || '';
+    if (!bezahltAm) { showStatus('Bitte das Datum der Zahlung eintragen.', 'error'); return; }
+  }
+  rechnungLaeuft = true;
+  try {
+    const a = await schnittstelle('rechnungBezahlt', { nr, bezahltAm, zahlungsart });
+    const r = rechnungen.find(x => x.nr === nr);
+    if (r) Object.assign(r, { bezahltAm: a.rechnung.bezahltAm, zahlungsart: a.rechnung.zahlungsart, faellig: a.rechnung.faellig || r.faellig });
+    zahlungFormFuer = '';
+    renderRechnungen();
+    showStatus(zuruecksetzen ? nr + ' ist wieder offen.' : nr + ' ist als bezahlt markiert ✓');
+  } catch (e) {
+    showStatus(e.message === 'unbekannte_aktion' ? 'Bitte Code.gs ab Version 1.12 im Apps Script bereitstellen.' : ((e.daten && e.daten.text) || apiFehlerText(e)), 'error');
+  } finally { rechnungLaeuft = false; }
 }
 
 // ---------- Festschreiben, Stornieren ----------
 function entwurfDaten() {
   return { bestellnr: entwurf.bestellnr, datum: entwurf.datum, leistungsdatum: entwurf.leistungsdatum, betreff: entwurf.betreff.trim(),
     empfaenger: entwurf.empfaenger.trim(), hinweis: entwurf.hinweis.trim(), seriennummern: entwurf.seriennummern.trim(),
+    faellig: entwurf.faellig || '', bezahltAm: entwurf.zahlungsart ? (entwurf.bezahltAm || '') : '', zahlungsart: entwurf.zahlungsart || '',
     positionen: entwurf.positionen.map(p => ({ text: String(p.text || '').trim(), menge: p.menge, preis: p.preis })) };
 }
 async function rechnungFestschreiben() {

@@ -1455,6 +1455,56 @@ test.describe('Admin: Rechnungen', () => {
     await expect(fenster.locator('body')).toContainText('Doppelt berechnet');
   });
 
+  test('Status wie Papierkram: Etsy-Rechnung gleich bezahlt, freie Rechnung offen → bezahlt; Filter; zweimal drucken', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const karte = page.locator('.best[data-nr="KW-20261001-003"]');
+    await karte.locator('summary').first().click();
+    await karte.getByRole('button', { name: 'Rechnung erstellen' }).click();
+    await expect(page.locator('#reZahlung')).toHaveValue('PayPal');
+    await expect(page.locator('#reBezahltAm')).toHaveValue('2026-10-01');
+    page.once('dialog', d => d.accept());
+    await page.getByRole('button', { name: 'Rechnung festschreiben' }).click();
+    const z1 = page.locator('.re-zeile[data-nr="R-01272"]');
+    await expect(z1.locator('.re-status')).toHaveText('Bezahlt');
+    await expect(z1).toContainText('01.10.2026 · PayPal');
+    // freie Rechnung: offen, Fälligkeit zieht im Überweisungstext mit
+    await page.getByRole('button', { name: '+ Rechnung' }).click();
+    await expect(page.locator('#reZahlung')).toHaveValue('');
+    await page.fill('#reFaellig', '2030-01-31');
+    await expect(page.locator('#reHinweis')).toHaveValue(/bis zum 31\.01\.2030 auf/);
+    await page.fill('#reEmpfaenger', 'Hundeschule Wuff');
+    await page.getByLabel('Beschreibung 1').fill('Kronen für den Welpenkurs');
+    await page.getByLabel('Preis 1').fill('60');
+    page.once('dialog', d => d.accept());
+    await page.getByRole('button', { name: 'Rechnung festschreiben' }).click();
+    const z2 = page.locator('.re-zeile[data-nr="R-01273"]');
+    await expect(z2.locator('.re-status')).toHaveText('Offen');
+    await expect(page.locator('.re-offen')).toContainText('Offen: 1 Rechnung · € 60,00');
+    await page.selectOption('#reFStatus', 'Offen');
+    await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(1);
+    await page.selectOption('#reFStatus', '');
+    await z2.getByRole('button', { name: 'Als bezahlt markieren' }).click();
+    await page.selectOption('#reZArt', 'Bar');
+    await z2.getByRole('button', { name: 'Speichern' }).click();
+    await expect(z2.locator('.re-status')).toHaveText('Bezahlt');
+    await expect(page.locator('.re-offen')).toContainText('Alle Rechnungen sind bezahlt');
+    await page.fill('#reFSuche', 'wuff');
+    await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(1);
+    // dieselbe Rechnung lässt sich beliebig oft drucken
+    for (let i = 0; i < 2; i++) {
+      const [f] = await Promise.all([page.waitForEvent('popup'), z2.getByRole('button', { name: 'Drucken / PDF' }).click()]);
+      await expect(f.locator('body')).toContainText('R-01273');
+      await f.close();
+    }
+  });
+
+  test('überfällige Rechnung wird rot markiert', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#rechnungen', api: true });
+    await page.evaluate(() => { rechnungen = [{ nr: 'R-01300', art: 'Rechnung', datum: '01.01.2026', faellig: '15.01.2026', empfaenger: 'A', gesamt: 10, positionen: [] }]; renderRechnungen(); });
+    await expect(page.locator('.re-zeile[data-nr="R-01300"] .re-status')).toHaveText('Überfällig');
+    await expect(page.locator('.re-offen')).toContainText('davon überfällig: 1');
+  });
+
   test('Texte im Druck werden nicht als HTML ausgeführt', async ({ page }) => {
     await openAdmin(page, [], { seite: '#rechnungen', api: true });
     const html = await page.evaluate(() => rechnungHtml({ nr: 'R-1', art: 'Rechnung', datum: '14.11.2026', leistungsdatum: '14.11.2026',
