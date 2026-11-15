@@ -25,6 +25,9 @@ function blattAttrappe(daten, geld, kaputt) {
       getDisplayValue: () => anzeige(zelle(r, c)),
       setValue: v => { if (kaputt) throw new Error('Blatt gesperrt'); setze(r, c, v); },
       setValues: vs => { if (kaputt) throw new Error('Blatt gesperrt'); vs.forEach((z, i) => z.forEach((v, j) => setze(r + i, c + j, v))); },
+      // wie in Sheets: Inhalt leeren; leere Zeilen am Ende zählen nicht für getLastRow
+      clearContent: () => { for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) if (daten[r - 1 + i]) setze(r + i, c + j, '');
+        while (daten.length && daten[daten.length - 1].every(x => x === '' || x == null)) daten.pop(); },
       setBackground() {}, setNumberFormat() {}, setFontColor() {}, setFontWeight() {}
     })
   };
@@ -32,7 +35,8 @@ function blattAttrappe(daten, geld, kaputt) {
 
 // zeilen = Werte wie in der Tabelle (Preis als Zahl); kopf = Kopfzeile (Standard: die 12 alten Spalten)
 // blaetter = weitere Blätter { Name: [Zeilen inkl. Kopf] }, z. B. Lagerbewegungen; kaputt = Blätter, in die nicht geschrieben werden kann
-function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [], paypal = null, eigenschaften = {}, katalogText = null, serienliste = null, github = null, cloudinary = false, etsy = null } = {}) {
+function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [], paypal = null, eigenschaften = {}, katalogText = null, serienliste = null, github = null, cloudinary = false, etsy = null, drive = null } = {}) {
+  // drive = { dateien: ['Rechnung R-01271.pdf', …], unter: { '2025': ['…'] } } → PAPIERKRAM_ORDNER ist gesetzt
   // github = { dateien: { 'katalog.json': '…' } } → GITHUB_TOKEN ist gesetzt; cloudinary: true → CLOUDINARY_KEY/SECRET gesetzt
   // etsy = { receipts: [Etsy-Bestellungen], listings: [Etsy-Artikel], shop: 4711, falsch: true (Anmeldung scheitert), abgelaufen: true (Zugriffs-Token ungültig) }
   //        → ETSY_KEYSTRING/ETSY_SECRET sind gesetzt; etsy.tokenAbrufe zählt die Token-Anfragen
@@ -43,7 +47,16 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
     serienliste ? { SERIENLISTE_ID: 'SERIEN-ID' } : {}, github ? { GITHUB_TOKEN: 'GH-TOKEN' } : {},
     cloudinary ? { CLOUDINARY_KEY: 'CL-KEY', CLOUDINARY_SECRET: 'CL-SECRET' } : {},
     etsy ? { ETSY_KEYSTRING: 'ETSY-KEY', ETSY_SECRET: 'ETSY-SECRET' } : {},
-    etsy && etsy.zwei ? { ETSY2_KEYSTRING: 'ETSY2-KEY', ETSY2_SECRET: 'ETSY2-SECRET' } : {}, eigenschaften);
+    etsy && etsy.zwei ? { ETSY2_KEYSTRING: 'ETSY2-KEY', ETSY2_SECRET: 'ETSY2-SECRET' } : {},
+    drive ? { PAPIERKRAM_ORDNER: 'https://drive.google.com/drive/folders/PK-ORDNER-1234?usp=sharing' } : {}, eigenschaften);
+  const iter = l => { let i = 0; return { hasNext: () => i < l.length, next: () => l[i++] }; };
+  const ordnerAttrappe = (name, dateien, unter = {}) => ({
+    getName: () => name,
+    searchFiles: q => { const t = /title contains "([^"]+)"/.exec(q)[1];
+      return iter(dateien.filter(d => d.includes(t)).map(d => ({ getName: () => d, getUrl: () => 'https://drive.google.com/file/d/' + encodeURIComponent(d) }))); },
+    getFilesByType: () => iter(dateien.filter(d => d.endsWith('.pdf'))),
+    getFolders: () => iter(Object.keys(unter).map(n => ordnerAttrappe(n, unter[n])))
+  });
   if (etsy) etsy.tokenAbrufe = [];
   const gh = github ? { dateien: Object.assign({}, github.dateien || {}), gespeichert: [], falsch: !!github.falsch } : null;
   const serienDaten = serienliste ? serienliste.map(z => z.slice()) : null;
@@ -124,6 +137,7 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
       openById: id => { if (id !== 'SERIEN-ID' || !serienSheet) throw new Error('Datei nicht gefunden'); return { getSheets: () => [serienSheet] }; } },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] == null ? null : props[k], setProperty: (k, v) => { props[k] = v; } }) },
     UrlFetchApp: { fetch: fetchAttrappe },
+    DriveApp: { getFolderById: id => { if (!drive || id !== 'PK-ORDNER-1234') throw new Error('Kein Zugriff'); return ordnerAttrappe('Papierkram', drive.dateien || [], drive.unter || {}); } },
     CacheService: { getScriptCache: () => ({ get: k => cache[k] || null, put: (k, v) => { cache[k] = v; } }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: t => ({ setMimeType: () => ({ text: t }) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },

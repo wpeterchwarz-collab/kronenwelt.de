@@ -658,6 +658,11 @@ code { background: var(--petrol-l) !important; color: var(--petrol-dd); border-r
 .re-zahlung-form { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; background: var(--petrol-l); padding: 10px; margin-top: 6px; }
 .re-zahlung-form .re-feld { min-width: 160px; }
 .re-feld select { padding: 8px 9px; border: 1px solid var(--line2); border-radius: 2px; font-family: var(--f-sans); font-size: 15px; background: #fff; }
+.re-quelle { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line2); border-radius: 2px; padding: 1px 5px; margin-left: 4px; vertical-align: 1px; }
+.re-symbol-platz { display: inline-block; width: 32px; }
+.re-mehr { text-align: center; padding: 12px 0 4px; border-top: 1px solid var(--line); }
+.re-pk { font-size: 12px; margin-top: 12px; line-height: 1.7; }
+.re-csv { margin-left: 6px; cursor: pointer; }
 @media (max-width: 760px) {
   .re-kacheln { gap: 6px; }
   .re-kachel { padding: 8px 10px; }

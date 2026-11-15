@@ -22,13 +22,13 @@ const BESTELLUNGEN = [
 
 // api: true → Admin-Schlüssel ist eingetragen, die Schnittstelle (echter Apps-Script-Code) antwortet
 // lager: Zeilen für das Blatt „Lagerbewegungen“ (ohne Kopf), z. B. [['01.11.2026', '', 'KR-…', '', 'Werkstatt', 2, 'Genäht', '', '']]
-async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null, paypal = null, serienliste = null, github = false, cloudinary = false, etsy = null } = {}) {
+async function openAdmin(page, gespeichert = [], { seite = '#produkte/preise', fehlendeFotos = [], api = false, apiSchluessel = 'GEHEIM123', lager = null, paypal = null, serienliste = null, github = false, cloudinary = false, etsy = null, drive = null } = {}) {
   // github/cloudinary: true → Zugänge liegen im Apps Script (ab 1.8); direkte GitHub-Aufrufe landen dann in t.direkt
   await page.addInitScript(() => { localStorage.setItem('mkw_admin_pw', 'test'); localStorage.setItem('mkw_github_token', 'test'); });
   const blaetter = lager ? { Lagerbewegungen: [['Datum', 'Uhrzeit', 'Artikelnr.', 'Artikel', 'Kiste', 'Menge', 'Grund', 'Bestellnr.', 'Notiz'], ...lager] } : {};
   const ghDateien = github ? Object.fromEntries(['katalog.json', 'galerie.json', 'medien.json'].filter(d => fs.existsSync(path.join(ROOT, d)))
     .map(d => [d, fs.readFileSync(path.join(ROOT, d), 'utf8')])) : null;
-  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter, paypal, serienliste, github: github ? { dateien: ghDateien } : null, cloudinary, etsy });
+  const tabelle = umgebung(BESTELLUNGEN, 'GEHEIM123', { blaetter, paypal, serienliste, github: github ? { dateien: ghDateien } : null, cloudinary, etsy, drive });
   tabelle.direkt = [];
   await page.route(/^https?:\/\/(?!localhost)/, route => {
     const u = route.request().url();
@@ -1521,6 +1521,50 @@ test.describe('Admin: Rechnungen', () => {
     await page.getByRole('button', { name: 'Weitere Aktionen zu R-01300' }).click();
     const [f] = await Promise.all([page.waitForEvent('popup'), page.getByRole('button', { name: 'Ansehen' }).click()]);
     await expect(f.locator('body')).toContainText('R-01300');
+  });
+
+  test('Papierkram-CSV einlesen (Windows-1252): Entwürfe übersprungen, Liste, Kacheln, Suche, Original-PDF', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#rechnungen', api: true, drive: { dateien: ['Rechnung R-01271.pdf'] } });
+    await expect(page.locator('.re-pk')).toContainText('noch in Papierkram');
+    const csv = ['Rechnungsnr.;Betreff;Kunde;Land;Projekt;Kundennummer;Datum;Fälligkeitsdatum;Status;Typ;Netto;USt.;Brutto;Skonto;Bezahlt;letztes Bezahldatum;Notiz;Mahnungsdatum;Waren & Dienstleistungen',
+      'R-01271;Nr. 4226325495 über Etsy (MilasKronenwelt);Tanja Dreßler;Deutschland;"";K-01235;10.11.2026;24.11.2026;Bezahlt;Rechnung;24,00;0,00;24,00;0,00;24,00;2026-11-10;"";"";""',
+      'R-01270;Bestellnummer: # 302-7797887-6825167;Kristina Ewig;Deutschland;"";K-01233;07.11.2026;21.11.2026;Bezahlt;Rechnung;14,00;0,00;14,00;0,00;14,00;2026-11-07;"";"";""',
+      'R-00449;"2024; Sammel";Hundeschule;Deutschland;"";K-1;01.12.2024;15.12.2024;Storniert;Rechnung;1.269,50;0,00;1.269,50;0,00;0,00;"";"";"";""',
+      'R-00449-S;2024;Hundeschule;Deutschland;"";K-1;02.12.2024;"";Bezahlt;Stornorechnung;-1.269,50;0,00;-1.269,50;0,00;0,00;"";"";"";""',
+      'Entwurf;Baumwolltaschen grau;X;Deutschland;"";K-2;01.01.2023;"";Entwurf;Rechnung;24,50;0,00;24,50;0,00;0,00;"";"";"";""'].join('\r\n') + '\r\n';
+    const bytes = Buffer.from(csv, 'latin1');
+    page.once('dialog', d => { expect(d.message()).toContain('4 Rechnungen aus Papierkram (2024–2026)'); expect(d.message()).toContain('1 Entwürfe'); d.accept(); });
+    await page.locator('.re-csv input').setInputFiles({ name: 'rechnungen_9.csv', mimeType: 'text/csv', buffer: bytes });
+    await expect(page.locator('#statusText')).toHaveText(/4 Rechnungen aus Papierkram übernommen/);
+    const z = page.locator('.re-zeile[data-nr="R-01271"]');
+    await expect(z).toContainText('Tanja Dreßler');
+    await expect(z.locator('.re-status')).toHaveText('Bezahlt');
+    await expect(z).toContainText('10.11.2026 · Etsy Payments');
+    await expect(page.locator('.re-zeile[data-nr="R-01270"]')).toContainText('Amazon');
+    await expect(page.locator('.re-kachel.re-st-bezahlt')).toContainText('€ 38,00');
+    await expect(page.locator('.re-pk')).toContainText('Enthält 4 Rechnungen aus Papierkram (R-00449 bis R-01271)');
+    await page.selectOption('#reFJahr', '2024');
+    await expect(page.locator('.re-zeile[data-nr="R-00449"] .re-status')).toHaveText('Storniert');
+    await expect(page.locator('.re-zeile[data-nr="R-00449"]')).toContainText('storniert durch R-00449-S');
+    await expect(page.locator('.re-zeile[data-nr="R-00449-S"] .re-status')).toHaveText('Storno');
+    await page.selectOption('#reFJahr', '');
+    await page.fill('#reFSuche', 'dreßler');
+    await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(1);
+    const geoeffnet = [];
+    await page.context().route('https://drive.google.com/**', r => { geoeffnet.push(r.request().url()); r.fulfill({ body: 'PDF' }); });
+    await Promise.all([page.waitForEvent('popup'), z.getByRole('button', { name: 'Original-PDF R-01271 öffnen' }).click()]);
+    await expect.poll(() => geoeffnet[0] || '').toContain('drive.google.com/file/d/Rechnung%20R-01271.pdf');
+  });
+
+  test('Papierkram: falsche Datei wird abgelehnt; viele Rechnungen mit „Weitere anzeigen“', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#rechnungen', api: true });
+    await page.locator('.re-csv input').setInputFiles({ name: 'x.csv', mimeType: 'text/csv', buffer: Buffer.from('a;b\n1;2\n') });
+    await expect(page.locator('#statusText')).toHaveText(/nicht nach dem Rechnungs-Export/);
+    await page.evaluate(() => { papierkramSetzen(Array.from({ length: 450 }, (_, i) => ({ nr: 'R-' + String(i + 1).padStart(5, '0'), art: 'Rechnung',
+      datum: '01.03.2026', empfaenger: 'K' + i, gesamt: 10, status: 'Bezahlt', bezahltAm: '01.03.2026' }))); renderRechnungen(); });
+    await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(200);
+    await page.getByRole('button', { name: /Weitere anzeigen \(250 mehr\)/ }).click();
+    await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(400);
   });
 
   test('Texte im Druck werden nicht als HTML ausgeführt', async ({ page }) => {

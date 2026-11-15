@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.12', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.13', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -1115,5 +1115,58 @@ test.describe('Schnittstelle: Rechnungen', () => {
     expect(t.post({ aktion: 'rechnungen', schluessel: 'falsch' }).ok).toBe(false);
     expect(t.post({ aktion: 'rechnungErstellen', schluessel: 'falsch', rechnung: neu() }).ok).toBe(false);
     expect(t.blatt('Rechnungen')).toBeUndefined();
+  });
+});
+
+test.describe('Schnittstelle: alte Rechnungen aus Papierkram', () => {
+  const S = 'GEHEIM123';
+  const alt = (nr, extra = {}) => Object.assign({ nr, art: 'Rechnung', datum: '10.11.2026', faellig: '24.11.2026', kunde: 'Tanja D', land: 'Deutschland',
+    betreff: 'Nr. 1 über Etsy (MilasKronenwelt)', brutto: 24, status: 'Bezahlt', bezahltAm: '10.11.2026', zahlungsart: 'Etsy Payments', notiz: '' }, extra);
+
+  test('Import legt das Blatt an, ersetzt beim zweiten Mal und ändert die nächste Nummer nicht', () => {
+    const t = umgebung([], S);
+    const a = t.post({ aktion: 'altrechnungenImport', schluessel: S, rechnungen: [alt('R-01271'), alt('R-00449', { status: 'Storniert', brutto: 1269.5, storniertDurch: 'R-00449-S' }),
+      alt('R-00449-S', { art: 'Storno', brutto: -1269.5 })] });
+    expect(a).toMatchObject({ ok: true, anzahl: 3 });
+    expect(t.blatt('Rechnungen Papierkram')[0]).toEqual(['Rechnungsnr.', 'Art', 'Datum', 'Fällig am', 'Kunde', 'Land', 'Betreff', 'Brutto (€)', 'Status',
+      'Bezahlt am', 'Zahlungsart', 'Storniert durch', 'Notiz', 'PDF']);
+    const l = t.post({ aktion: 'rechnungen', schluessel: S });
+    expect(l.naechste).toBe('R-01272');
+    expect(l.rechnungen).toEqual([]);
+    expect(l.papierkram.find(r => r.nr === 'R-00449')).toMatchObject({ gesamt: 1269.5, status: 'Storniert', storniertDurch: 'R-00449-S', quelle: 'Papierkram' });
+    expect(l.papierkram.find(r => r.nr === 'R-00449-S')).toMatchObject({ art: 'Storno', gesamt: -1269.5 });
+    t.post({ aktion: 'altrechnungenImport', schluessel: S, rechnungen: [alt('R-01271')] });
+    expect(t.post({ aktion: 'rechnungen', schluessel: S }).papierkram.map(r => r.nr)).toEqual(['R-01271']);
+  });
+
+  test('Import prüft Nummern und Datum; ohne Schlüssel nichts', () => {
+    const t = umgebung([], S);
+    expect(t.post({ aktion: 'altrechnungenImport', schluessel: S, rechnungen: [alt('Entwurf')] }).fehler).toBe('alt_nr');
+    expect(t.post({ aktion: 'altrechnungenImport', schluessel: S, rechnungen: [alt('R-00001'), alt('R-00001')] }).fehler).toBe('alt_doppelt');
+    expect(t.post({ aktion: 'altrechnungenImport', schluessel: S, rechnungen: [alt('R-00001', { datum: '2026-11-10' })] }).fehler).toBe('alt_datum');
+    expect(t.post({ aktion: 'altrechnungenImport', schluessel: S, rechnungen: [] }).fehler).toBe('alt_leer');
+    expect(t.post({ aktion: 'altrechnungenImport', schluessel: 'falsch', rechnungen: [alt('R-00001')] }).ok).toBe(false);
+    expect(t.blatt('Rechnungen Papierkram')).toBeUndefined();
+  });
+
+  test('Original-PDF: sucht im Drive-Ordner und Unterordnern, R-01025 trifft nicht R-01025-2, Link wird gemerkt', () => {
+    const t = umgebung([], S, { drive: { dateien: ['Rechnung R-01025-2.pdf', 'Rechnung R-01271.pdf'], unter: { '2025': ['R-01025.pdf'] } } });
+    t.post({ aktion: 'altrechnungenImport', schluessel: S, rechnungen: [alt('R-01271'), alt('R-01025'), alt('R-01025-2'), alt('R-00001')] });
+    expect(t.post({ aktion: 'altrechnungPdf', schluessel: S, nr: 'R-01025' })).toMatchObject({ ok: true, url: 'https://drive.google.com/file/d/R-01025.pdf' });
+    expect(t.post({ aktion: 'altrechnungPdf', schluessel: S, nr: 'R-01025-2' }).url).toContain('R-01025-2.pdf');
+    expect(t.post({ aktion: 'altrechnungPdf', schluessel: S, nr: 'R-00001' }).fehler).toBe('alt_pdf_fehlt');
+    expect(t.post({ aktion: 'altrechnungPdf', schluessel: S, nr: 'R-09999' }).fehler).toBe('rechnung_nicht_gefunden');
+    expect(t.blatt('Rechnungen Papierkram').find(z => z[0] === 'R-01025')[13]).toContain('R-01025.pdf');
+    // erneuter Import behält gefundene Links
+    t.post({ aktion: 'altrechnungenImport', schluessel: S, rechnungen: [alt('R-01025')] });
+    expect(t.blatt('Rechnungen Papierkram')[1][13]).toContain('R-01025.pdf');
+    expect(t.post({ aktion: 'rechnungen', schluessel: S })).toMatchObject({ papierkramOrdner: true });
+  });
+
+  test('ohne eingetragenen Ordner: verständliche Meldung', () => {
+    const t = umgebung([], S);
+    t.post({ aktion: 'altrechnungenImport', schluessel: S, rechnungen: [alt('R-01271')] });
+    expect(t.post({ aktion: 'altrechnungPdf', schluessel: S, nr: 'R-01271' }).fehler).toBe('alt_ordner_fehlt');
+    expect(t.post({ aktion: 'rechnungen', schluessel: S }).papierkramOrdner).toBe(false);
   });
 });
