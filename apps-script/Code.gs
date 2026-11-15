@@ -48,6 +48,12 @@
       Ab 1.12: Zahlungsstatus wie in Papierkram (Offen / Überfällig / Bezahlt / Storniert). Dafür die Spalten
       „Fällig am“, „Bezahlt am“ und „Zahlungsart“; nur diese drei dürfen sich nach dem Festschreiben noch ändern
       (Aktion „rechnungBezahlt“), der Inhalt der Rechnung selbst nie.
+      Ab 1.13: alte Rechnungen aus Papierkram (bis R-01271) im Blatt „Rechnungen Papierkram“, nur zum Nachschlagen.
+      Eingelesen wird der CSV-Export von Papierkram in der Admin-Seite (Aktion „altrechnungenImport“, ersetzt das Blatt).
+      Die Original-PDFs liegen im Google-Drive-Ordner „Rechnungen_Papierkram“ (Meine Ablage) – oder in dem Ordner,
+      dessen Link/ID in der Skript-Eigenschaft PAPIERKRAM_ORDNER steht. Unterordner (z. B. je Jahr) sind erlaubt;
+      im Dateinamen muss die Rechnungsnummer stehen.
+      Nach dem Einfügen einmal „papierkramOrdnerPruefen“ im Editor ausführen (erlaubt den Zugriff auf Drive).
 
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
    werden rechts angehängt, sobald sie gebraucht werden. Nichts wird umbenannt oder gelöscht.
@@ -57,7 +63,7 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.12';
+const SCHNITTSTELLE_VERSION = '1.13';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
@@ -170,7 +176,7 @@ function adminAnfrage(data) {
     Utilities.sleep(800);                                   // Ausprobieren von Schlüsseln bremsen
     return antwort({ ok: false, fehler: 'nicht_erlaubt' });
   }
-  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung', 'etsyAbruf', 'etsyArtikel', 'rechnungErstellen', 'rechnungStornieren', 'rechnungBezahlt'].indexOf(data.aktion) >= 0;
+  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung', 'etsyAbruf', 'etsyArtikel', 'rechnungErstellen', 'rechnungStornieren', 'rechnungBezahlt', 'altrechnungenImport'].indexOf(data.aktion) >= 0;
   const lock = LockService.getScriptLock();
   try {
     if (schreibt) lock.waitLock(20000);
@@ -208,6 +214,10 @@ function adminAnfrage(data) {
         return antwort(rechnungStornieren(data));
       case 'rechnungBezahlt':
         return antwort(rechnungBezahltSetzen(data));
+      case 'altrechnungenImport':
+        return antwort(altrechnungenImport(data));
+      case 'altrechnungPdf':
+        return antwort(altrechnungPdf(data));
       case 'bestellungen':
         return antwort({ ok: true, version: SCHNITTSTELLE_VERSION, bestellungen: bestellungenLesen() });
       case 'status':
@@ -1194,7 +1204,7 @@ function rechnungNaechsteNr(alle) {
 function rechnungenLesen() {
   const alle = rechnungenAlle();
   return { ok: true, rechnungen: alle.reverse(), naechste: rechnungNaechsteNr(alle), absender: rechnungAbsender(),
-    kleinbetrag: RECHNUNG_KLEINBETRAG };
+    kleinbetrag: RECHNUNG_KLEINBETRAG, papierkram: altrechnungenAlle(), papierkramOrdner: !!papierkramOrdnerId() };
 }
 
 const rechnungText = function (x, max) { return String(x == null ? '' : x).replace(/\r/g, '').trim().slice(0, max); };
@@ -1322,6 +1332,125 @@ function rechnungBezahltSetzen(data) {
   r.bezahltAm = am; r.zahlungsart = art;
   if (!r.faellig) r.faellig = rechnungPlusTage(r.datum, RECHNUNG_ZIEL_TAGE);
   return { ok: true, rechnung: r };
+}
+
+/* ---------- Alte Rechnungen aus Papierkram (nur nachschlagen, nie ändern) ---------- */
+const ALT_BLATT = 'Rechnungen Papierkram';
+const ALT_SPALTEN = ['Rechnungsnr.', 'Art', 'Datum', 'Fällig am', 'Kunde', 'Land', 'Betreff', 'Brutto (€)', 'Status',
+  'Bezahlt am', 'Zahlungsart', 'Storniert durch', 'Notiz', 'PDF'];
+const ALT_NR = /^R-\d{5}(-\d{1,2})?(-S)?$/;
+
+function altrechnungenAlle() {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ALT_BLATT);
+  if (!sh) return [];
+  return zeilenLesen(sh).zeilen.filter(function (o) { return o['Rechnungsnr.']; }).map(function (o) {
+    return { nr: String(o['Rechnungsnr.']), art: o['Art'] === 'Storno' ? 'Storno' : 'Rechnung', datum: o['Datum'], faellig: o['Fällig am'],
+      empfaenger: o['Kunde'], land: o['Land'], betreff: o['Betreff'], gesamt: altBetrag(o['Brutto (€)']),
+      status: o['Status'], bezahltAm: o['Bezahlt am'], zahlungsart: o['Zahlungsart'], storniertDurch: o['Storniert durch'],
+      notiz: o['Notiz'], pdf: !!o['PDF'], quelle: 'Papierkram' };
+  });
+}
+
+// Ersetzt das Blatt komplett durch die übergebene Liste (aus dem CSV-Export von Papierkram, in der Admin-Seite gelesen)
+function altrechnungenImport(data) {
+  const liste = Array.isArray(data.rechnungen) ? data.rechnungen : [];
+  if (!liste.length || liste.length > 10000) throw fehler('alt_leer', 'Keine Rechnungen in der Datei gefunden.');
+  const nrs = {};
+  const zeilen = liste.map(function (r, i) {
+    const nr = rechnungText(r.nr, 20);
+    if (!ALT_NR.test(nr)) throw fehler('alt_nr', 'Zeile ' + (i + 2) + ': ungültige Rechnungsnummer „' + nr + '“');
+    if (nrs[nr]) throw fehler('alt_doppelt', 'Rechnungsnummer ' + nr + ' kommt doppelt vor');
+    nrs[nr] = true;
+    if (!rechnungDatumOk(r.datum)) throw fehler('alt_datum', nr + ': Datum fehlt oder ist ungültig');
+    const datum = function (d) { return rechnungDatumOk(d) ? d : ''; };
+    return [nr, r.art === 'Storno' ? 'Storno' : 'Rechnung', r.datum, datum(r.faellig), rechnungText(r.kunde, 120), rechnungText(r.land, 60),
+      rechnungText(r.betreff, 200), rechnungBetrag(r.brutto), ['Bezahlt', 'Storniert', 'Offen'].indexOf(r.status) >= 0 ? r.status : 'Offen',
+      datum(r.bezahltAm), rechnungText(r.zahlungsart, 40), rechnungText(r.storniertDurch, 20), rechnungText(r.notiz, 300), ''];
+  });
+  const sh = lagerBlatt(ALT_BLATT, ALT_SPALTEN);
+  // gefundene PDF-Links behalten
+  const vorher = {};
+  altrechnungenRoh(sh).forEach(function (o) { if (o.pdf) vorher[o.nr] = o.pdf; });
+  zeilen.forEach(function (z) { z[13] = vorher[z[0]] || ''; });
+  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, ALT_SPALTEN.length).clearContent();
+  const ber = sh.getRange(2, 1, zeilen.length, ALT_SPALTEN.length);
+  ber.setNumberFormat('@');
+  ber.setValues(zeilen);
+  sh.getRange(2, 8, zeilen.length, 1).setNumberFormat('#,##0.00');
+  return { ok: true, anzahl: zeilen.length, papierkram: altrechnungenAlle() };
+}
+// Zahl aus der Tabelle (Zahl oder Text wie „1.269,50“)
+function altBetrag(x) {
+  if (typeof x === 'number') return rechnungBetrag(x);
+  const t = String(x || '').replace(/[^\d,.-]/g, '');
+  return rechnungBetrag(/,\d{1,2}$/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, ''));
+}
+function altrechnungenRoh(sh) {
+  return zeilenLesen(sh).zeilen.map(function (o, i) { return { nr: String(o['Rechnungsnr.'] || ''), pdf: String(o['PDF'] || ''), zeile: i + 2 }; });
+}
+
+const PAPIERKRAM_ORDNER_NAME = 'Rechnungen_Papierkram';
+// Ordner-ID: aus der Skript-Eigenschaft (Link oder ID), sonst den Ordner „Rechnungen_Papierkram“ suchen und merken
+function papierkramOrdnerId() {
+  const props = PropertiesService.getScriptProperties();
+  const v = String(props.getProperty('PAPIERKRAM_ORDNER') || '').trim();
+  const m = /folders\/([\w-]{10,})/.exec(v) || /^([\w-]{10,})$/.exec(v);
+  if (m) return m[1];
+  try {
+    const it = DriveApp.getFoldersByName(v || PAPIERKRAM_ORDNER_NAME);
+    if (it.hasNext()) { const id = it.next().getId(); props.setProperty('PAPIERKRAM_ORDNER', id); return id; }
+  } catch (e) { /* noch kein Drive-Zugriff erlaubt */ }
+  return '';
+}
+
+// Datei zur Rechnungsnummer im Ordner (und in Unterordnern) suchen; R-01025 findet nicht R-01025-2 oder R-01025-S
+function altPdfSuchen(ordner, nr, tiefe) {
+  const muster = new RegExp('(^|[^\\d])' + nr.replace(/-/g, '\\-') + '(?![\\d-])', 'i');
+  const it = ordner.searchFiles('title contains "' + nr + '"');
+  while (it.hasNext()) {
+    const f = it.next();
+    if (muster.test(f.getName())) return f;
+  }
+  if (tiefe <= 0) return null;
+  const unter = ordner.getFolders();
+  while (unter.hasNext()) {
+    const f = altPdfSuchen(unter.next(), nr, tiefe - 1);
+    if (f) return f;
+  }
+  return null;
+}
+
+function altrechnungPdf(data) {
+  const nr = rechnungText(data.nr, 20);
+  if (!ALT_NR.test(nr)) throw fehler('alt_nr', 'Ungültige Rechnungsnummer');
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ALT_BLATT);
+  const z = sh ? altrechnungenRoh(sh).filter(function (o) { return o.nr === nr; })[0] : null;
+  if (!z) throw fehler('rechnung_nicht_gefunden', 'Rechnung ' + nr + ' nicht gefunden');
+  if (z.pdf) return { ok: true, url: z.pdf };
+  const id = papierkramOrdnerId();
+  if (!id) throw fehler('alt_ordner_fehlt', 'Der Drive-Ordner „' + PAPIERKRAM_ORDNER_NAME + '“ wurde nicht gefunden. Bitte im Apps Script einmal „papierkramOrdnerPruefen“ ausführen.');
+  let f = null;
+  try { f = altPdfSuchen(DriveApp.getFolderById(id), nr, 2); }
+  catch (e) { throw fehler('alt_ordner', 'Kein Zugriff auf den Drive-Ordner. Bitte im Editor einmal „papierkramOrdnerPruefen“ ausführen.'); }
+  if (!f) throw fehler('alt_pdf_fehlt', 'Im Drive-Ordner gibt es kein PDF mit „' + nr + '“ im Namen.');
+  const url = f.getUrl();
+  sh.getRange(z.zeile, ALT_SPALTEN.indexOf('PDF') + 1).setValue(url);
+  return { ok: true, url: url };
+}
+
+/* Einmalig im Editor ausführen, nachdem PAPIERKRAM_ORDNER eingetragen ist: erlaubt den Zugriff auf Drive
+   und zeigt im Protokoll, wie viele PDFs im Ordner liegen. */
+function papierkramOrdnerPruefen() {
+  const id = papierkramOrdnerId();
+  if (!id) { Logger.log('Ordner „' + PAPIERKRAM_ORDNER_NAME + '“ nicht gefunden. Bitte den Ordner so nennen oder den Link in der Skript-Eigenschaft PAPIERKRAM_ORDNER eintragen.'); return; }
+  const ordner = DriveApp.getFolderById(id);
+  let n = 0;
+  const zaehlen = function (o, tiefe) {
+    const it = o.getFilesByType('application/pdf'); while (it.hasNext()) { it.next(); n++; }
+    if (tiefe > 0) { const u = o.getFolders(); while (u.hasNext()) zaehlen(u.next(), tiefe - 1); }
+  };
+  zaehlen(ordner, 2);
+  Logger.log('Ordner „' + ordner.getName() + '“: ' + n + ' PDF-Dateien gefunden.');
 }
 
 /* ---------------- 7) Etsy ---------------- */

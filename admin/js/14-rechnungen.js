@@ -14,7 +14,11 @@ let entwurf = null;                                      // Rechnung in Arbeit (
 let rechnungLaeuft = false;
 let rechnungFilter = { jahr: String(new Date().getFullYear()), status: '', suche: '' };
 let zahlungFormFuer = '';                                // Rechnungsnummer, bei der „Als bezahlt markieren“ offen ist
-let menueFuer = '';                                      // Rechnungsnummer, deren ⋮-Menü offen ist
+let menueFuer = '';
+let papierkram = [];                                     // alte Rechnungen aus Papierkram (nur nachschlagen)
+let papierkramOrdner = false;                            // Drive-Ordner mit den Original-PDFs eingetragen?
+let listeMax = 200;                                      // so viele Zeilen zeigen, „Weitere anzeigen“ für mehr
+const alleRechnungen = () => (rechnungen || []).concat(papierkram);                                      // Rechnungsnummer, deren ⋮-Menü offen ist
 
 const ZAHLUNGSARTEN = ['Überweisung', 'PayPal', 'Etsy Payments', 'Amazon', 'Bar', 'Karte (SumUp)'];
 const RECHNUNG_STATUS = ['Offen', 'Überfällig', 'Bezahlt', 'Storniert'];
@@ -57,6 +61,8 @@ async function ladeRechnungen(neu) {
   try {
     const r = await schnittstelle('rechnungen');
     rechnungen = r.rechnungen || [];
+    papierkramSetzen(r.papierkram);
+    papierkramOrdner = !!r.papierkramOrdner;
     rechnungInfo = { naechste: r.naechste, absender: r.absender || {}, kleinbetrag: r.kleinbetrag || 250 };
     rechnungFehler = '';
   } catch (e) {
@@ -219,13 +225,13 @@ function zahlungsOptionen(gewaehlt) {
 
 function rechnungJahre() {
   const jahre = new Set([String(new Date().getFullYear())]);
-  (rechnungen || []).forEach(r => { const j = String(r.datum || '').slice(6); if (j) jahre.add(j); });
+  alleRechnungen().forEach(r => { const j = String(r.datum || '').slice(6); if (j) jahre.add(j); });
   return [...jahre].sort().reverse();
 }
 // Jahr und Suche (ohne Status) – Grundlage für Kacheln, Reiter-Zahlen und Liste
 function rechnungenImJahr() {
   const f = rechnungFilter, q = f.suche.trim().toLowerCase();
-  return rechnungen.filter(r => {
+  return alleRechnungen().filter(r => {
     if (f.jahr && String(r.datum || '').slice(6) !== f.jahr) return false;
     if (q && ![r.nr, r.betreff, r.empfaenger, r.bestellnr].some(x => String(x || '').toLowerCase().includes(q))) return false;
     return true;
@@ -238,6 +244,7 @@ function rechnungenGefiltert() {
 function rechnungFilterSetzen(feld, wert) {
   rechnungFilter[feld] = wert;
   menueFuer = '';
+  listeMax = 200;
   if (feld === 'suche') {                                // Eingabefeld behalten (Fokus), nur Kacheln, Reiter und Liste neu
     const k = document.getElementById('reUebersicht'); if (k) k.outerHTML = uebersichtHtml();
     const l = document.getElementById('reListe'); if (l) l.outerHTML = listeZeilenHtml();
@@ -247,8 +254,8 @@ function rechnungFilterSetzen(feld, wert) {
 }
 
 function listeHtml() {
-  if (!rechnungen.length) return `<div class="card leise">Noch keine Rechnungen hier. Die nächste bekommt die Nummer ${medienEsc(rechnungInfo.naechste || 'R-01272')}.
-    Ältere Rechnungen bleiben in Papierkram.</div>`;
+  if (!alleRechnungen().length) return `<div class="card leise">Noch keine Rechnungen hier. Die nächste bekommt die Nummer ${medienEsc(rechnungInfo.naechste || 'R-01272')}.
+    ${papierkramHtml()}</div>`;
   const f = rechnungFilter;
   return `<div class="card re-karte">
     <div class="re-filter">
@@ -258,7 +265,7 @@ function listeHtml() {
     </div>
     ${uebersichtHtml()}
     ${listeZeilenHtml()}
-    <div class="leise" style="font-size:12px;margin-top:10px">Ältere Rechnungen (bis R-01271) sind in Papierkram.</div>
+    ${papierkramHtml()}
   </div>`;
 }
 
@@ -280,13 +287,16 @@ function uebersichtHtml() {
 }
 
 function listeZeilenHtml() {
-  const liste = rechnungenGefiltert();
-  if (!liste.length) return '<div id="reListe" class="leise" style="padding:14px 0">Keine Rechnungen für diese Auswahl.</div>';
+  const gefiltert = rechnungenGefiltert();
+  if (!gefiltert.length) return '<div id="reListe" class="leise" style="padding:14px 0">Keine Rechnungen für diese Auswahl.</div>';
+  const liste = gefiltert.slice(0, listeMax);
+  const mehr = gefiltert.length - liste.length;
   return `<div class="re-liste" id="reListe">
     <div class="re-zeile re-kopfzeile" aria-hidden="true"><div>Nr. / Betreff</div><div>Kunde</div><div>Status</div><div>Datum</div><div>Fällig am</div><div class="re-zahl">Betrag</div><div></div></div>
     ${liste.map(r => {
     const name = String(r.empfaenger || '').split('\n')[0];
     const nr = jsArg(r.nr), st = rStatus(r);
+    if (r.quelle === 'Papierkram') return papierkramZeileHtml(r, nr, st, name);
     const zahlbar = st === 'Offen' || st === 'Überfällig';
     const menue = [
       zahlbar ? `<button type="button" onclick="zahlungFormZeigen(${nr})">✓ Als bezahlt markieren</button>` : '',
@@ -313,7 +323,131 @@ function listeZeilenHtml() {
         <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="rechnungBezahltKlick(${nr})">Speichern</button>
           <button class="btn btn-outline btn-sm" onclick="zahlungFormZeigen('')">Abbrechen</button></div></div>` : ''}
     </div>`;
-  }).join('')}</div>`;
+  }).join('')}
+    ${mehr > 0 ? `<div class="re-mehr"><button class="btn btn-outline btn-sm" onclick="listeMax += 200; renderRechnungen()">Weitere anzeigen (${mehr} mehr)</button></div>` : ''}</div>`;
+}
+
+// Zeile einer alten Rechnung aus Papierkram: nur ansehen (Original-PDF), nichts ändern
+function papierkramZeileHtml(r, nr, st, name) {
+  const cls = ({ 'Überfällig': 'ueberfaellig' })[st] || st.toLowerCase();
+  return `<div class="re-zeile re-papierkram ${r.storniertDurch ? 'storniert' : ''} re-z-${cls}" data-nr="${medienEsc(r.nr)}">
+      <div class="re-nr"><b>${medienEsc(r.nr)}</b> <span class="re-quelle" title="aus Papierkram übernommen">Papierkram</span>
+        <div class="leise">${r.storniertDurch && r.storniertDurch !== 'Papierkram' ? 'storniert durch ' + medienEsc(r.storniertDurch) : medienEsc(r.betreff || '')}</div></div>
+      <div class="re-kunde">${medienEsc(name)}</div>
+      <div class="re-st">${rStatusBadge(st)}${st === 'Bezahlt' ? `<div class="leise re-klein">${medienEsc(r.bezahltAm)}${r.zahlungsart ? ' · ' + medienEsc(r.zahlungsart) : ''}</div>` : ''}</div>
+      <div class="re-datum"><span class="re-mobil leise">Datum </span>${medienEsc(r.datum)}</div>
+      <div class="re-faellig"></div>
+      <div class="re-zahl re-betrag"><b>€ ${rBetrag(r.gesamt)}</b></div>
+      <div class="re-symbole">
+        <button type="button" class="re-symbol" title="Original-PDF öffnen" aria-label="Original-PDF ${medienEsc(r.nr)} öffnen" onclick="papierkramPdf(${nr})">${RE_DRUCKER}</button>
+        <span class="re-symbol-platz"></span>
+      </div>
+    </div>`;
+}
+
+// ---------- Alte Rechnungen aus Papierkram ----------
+function papierkramSetzen(liste) {
+  papierkram = (liste || []).map(r => Object.assign({}, r, { quelle: 'Papierkram',
+    storniertDurch: r.storniertDurch || (r.status === 'Storniert' && r.art !== 'Storno' ? 'Papierkram' : ''),
+    bezahltAm: r.status === 'Bezahlt' ? (r.bezahltAm || r.datum) : '' }))
+    .sort((a, b) => datumZuIso(b.datum).localeCompare(datumZuIso(a.datum)) || b.nr.localeCompare(a.nr));
+}
+
+function papierkramHtml() {
+  const knopf = text => `<label class="btn btn-outline btn-sm re-csv">${text}<input type="file" accept=".csv,text/csv" hidden onchange="papierkramDatei(this)"></label>`;
+  if (!papierkram.length) return `<div class="re-pk leise">Ältere Rechnungen (bis R-01271) sind noch in Papierkram.
+    In Papierkram unter Rechnungen mit Jahr „Alle“ auf „CSV“ klicken und die Datei hier einlesen: ${knopf('Aus Papierkram übernehmen')}</div>`;
+  const nrs = papierkram.map(r => r.nr).filter(n => /^R-\d{5}$/.test(n)).sort();
+  return `<div class="re-pk leise">Enthält ${papierkram.length.toLocaleString('de-DE')} Rechnungen aus Papierkram (${medienEsc(nrs[0] || '')} bis ${medienEsc(nrs[nrs.length - 1] || '')}). ${knopf('CSV neu einlesen')}
+    ${papierkramOrdner ? '' : '<div>Original-PDFs: Ordner „Rechnungen_Papierkram“ in Google Drive noch nicht gefunden (im Apps Script einmal „papierkramOrdnerPruefen“ ausführen).</div>'}</div>`;
+}
+
+// CSV aus Papierkram lesen (Windows-1252 oder UTF-8, Semikolon getrennt)
+function csvZeilen(text) {
+  const zeilen = []; let z = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c;
+    } else if (c === '"') q = true;
+    else if (c === ';') { z.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      z.push(f); f = ''; if (z.some(x => x !== '')) zeilen.push(z); z = [];
+    } else f += c;
+  }
+  z.push(f); if (z.some(x => x !== '')) zeilen.push(z);
+  return zeilen;
+}
+function csvText(bytes) {
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/^\uFEFF/, ''); }
+  catch (e) { return new TextDecoder('windows-1252').decode(bytes); }
+}
+function papierkramAusCsv(text) {
+  const zeilen = csvZeilen(text);
+  const kopf = (zeilen.shift() || []).map(k => k.trim());
+  const sp = name => kopf.indexOf(name);
+  const pflicht = ['Rechnungsnr.', 'Betreff', 'Kunde', 'Datum', 'Status', 'Typ', 'Brutto'];
+  const fehlt = pflicht.filter(k => sp(k) < 0);
+  if (fehlt.length) throw new Error('Das sieht nicht nach dem Rechnungs-Export von Papierkram aus (es fehlt: ' + fehlt.join(', ') + ').');
+  const w = (z, k) => sp(k) >= 0 ? String(z[sp(k)] || '').trim() : '';
+  const zahl = t => { t = String(t || '').replace(/\./g, '').replace(',', '.'); return Math.round((parseFloat(t) || 0) * 100) / 100; };
+  const iso = t => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t || ''); return m ? m[3] + '.' + m[2] + '.' + m[1] : ''; };
+  const alle = [], entwuerfe = [];
+  zeilen.forEach(z => {
+    const status = w(z, 'Status');
+    if (status === 'Entwurf' || !/^R-\d/.test(w(z, 'Rechnungsnr.'))) { entwuerfe.push(w(z, 'Rechnungsnr.')); return; }
+    const betreff = w(z, 'Betreff'), notiz = w(z, 'Notiz');
+    const zahlungsart = /über Etsy|Etsy Payments/i.test(betreff + ' ' + notiz) ? 'Etsy Payments'
+      : /^Bestellnummer: #/.test(betreff) ? 'Amazon' : '';
+    alle.push({ nr: w(z, 'Rechnungsnr.'), art: w(z, 'Typ') === 'Stornorechnung' ? 'Storno' : 'Rechnung', datum: w(z, 'Datum'),
+      faellig: w(z, 'Fälligkeitsdatum'), kunde: w(z, 'Kunde'), land: w(z, 'Land'), betreff, brutto: zahl(w(z, 'Brutto')),
+      status: status === 'Storniert' ? 'Storniert' : status === 'Bezahlt' ? 'Bezahlt' : 'Offen',
+      bezahltAm: status === 'Bezahlt' ? iso(w(z, 'letztes Bezahldatum')) : '', zahlungsart: status === 'Bezahlt' ? zahlungsart : '', notiz });
+  });
+  const nrs = new Set(alle.map(r => r.nr));
+  alle.forEach(r => { if (r.status === 'Storniert' && r.art === 'Rechnung' && nrs.has(r.nr + '-S')) r.storniertDurch = r.nr + '-S'; });
+  return { alle, entwuerfe };
+}
+
+async function papierkramDatei(input) {
+  const datei = input.files && input.files[0];
+  input.value = '';
+  if (!datei || rechnungLaeuft) return;
+  let daten;
+  try { daten = papierkramAusCsv(csvText(new Uint8Array(await datei.arrayBuffer()))); }
+  catch (e) { showStatus(e.message, 'error'); return; }
+  const { alle, entwuerfe } = daten;
+  if (!alle.length) { showStatus('In der Datei stehen keine Rechnungen.', 'error'); return; }
+  const jahre = alle.map(r => r.datum.slice(6)).sort();
+  if (!confirm(`${alle.length.toLocaleString('de-DE')} Rechnungen aus Papierkram (${jahre[0]}–${jahre[jahre.length - 1]}) übernehmen?`
+    + (entwuerfe.length ? `\n\n${entwuerfe.length} Entwürfe werden übersprungen.` : '')
+    + (papierkram.length ? '\n\nDie bisher übernommene Papierkram-Liste wird dabei ersetzt.' : ''))) return;
+  rechnungLaeuft = true;
+  showStatus('Rechnungen aus Papierkram werden übernommen …');
+  try {
+    const a = await schnittstelle('altrechnungenImport', { rechnungen: alle });
+    papierkramSetzen(a.papierkram);
+    renderRechnungen();
+    showStatus(a.anzahl.toLocaleString('de-DE') + ' Rechnungen aus Papierkram übernommen ✓');
+  } catch (e) {
+    showStatus(e.message === 'unbekannte_aktion' ? 'Bitte zuerst Code.gs ab Version 1.13 im Apps Script bereitstellen.' : ((e.daten && e.daten.text) || apiFehlerText(e)), 'error');
+  } finally { rechnungLaeuft = false; }
+}
+
+// Original-PDF aus dem Drive-Ordner öffnen (Fenster gleich öffnen, sonst blockiert der Browser es)
+async function papierkramPdf(nr) {
+  menueFuer = '';
+  const w = window.open('', '_blank');
+  if (w) w.document.write('<p style="font-family:sans-serif">PDF wird gesucht …</p>');
+  try {
+    const a = await schnittstelle('altrechnungPdf', { nr });
+    const r = papierkram.find(x => x.nr === nr); if (r) r.pdf = true;
+    if (w) w.location.href = a.url; else window.open(a.url, '_blank');
+  } catch (e) {
+    if (w) w.close();
+    showStatus(e.message === 'unbekannte_aktion' ? 'Bitte zuerst Code.gs ab Version 1.13 im Apps Script bereitstellen.' : ((e.daten && e.daten.text) || apiFehlerText(e)), 'error');
+  }
 }
 
 const RE_DRUCKER = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="1.5"/><path d="M7 14h10v7H7z"/></svg>';
