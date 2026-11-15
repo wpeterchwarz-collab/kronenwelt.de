@@ -1445,9 +1445,12 @@ test.describe('Admin: Rechnungen', () => {
     await page.getByRole('button', { name: 'Rechnung festschreiben' }).click();
     await expect(page.locator('.re-zeile[data-nr="R-01272"]')).toContainText('€ 485,00');
     page.once('dialog', d => d.accept('Doppelt berechnet'));
+    await page.getByRole('button', { name: 'Weitere Aktionen zu R-01272', exact: true }).click();
     await page.locator('.re-zeile[data-nr="R-01272"]').getByRole('button', { name: 'Stornieren' }).click();
     await expect(page.locator('.re-zeile[data-nr="R-01272-S"]')).toContainText('€ -485,00');
     await expect(page.locator('.re-zeile[data-nr="R-01272"]')).toContainText('storniert durch R-01272-S');
+    await expect(page.locator('.re-zeile[data-nr="R-01272"] .re-status')).toHaveText('Storniert');
+    await page.getByRole('button', { name: 'Weitere Aktionen zu R-01272', exact: true }).click();
     await expect(page.locator('.re-zeile[data-nr="R-01272"]').getByRole('button', { name: 'Stornieren' })).toHaveCount(0);
     const [fenster] = await Promise.all([page.waitForEvent('popup'),
       page.locator('.re-zeile[data-nr="R-01272-S"]').getByRole('button', { name: 'Drucken / PDF' }).click()]);
@@ -1479,15 +1482,25 @@ test.describe('Admin: Rechnungen', () => {
     await page.getByRole('button', { name: 'Rechnung festschreiben' }).click();
     const z2 = page.locator('.re-zeile[data-nr="R-01273"]');
     await expect(z2.locator('.re-status')).toHaveText('Offen');
-    await expect(page.locator('.re-offen')).toContainText('Offen: 1 Rechnung · € 60,00');
-    await page.selectOption('#reFStatus', 'Offen');
+    await expect(page.locator('.re-kachel.re-st-offen')).toContainText('€ 60,00');
+    await expect(page.locator('.re-kachel.re-st-offen')).toContainText('1 Rechnung');
+    await expect(page.locator('.re-kachel.re-st-bezahlt')).toContainText('€ 29,00');
+    await page.getByRole('tab', { name: /Offen/ }).click();
     await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(1);
-    await page.selectOption('#reFStatus', '');
-    await z2.getByRole('button', { name: 'Als bezahlt markieren' }).click();
+    await page.getByRole('tab', { name: /Alle/ }).click();
+    await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(2);
+    // Menü öffnet und schließt (Klick daneben)
+    await page.getByRole('button', { name: 'Weitere Aktionen zu R-01273' }).click();
+    await expect(page.locator('.re-menue')).toBeVisible();
+    await page.locator('#tab-rechnungen h1').click();
+    await expect(page.locator('.re-menue')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Weitere Aktionen zu R-01273' }).click();
+    await z2.getByRole('button', { name: /Als bezahlt markieren/ }).click();
     await page.selectOption('#reZArt', 'Bar');
     await z2.getByRole('button', { name: 'Speichern' }).click();
     await expect(z2.locator('.re-status')).toHaveText('Bezahlt');
-    await expect(page.locator('.re-offen')).toContainText('Alle Rechnungen sind bezahlt');
+    await expect(page.locator('.re-kachel.re-st-offen')).toContainText('0 Rechnungen');
+    await expect(page.locator('.re-kachel.re-st-bezahlt')).toContainText('€ 89,00');
     await page.fill('#reFSuche', 'wuff');
     await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(1);
     // dieselbe Rechnung lässt sich beliebig oft drucken
@@ -1502,7 +1515,12 @@ test.describe('Admin: Rechnungen', () => {
     await openAdmin(page, [], { seite: '#rechnungen', api: true });
     await page.evaluate(() => { rechnungen = [{ nr: 'R-01300', art: 'Rechnung', datum: '01.01.2026', faellig: '15.01.2026', empfaenger: 'A', gesamt: 10, positionen: [] }]; renderRechnungen(); });
     await expect(page.locator('.re-zeile[data-nr="R-01300"] .re-status')).toHaveText('Überfällig');
-    await expect(page.locator('.re-offen')).toContainText('davon überfällig: 1');
+    await expect(page.locator('.re-kachel.re-st-ueberfaellig')).toContainText('€ 10,00');
+    await expect(page.locator('.re-zeile[data-nr="R-01300"] .re-faellig')).toHaveClass(/re-rot/);
+    // Ansehen öffnet die Rechnung ohne Druckdialog
+    await page.getByRole('button', { name: 'Weitere Aktionen zu R-01300' }).click();
+    const [f] = await Promise.all([page.waitForEvent('popup'), page.getByRole('button', { name: 'Ansehen' }).click()]);
+    await expect(f.locator('body')).toContainText('R-01300');
   });
 
   test('Texte im Druck werden nicht als HTML ausgeführt', async ({ page }) => {

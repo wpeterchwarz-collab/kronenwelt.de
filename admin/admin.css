@@ -615,31 +615,59 @@ code { background: var(--petrol-l) !important; color: var(--petrol-dd); border-r
 .re-zahl { text-align: right; white-space: nowrap; padding-top: 12px !important; }
 .re-summe { margin-left: auto; font-size: 16px; }
 .re-liste { display: flex; flex-direction: column; }
-.re-zeile { display: grid; grid-template-columns: 1.5fr 1.2fr 1fr .8fr .8fr auto; gap: 6px 14px; padding: 12px 0; border-top: 1px solid var(--line); align-items: start; }
-.re-zeile:first-child { border-top: none; }
-.re-zeile .btn-row { grid-column: 1 / -1; }
-.re-kopfzeile { font-size: 12px; font-weight: 600; color: var(--muted); padding: 4px 0 6px; }
+.re-karte { padding-bottom: 14px; }
+/* Status-Farben (Pastell, passend zum Admin) */
+.re-st-bezahlt { --re-bg: #e4eedb; --re-fg: #3f6b2a; }
+.re-st-offen { --re-bg: #f7ebd2; --re-fg: #85570f; }
+.re-st-ueberfaellig { --re-bg: #f5dfe0; --re-fg: #8f3239; }
+.re-st-storniert, .re-st-storno { --re-bg: #eeeae6; --re-fg: #766b65; }
+.re-status { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .02em; border-radius: 3px; padding: 3px 9px; background: var(--re-bg); color: var(--re-fg); }
+.re-kacheln { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 14px; }
+.re-kachel { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; border: none; border-radius: 3px; padding: 10px 14px; background: var(--re-bg); color: var(--re-fg); cursor: pointer; font-family: var(--f-sans); }
+.re-kachel:hover { filter: brightness(.97); }
+.re-kachel-titel { font-size: 12px; letter-spacing: .04em; }
+.re-kachel-summe { font-size: 20px; font-weight: 600; }
+.re-kachel-anzahl { font-size: 12px; opacity: .85; }
+.re-reiterleiste { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.re-reiter { font-family: var(--f-sans); font-size: 13px; padding: 6px 12px; border: 1px solid var(--line2); border-radius: 2px; background: #fff; color: var(--muted); cursor: pointer; }
+.re-reiter span { font-size: 12px; opacity: .75; margin-left: 2px; }
+.re-reiter.aktiv { border-color: var(--petrol-d); background: var(--petrol-l); color: var(--petrol-dd); font-weight: 600; }
+.re-zeile { display: grid; grid-template-columns: 1.6fr 1.2fr 1fr .8fr .8fr .8fr 72px; gap: 4px 12px; padding: 10px 6px; border-top: 1px solid var(--line); align-items: center; font-size: 14px; }
+.re-zeile:not(.re-kopfzeile):hover { background: #faf8f5; }
+.re-kopfzeile { font-size: 12px; font-weight: 600; color: var(--muted); padding: 4px 6px 6px; border-top: none; }
+.re-nr b { color: var(--petrol-d); }
+.re-nr .leise, .re-klein { font-size: 12px; }
+.re-klein { margin-top: 3px; }
 .re-zeile .re-zahl { padding-top: 0 !important; }
+.re-z-bezahlt .re-betrag b { color: #3f6b2a; }
+.re-zeile.storniert .re-nr b { text-decoration: line-through; color: var(--muted); }
+.re-zeile.storniert .re-kunde, .re-zeile.storniert .re-datum, .re-zeile.storniert .re-betrag b { color: var(--muted); }
 .re-mobil { display: none; }
-.re-klein { font-size: 12px; margin-top: 3px; }
 .re-rot { color: var(--err); }
-.re-status { display: inline-block; font-size: 12px; font-weight: 600; color: #fff; border-radius: 2px; padding: 2px 8px; }
-.re-st-bezahlt { background: #5aa832; }
-.re-st-offen { background: #d99a2b; }
-.re-st-ueberfaellig { background: var(--err); }
-.re-st-storniert, .re-st-storno { background: #9b8f88; }
+.re-symbole { display: flex; justify-content: flex-end; align-items: center; gap: 2px; }
+.re-symbol { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: none; background: none; color: var(--petrol-d); border-radius: 3px; cursor: pointer; font-size: 18px; line-height: 1; }
+.re-symbol:hover, .re-symbol[aria-expanded="true"] { background: var(--petrol-l); }
+.re-menue-wrap { position: relative; }
+.re-menue { position: absolute; right: 0; top: 34px; z-index: 20; min-width: 210px; background: #fff; border: 1px solid var(--line2); border-radius: 3px; box-shadow: 0 4px 14px rgba(0,0,0,.12); padding: 4px 0; }
+.re-menue button { display: block; width: 100%; text-align: left; border: none; background: none; padding: 9px 14px; font-family: var(--f-sans); font-size: 14px; color: var(--ink, #333); cursor: pointer; }
+.re-menue button:hover { background: var(--petrol-l); }
+.re-menue .re-menue-rot { color: var(--err); }
 .re-filter { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
 .re-filter select, .re-filter input, .re-zahlung-form select { padding: 7px 8px; border: 1px solid var(--line2); border-radius: 2px; font-family: var(--f-sans); font-size: 14px; background: #fff; }
 .re-filter input { flex: 1; min-width: 180px; }
-.re-offen { margin-bottom: 6px; }
-.re-zahlung-form { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; background: var(--petrol-l); padding: 10px; }
+.re-zahlung-form { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; background: var(--petrol-l); padding: 10px; margin-top: 6px; }
 .re-zahlung-form .re-feld { min-width: 160px; }
 .re-feld select { padding: 8px 9px; border: 1px solid var(--line2); border-radius: 2px; font-family: var(--f-sans); font-size: 15px; background: #fff; }
 @media (max-width: 760px) {
-  .re-zeile { grid-template-columns: 1fr auto; }
+  .re-kacheln { gap: 6px; }
+  .re-kachel { padding: 8px 10px; }
+  .re-kachel-summe { font-size: 16px; }
   .re-kopfzeile { display: none; }
   .re-mobil { display: inline; }
-  .re-zeile > div:nth-child(6) { grid-column: 2; grid-row: 1; }
+  .re-zeile { grid-template-columns: 1fr auto; grid-template-areas: "nr betrag" "kunde st" "datum symbole" "faellig symbole"; gap: 2px 10px; }
+  .re-nr { grid-area: nr; } .re-betrag { grid-area: betrag; } .re-kunde { grid-area: kunde; } .re-st { grid-area: st; justify-self: end; text-align: right; }
+  .re-datum { grid-area: datum; font-size: 13px; } .re-faellig { grid-area: faellig; font-size: 13px; } .re-symbole { grid-area: symbole; }
+}
 }
 .re-zeile.storniert > div:first-child b { text-decoration: line-through; color: var(--muted); }
 @media (max-width: 640px) {
