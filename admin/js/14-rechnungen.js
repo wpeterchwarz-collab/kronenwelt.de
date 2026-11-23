@@ -73,8 +73,7 @@ async function ladeRechnungen(neu) {
 
 // ---------- Entwurf aus einer Bestellung ----------
 function rechnungEmpfaenger(b) {
-  const zeilen = String(b.adresse || '').split(/\n|,\s*/).map(x => x.trim()).filter(Boolean);
-  if (zeilen.length && /^(DE|Deutschland|Germany)$/i.test(zeilen[zeilen.length - 1])) zeilen.pop();
+  const zeilen = adresseSauber(b.adresse).split(', ').filter(Boolean);
   if (b.kunde && (!zeilen.length || zeilen[0].toLowerCase() !== b.kunde.trim().toLowerCase())) zeilen.unshift(b.kunde.trim());
   return zeilen.join('\n');
 }
@@ -101,7 +100,9 @@ function rechnungPositionenAus(b) {
   const pos = positionen(b);
   const liste = pos.map(p => {
     const teile = [p.farbe, p.groesse ? 'Größe ' + p.groesse : ''].filter(Boolean).join(', ');
-    let text = (p.variante && p.variante !== SONSTIGES ? 'Handgemachte Hundekrone ' + p.variante : 'Handgemachter Artikel') + (teile ? ', ' + teile : '');
+    // „Handgemachte Hundekrone“ nur bei Kronen aus dem Katalog; andere Artikel (z. B. Traumfänger) mit ihrer eigenen Bezeichnung
+    const krone = istKatalogKrone(p.variante);
+    let text = (krone ? 'Handgemachte Hundekrone ' + p.variante : p.variante && p.variante !== SONSTIGES ? p.variante : 'Handgemachter Artikel') + (teile ? ', ' + teile : '');
     if (p.pers && p.pers !== 'ohne Namen') text += '\nPersonalisierung: ' + p.pers;
     const katalog = typeof currentPrices !== 'undefined' ? ((currentPrices[p.variante] || {})[p.groesse] || 0) : 0;
     return { text, menge: 1, preis: pos.length === 1 ? b.preis : katalog };
@@ -128,15 +129,12 @@ function rechnungDatenAus(b) {
   return d;
 }
 
-// „Versenden + Rechnung“: Rechnung ohne Entwurf festschreiben und im schon geöffneten Fenster drucken.
-// Klappt etwas nicht (z. B. fehlende Anschrift über 250 €), öffnet sich der Entwurf zum Nachtragen.
-async function rechnungBeimVersand(b, w) {
+// „Versenden + Rechnung“: Rechnung ohne Entwurf festschreiben und gleich auf derselben Seite drucken.
+// Klappt etwas nicht (z. B. fehlende Anschrift über 250 €), bleibt Sara in der Bestellung und kann den Entwurf öffnen.
+async function rechnungBeimVersand(b) {
   const d = rechnungDatenAus(b);
   const zumEntwurf = text => {
-    if (w) w.close();
-    entwurf = Object.assign({ bestellPreis: b.preis }, d);
-    geheZu('rechnungen');
-    showStatus('Versendet ✓ ' + text + ' Bitte im Entwurf prüfen und dann festschreiben.', 'error');
+    showStatus('Versendet ✓ ' + text + ' Die Rechnung ist noch nicht festgeschrieben: „Rechnung erstellen“ in der Bestellung öffnet den Entwurf.', 'error');
   };
   if (!d.empfaenger || d.positionen.some(p => !p.text) || !(rSumme(d.positionen) > 0)) { zumEntwurf('Für die Rechnung fehlen Angaben.'); return; }
   try {
@@ -146,17 +144,12 @@ async function rechnungBeimVersand(b, w) {
     const best = (bestellungen || []).find(x => x.nr === b.nr); if (best) best.rechnungsnr = r.rechnung.nr;
     if (rechnungen) { rechnungen.unshift(r.rechnung); rechnungInfo.naechste = 'R-' + String(parseInt(r.rechnung.nr.slice(2), 10) + 1).padStart(5, '0'); }
     renderBestellListe();
-    if (w) {
-      w.document.open(); w.document.write(rechnungHtml(r.rechnung, rechnungInfo.absender)); w.document.close();
-      setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* Nutzerin druckt selbst */ } }, 300);
-    }
-    showStatus('Versendet ✓ Rechnung ' + r.rechnung.nr + ' ist festgeschrieben' + (w ? ' und im Druckfenster.' : '. Pop-ups sind blockiert – „Rechnung drucken / PDF“ in der Bestellung.')
-      + (b.seriennummern ? ' MK-Nummern: ' + b.seriennummern : ''));
+    druckAnsicht(rechnungHtml(r.rechnung, rechnungInfo.absender), true);
+    showStatus('Versendet ✓ Rechnung ' + r.rechnung.nr + ' ist festgeschrieben.' + (b.seriennummern ? ' MK-Nummern: ' + b.seriennummern : ''));
   } catch (e) {
     zumEntwurf((e.daten && e.daten.text) || apiFehlerText(e));
   }
 }
-
 function rechnungNeu() {
   entwurf = { bestellnr: '', bestellPreis: null, datum: rHeute(), leistungsdatum: rHeute(), betreff: '', empfaenger: '',
     positionen: [{ text: '', menge: 1, preis: 0 }], hinweis: 'Bitte überweisen Sie den Betrag bis zum ' + rDatumPlus(rHeute(), 14) + ' auf das unten angegebene Konto.', seriennummern: '',
@@ -523,7 +516,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && menueFuer)
 function rechnungAnsehen(nr) {
   menueFuer = '';
   const r = (rechnungen || []).find(x => x.nr === nr);
-  if (r) druckFenster(rechnungHtml(r, rechnungInfo.absender), false);
+  if (r) druckAnsicht(rechnungHtml(r, rechnungInfo.absender), false);
   renderRechnungen();
 }
 
@@ -593,34 +586,48 @@ async function rechnungStornoKlick(nr) {
 }
 
 // ---------- Drucken ----------
-// Fenster sofort im Klick öffnen (sonst blockt der Browser es), Inhalt danach hineinschreiben
-function druckFenster(html, drucken) {
-  const w = window.open('', '_blank');
-  if (!w) { showStatus('Das Druckfenster wurde blockiert. Bitte Pop-ups für diese Seite erlauben.', 'error'); return null; }
-  w.document.open(); w.document.write(html); w.document.close();
-  if (drucken) setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* Nutzerin druckt selbst */ } }, 300);
-  return w;
+// Rechnung in einer Ansicht auf derselben Seite zeigen und von dort drucken. Kein neues Fenster:
+// das sprang vor allem in der installierten App am Laptop aus dem Shop-Manager heraus ins zuletzt benutzte Programm.
+function druckAnsicht(html, drucken) {
+  druckAnsichtZu();
+  const o = document.createElement('div');
+  o.id = 'druckAnsicht';
+  o.className = 'druck-ansicht';
+  o.setAttribute('role', 'dialog');
+  o.setAttribute('aria-label', 'Rechnung');
+  o.innerHTML = '<div class="druck-leiste"><button type="button" class="btn btn-primary btn-sm" data-druck="los">Drucken / PDF</button>'
+    + '<button type="button" class="btn btn-outline btn-sm" data-druck="zu">Schließen</button></div><iframe title="Rechnung"></iframe>';
+  document.body.appendChild(o);
+  const f = o.querySelector('iframe');
+  const los = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { /* Nutzerin druckt mit dem Knopf */ } };
+  o.querySelector('[data-druck="los"]').onclick = los;
+  o.querySelector('[data-druck="zu"]').onclick = druckAnsichtZu;
+  o.addEventListener('click', e => e.stopPropagation());          // nicht das Rechnungsmenü-Schließen auslösen
+  f.addEventListener('load', () => { if (drucken) setTimeout(los, 150); }, { once: true });
+  f.srcdoc = html;
+  return o;
 }
+function druckAnsichtZu() { const o = document.getElementById('druckAnsicht'); if (o) o.remove(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') druckAnsichtZu(); });
 function rechnungDrucken(nr) {
   const r = (rechnungen || []).find(x => x.nr === nr);
   if (!r) return;
-  druckFenster(rechnungHtml(r, rechnungInfo.absender), true);
+  druckAnsicht(rechnungHtml(r, rechnungInfo.absender), true);
 }
 function rechnungVorschau() {
   if (!entwurf) return;
   const d = entwurfDaten();
-  druckFenster(rechnungHtml(Object.assign({ nr: '(Entwurf)', art: 'Rechnung', gesamt: rSumme(d.positionen) }, d), rechnungInfo.absender, true), false);
+  druckAnsicht(rechnungHtml(Object.assign({ nr: '(Entwurf)', art: 'Rechnung', gesamt: rSumme(d.positionen) }, d), rechnungInfo.absender, true), false);
 }
 // Aus der Bestellung heraus: Rechnung drucken, auch wenn die Liste noch nicht geladen ist
 async function rechnungZurBestellung(nr) {
-  const w = window.open('', '_blank');
-  if (w) w.document.write('<p style="font-family:Arial;padding:20px">Rechnung wird geladen …</p>');
+  showStatus('Rechnung wird geladen …', 'loading');
   await ladeRechnungen(!rechnungen);
   const b = (bestellungen || []).find(x => x.nr === nr);
   const r = (rechnungen || []).find(x => b && x.nr === b.rechnungsnr);
-  if (!r || !w) { if (w) w.close(); showStatus('Rechnung nicht gefunden.', 'error'); return; }
-  w.document.open(); w.document.write(rechnungHtml(r, rechnungInfo.absender)); w.document.close();
-  setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* */ } }, 300);
+  if (!r) { showStatus('Rechnung nicht gefunden.', 'error'); return; }
+  document.getElementById('statusBar').classList.remove('show');
+  druckAnsicht(rechnungHtml(r, rechnungInfo.absender), true);
 }
 
 function rechnungHtml(r, a, istEntwurf) {

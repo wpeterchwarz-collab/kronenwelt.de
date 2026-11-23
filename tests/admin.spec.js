@@ -320,14 +320,20 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     await k.locator('button:has-text("Jetzt versenden")').click();
     await k.locator('input[id^="sn-"]').fill('0034 0434 1234 5678 90');
     await k.locator('input[id^="mail-"]').uncheck();
-    const [druck] = await Promise.all([page.waitForEvent('popup'), k.getByRole('button', { name: 'Versenden + Rechnung' }).click()]);
+    const fenster = [];
+    page.on('popup', f => fenster.push(f));
+    await k.getByRole('button', { name: 'Versenden + Rechnung' }).click();
     await expect(page.locator('#statusText')).toContainText('Rechnung R-01272 ist festgeschrieben');
+    const druck = page.frameLocator('#druckAnsicht iframe');              // Druck auf derselben Seite, kein neues Fenster
+    expect(fenster).toHaveLength(0);
     await expect(druck.locator('body')).toContainText('R-01272');
     await expect(druck.locator('body')).toContainText('Kim Muster');
     const blatt = tabelle.blatt('Rechnungen');
     expect(blatt).toHaveLength(2);                                             // Kopf + eine Rechnung
     expect(blatt[1][0]).toBe('R-01272');
     // Bestellung kennt jetzt ihre Rechnung, kein zweiter Rechnungs-Knopf
+    await page.locator('#druckAnsicht').getByRole('button', { name: 'Schließen' }).click();
+    await expect(page.locator('#druckAnsicht')).toHaveCount(0);
     await page.click('#bestFilterLeiste [data-filter="erledigt"]');
     await expect(k).toHaveAttribute('open', '');                              // bleibt aufgeklappt
     await expect(k).toContainText('Rechnung R-01272');
@@ -341,11 +347,12 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     await k.locator('summary').first().click();
     await k.locator('button:has-text("Jetzt versenden")').click();
     await k.locator('input[id^="sn-"]').fill('xx');
-    const popup = page.waitForEvent('popup');
+    const fenster = [];
+    page.on('popup', f => fenster.push(f));
     await k.getByRole('button', { name: 'Versenden + Rechnung' }).click();
-    const f = await popup;
     await expect(page.locator('#statusText')).toContainText('Sendungsnummer sieht nicht richtig aus');
-    await expect.poll(() => f.isClosed()).toBe(true);
+    await expect(page.locator('#druckAnsicht')).toHaveCount(0);
+    expect(fenster).toHaveLength(0);
     expect(tabelle.blatt('Rechnungen')).toBeUndefined();
   });
 
@@ -440,7 +447,7 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     await k.locator('summary').first().click();
     await k.locator('.kopier-knopf').click();
     await expect(page.locator('#statusText')).toHaveText(/Adresse kopiert/);
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Kim Muster\nMoorblick 4\n24329 Dannau\nDE');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Kim Muster\nMoorblick 4\n24329 Dannau');   // ohne Land
   });
 
   test('Startseite meldet neue Bestellungen unter „Zu tun“', async ({ page }) => {
@@ -1039,6 +1046,49 @@ test.describe('Admin: MK-Seriennummern', () => {
     expect(t.serien[2].slice(0, 3)).toEqual(['MK-2026-310', 'markt', 'Party, ' + PARTY.merkmale.farbe[0].wert + ', Mini, BELLA']);
   });
 
+  test('Etsy-Bestellung Traumfänger + Krone: MK-Nummer nur für die Krone; Rechnung ohne „Hundekrone“ beim Traumfänger, Adresse ohne Land und Großbuchstaben', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
+    const nr = t.post({ aktion: 'anlegen', schluessel: 'GEHEIM123', kanal: 'Etsy', status: 'In Arbeit', plattformNr: '4243100400',
+      positionen: [{ variante: 'Traumfänger klein', farbe: 'Natur', groesse: '', pers: '' },
+        { variante: 'Party', farbe: PARTY.merkmale.farbe[0].wert, groesse: 'Mini', pers: 'BELLA' }],
+      preis: 25, kunde: 'Luca Adomeit', adresse: 'Scheidtstraße 62, 42369 WUPPERTAL, DEUTSCHLAND' }).bestellung.nr;
+    await page.click('#tab-bestellungen button:has-text("Aktualisieren")');
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await k.locator('summary').first().click();
+    await expect(k.locator('.best-details')).toContainText('Scheidtstraße 62');
+    await expect(k.locator('.best-details')).toContainText('42369 Wuppertal');
+    await expect(k.locator('.best-details')).not.toContainText(/DEUTSCHLAND|WUPPERTAL/);
+    const felder = k.locator('.serien input[id^="mk-"]');
+    await expect(felder).toHaveCount(1);                                      // nur die Krone
+    await expect(felder.first()).toHaveValue('MK-2026-310');
+    await expect(k.locator('.serien')).not.toContainText('Traumfänger');
+    page.once('dialog', d => d.accept());                                    // ohne Sendungsnummer
+    await k.getByRole('button', { name: 'Versenden + Rechnung' }).click();
+    await expect(page.locator('#statusText')).toContainText('ist festgeschrieben');
+    expect(t.serien[2].slice(0, 3)).toEqual(['MK-2026-310', 'etsy', 'Party, ' + PARTY.merkmale.farbe[0].wert + ', Mini, BELLA']);
+    expect(t.serien.filter(z => /Traumfänger/.test(z[2] || ''))).toHaveLength(0);
+    const re = page.frameLocator('#druckAnsicht iframe');
+    await expect(re.locator('body')).toContainText('Traumfänger klein, Natur');
+    await expect(re.locator('body')).not.toContainText('Hundekrone Traumfänger');
+    await expect(re.locator('body')).toContainText('Handgemachte Hundekrone Party');
+    await expect(re.locator('body')).toContainText('42369 Wuppertal');
+    await expect(re.locator('body')).not.toContainText(/DEUTSCHLAND|WUPPERTAL/);
+  });
+
+  test('nur ein Traumfänger: keine MK-Felder, Versenden geht ohne MK-Nummer', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
+    const nr = t.post({ aktion: 'anlegen', schluessel: 'GEHEIM123', kanal: 'Etsy', status: 'In Arbeit', plattformNr: '4243100401',
+      positionen: [{ variante: 'Traumfänger klein', farbe: 'Lila', groesse: '', pers: '' }], preis: 12, kunde: 'Lia', adresse: 'Weg 1, 76137 Karlsruhe' }).bestellung.nr;
+    await page.click('#tab-bestellungen button:has-text("Aktualisieren")');
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await k.locator('summary').first().click();
+    await expect(k.locator('.serien')).toHaveCount(0);
+    page.once('dialog', d => d.accept());
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    await expect(page.locator('#statusText')).toHaveText(/Als versendet markiert ✓$/);
+    expect(t.serien).toHaveLength(3);                                         // Liste unverändert
+  });
+
   test('Einstellungen zeigen die zuletzt vergebene MK-Nummer', async ({ page }) => {
     await openAdmin(page, [], { seite: '#einstellungen', api: true, serienliste: liste() });
     await page.click('button[onclick="saveSchnittstelle()"]');
@@ -1466,13 +1516,14 @@ test.describe('Admin: Rechnungen', () => {
     await expect(page.locator('#statusText')).toContainText('Rechnung R-01272 ist festgeschrieben');
     await expect(page.locator('.re-zeile[data-nr="R-01272"]')).toContainText('€ 29,00');
     expect(t.daten[3][t.daten[0].indexOf('Rechnungsnr.')]).toBe('R-01272');
-    const [fenster] = await Promise.all([page.waitForEvent('popup'),
-      page.locator('.re-zeile[data-nr="R-01272"]').getByRole('button', { name: 'Drucken / PDF' }).click()]);
+    await page.locator('.re-zeile[data-nr="R-01272"]').getByRole('button', { name: 'Drucken / PDF' }).click();
+    const fenster = page.frameLocator('#druckAnsicht iframe');
     await expect(fenster.locator('h1')).toHaveText('Rechnung');
     await expect(fenster.locator('body')).toContainText('R-01272');
     await expect(fenster.locator('body')).toContainText('Gemäß § 19 UStG');
     await expect(fenster.locator('.summe')).toContainText('€ 29,00');
-    expect(await fenster.title()).toMatch(/^Rechnung_R-01272_Kim_Muster_2026-/);
+    await expect.poll(() => page.locator('#druckAnsicht iframe').evaluate(f => f.contentDocument.title)).toMatch(/^Rechnung_R-01272_Kim_Muster_2026-/);
+    await page.locator('#druckAnsicht').getByRole('button', { name: 'Schließen' }).click();
     // zurück bei der Bestellung: kein zweites „Rechnung erstellen“, sondern drucken
     await page.goto('/admin.html#bestellungen');
     await page.locator(".best[data-nr=\"KW-20261001-003\"] > summary").click();
@@ -1504,8 +1555,8 @@ test.describe('Admin: Rechnungen', () => {
     await expect(page.locator('.re-zeile[data-nr="R-01272"] .re-status')).toHaveText('Storniert');
     await page.getByRole('button', { name: 'Weitere Aktionen zu R-01272', exact: true }).click();
     await expect(page.locator('.re-zeile[data-nr="R-01272"]').getByRole('button', { name: 'Stornieren' })).toHaveCount(0);
-    const [fenster] = await Promise.all([page.waitForEvent('popup'),
-      page.locator('.re-zeile[data-nr="R-01272-S"]').getByRole('button', { name: 'Drucken / PDF' }).click()]);
+    await page.locator('.re-zeile[data-nr="R-01272-S"]').getByRole('button', { name: 'Drucken / PDF' }).click();
+    const fenster = page.frameLocator('#druckAnsicht iframe');
     await expect(fenster.locator('h1')).toHaveText('Stornorechnung');
     await expect(fenster.locator('body')).toContainText('Doppelt berechnet');
   });
@@ -1557,9 +1608,10 @@ test.describe('Admin: Rechnungen', () => {
     await expect(page.locator('.re-zeile[data-nr]')).toHaveCount(1);
     // dieselbe Rechnung lässt sich beliebig oft drucken
     for (let i = 0; i < 2; i++) {
-      const [f] = await Promise.all([page.waitForEvent('popup'), z2.getByRole('button', { name: 'Drucken / PDF' }).click()]);
-      await expect(f.locator('body')).toContainText('R-01273');
-      await f.close();
+      await z2.getByRole('button', { name: 'Drucken / PDF' }).click();
+      await expect(page.frameLocator('#druckAnsicht iframe').locator('body')).toContainText('R-01273');
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#druckAnsicht')).toHaveCount(0);
     }
   });
 
@@ -1571,8 +1623,8 @@ test.describe('Admin: Rechnungen', () => {
     await expect(page.locator('.re-zeile[data-nr="R-01300"] .re-faellig')).toHaveClass(/re-rot/);
     // Ansehen öffnet die Rechnung ohne Druckdialog
     await page.getByRole('button', { name: 'Weitere Aktionen zu R-01300' }).click();
-    const [f] = await Promise.all([page.waitForEvent('popup'), page.getByRole('button', { name: 'Ansehen' }).click()]);
-    await expect(f.locator('body')).toContainText('R-01300');
+    await page.getByRole('button', { name: 'Ansehen' }).click();
+    await expect(page.frameLocator('#druckAnsicht iframe').locator('body')).toContainText('R-01300');
   });
 
   test('Papierkram-CSV einlesen (Windows-1252): Entwürfe übersprungen, Liste, Kacheln, Suche, Original-PDF', async ({ page }) => {
