@@ -300,6 +300,7 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     const k = karte(page, 'KW-20261001-003');
     await k.locator('summary').first().click();
     await k.locator('button:has-text("Jetzt versenden")').click();          // neue Bestellung: direkt versenden
+    await k.getByRole('button', { name: 'Ohne Rechnung versenden' }).click();
     await k.locator('input[id^="sn-"]').fill('0034 0434 1234 5678 90');
     await expect(k.locator('input[id^="mail-"]')).toBeChecked();             // Webshop: Mail ist vorausgewählt
     await k.locator('button:has-text("Als versendet markieren")').click();
@@ -313,16 +314,16 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     await expect(k.locator('a[href*="piececode=003404341234567890"]')).toBeVisible();
   });
 
-  test('„Versenden + Rechnung“: ein Klick versendet, schreibt die Rechnung fest und öffnet den Druck', async ({ page }) => {
+  test('Neuer Ablauf: zuerst „Rechnung erstellen“, zuletzt DHL-Nummer und „Versenden“', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
     const k = karte(page, 'KW-20261001-003');
     await k.locator('summary').first().click();
     await k.locator('button:has-text("Jetzt versenden")').click();
-    await k.locator('input[id^="sn-"]').fill('0034 0434 1234 5678 90');
-    await k.locator('input[id^="mail-"]').uncheck();
+    await expect(k.locator('input[id^="sn-"]')).toHaveCount(0);               // DHL-Nummer kommt zuletzt
+    await expect(k.getByRole('button', { name: 'Rechnung erstellen' })).toHaveCount(1);   // nur der eine Knopf
     const fenster = [];
     page.on('popup', f => fenster.push(f));
-    await k.getByRole('button', { name: 'Versenden + Rechnung' }).click();
+    await k.getByRole('button', { name: 'Rechnung erstellen' }).click();
     await expect(page.locator('#statusText')).toContainText('Rechnung R-01272 ist festgeschrieben');
     const druck = page.frameLocator('#druckAnsicht iframe');              // Druck auf derselben Seite, kein neues Fenster
     expect(fenster).toHaveLength(0);
@@ -331,29 +332,35 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     const blatt = tabelle.blatt('Rechnungen');
     expect(blatt).toHaveLength(2);                                             // Kopf + eine Rechnung
     expect(blatt[1][0]).toBe('R-01272');
-    // Bestellung kennt jetzt ihre Rechnung, kein zweiter Rechnungs-Knopf
+    expect(tabelle.mails).toHaveLength(0);                                     // noch nicht versendet
     await page.locator('#druckAnsicht').getByRole('button', { name: 'Schließen' }).click();
-    await expect(page.locator('#druckAnsicht')).toHaveCount(0);
-    await page.click('#bestFilterLeiste [data-filter="erledigt"]');
-    await expect(k).toHaveAttribute('open', '');                              // bleibt aufgeklappt
-    await expect(k).toContainText('Rechnung R-01272');
+    await expect(k.locator('.status')).toHaveText('Neu');
+    await expect(k).toContainText('Rechnung R-01272 ist erstellt');
     await expect(k.getByRole('button', { name: 'Rechnung erstellen' })).toHaveCount(0);
     await expect(k.getByRole('button', { name: 'Rechnung drucken / PDF' })).toBeVisible();
+    // zuletzt: DHL-Nummer und „Versenden“
+    await k.locator('input[id^="sn-"]').fill('0034 0434 1234 5678 90');
+    await k.locator('input[id^="mail-"]').uncheck();
+    await k.getByRole('button', { name: 'Versenden', exact: true }).click();
+    await expect(page.locator('#statusText')).toHaveText(/Als versendet markiert ✓/);
+    await page.click('#bestFilterLeiste [data-filter="erledigt"]');
+    await expect(k.locator('.status')).toHaveText('Versendet');
+    await expect(k).toContainText('Rechnung R-01272');
+    expect(tabelle.blatt('Rechnungen')).toHaveLength(2);                       // keine zweite Rechnung
   });
 
-  test('„Versenden + Rechnung“ abgebrochen (falsche Sendungsnummer): nichts versendet, keine Rechnung', async ({ page }) => {
+  test('nach der Rechnung: falsche Sendungsnummer wird abgefangen, nichts versendet', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
     const k = karte(page, 'KW-20261001-003');
     await k.locator('summary').first().click();
     await k.locator('button:has-text("Jetzt versenden")').click();
+    await k.getByRole('button', { name: 'Rechnung erstellen' }).click();
+    await page.locator('#druckAnsicht').getByRole('button', { name: 'Schließen' }).click();
     await k.locator('input[id^="sn-"]').fill('xx');
-    const fenster = [];
-    page.on('popup', f => fenster.push(f));
-    await k.getByRole('button', { name: 'Versenden + Rechnung' }).click();
+    await k.getByRole('button', { name: 'Versenden', exact: true }).click();
     await expect(page.locator('#statusText')).toContainText('Sendungsnummer sieht nicht richtig aus');
-    await expect(page.locator('#druckAnsicht')).toHaveCount(0);
-    expect(fenster).toHaveLength(0);
-    expect(tabelle.blatt('Rechnungen')).toBeUndefined();
+    await expect(k.locator('.status')).toHaveText('Neu');
+    expect(tabelle.blatt('Rechnungen')).toHaveLength(2);
   });
 
   test('Versenden ohne Mail: Haken abwählen, es geht keine Mail raus', async ({ page }) => {
@@ -361,6 +368,7 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     const k = karte(page, 'KW-20261001-003');
     await k.locator('summary').first().click();
     await k.locator('button:has-text("Jetzt versenden")').click();          // neue Bestellung: direkt versenden
+    await k.getByRole('button', { name: 'Ohne Rechnung versenden' }).click();
     await k.locator('input[id^="sn-"]').fill('123456789012');
     await k.locator('input[id^="mail-"]').uncheck();
     await k.locator('button:has-text("Als versendet markieren")').click();
@@ -373,6 +381,7 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     const k = karte(page, 'KW-20261001-003');
     await k.locator('summary').first().click();
     await k.locator('button:has-text("Jetzt versenden")').click();          // neue Bestellung: direkt versenden
+    await k.getByRole('button', { name: 'Ohne Rechnung versenden' }).click();
     await k.locator('input[id^="sn-"]').fill('12-34');
     await k.locator('button:has-text("Als versendet markieren")').click();
     await expect(page.locator('#statusText')).toContainText('Sendungsnummer');
@@ -436,7 +445,7 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     await k.locator('button:has-text("In Arbeit nehmen")').click();
     await expect(page.locator('.best-gruppe')).toHaveText([/Neu\s+1/, /In Arbeit\s+1/]);
     await expect(k.locator('.schritte li.jetzt')).toHaveText('Versendet');
-    await expect(k.locator('input[id^="sn-"]')).toBeVisible();                // jetzt ist Versenden dran
+    await expect(k.locator('.versand-box').getByRole('button', { name: 'Rechnung erstellen' })).toBeVisible();   // jetzt: erst die Rechnung
     await expect(k.locator('.best-mehr')).not.toHaveAttribute('open', '');     // Status von Hand ist versteckt
   });
 
@@ -786,6 +795,7 @@ test.describe('Admin: Zahlung prüfen', () => {
     await k.locator('summary').first().click();
     await expect(k.locator('.zahlung-warnung')).toContainText('bezahlt 0,01 €, laut Preisliste ' + partyPreis.toFixed(2).replace('.', ',') + ' €');
     await k.locator('button:has-text("Jetzt versenden")').click();
+    await k.getByRole('button', { name: 'Ohne Rechnung versenden' }).click();
     await k.locator('input[id^="sn-"]').fill('00340434123456789012');
     page.once('dialog', d => { expect(d.message()).toContain('nicht bestätigt'); d.dismiss(); });
     await k.locator('button:has-text("Als versendet markieren")').click();
@@ -974,10 +984,11 @@ test.describe('Admin: MK-Seriennummern', () => {
   const HERST = 'Mila’s Kronenwelt, Vogesenweg 8, 75045 Walzbachtal, Deutschland';
   const liste = () => [['(SN) Seriennnummer', 'Verkaufsplattform', 'Produktbezeichnung / Typ', 'Herstellungsdatum', 'Herstellername & Kontakt', 'Verweis auf Sicherheits-/Risikoakte'],
     ['MK-2025-309', 'etsy', 'Gross, grün', '10.11.2026', HERST, 'Risikoakte_Hundekrone_2025.xlsx'], ['MK-2025-310', '', '', '', '', '']];
-  const zumVersand = async (page, nr) => {
+  const zumVersand = async (page, nr, mitRechnung) => {
     const k = page.locator(`.best[data-nr="${nr}"]`);
     await k.locator('summary').first().click();
     await k.locator('button:has-text("Jetzt versenden")').click();
+    if (!mitRechnung) await k.getByRole('button', { name: 'Ohne Rechnung versenden' }).click();
     return k;
   };
 
@@ -1003,13 +1014,13 @@ test.describe('Admin: MK-Seriennummern', () => {
 
   test('schon vergebene Nummer: freie Nummern werden eingesetzt, nichts ist versendet', async ({ page }) => {
     const t = await openAdmin(page, [], { seite: '#bestellungen', api: true, serienliste: liste() });
-    const k = await zumVersand(page, 'KW-20261001-003');
+    const k = await zumVersand(page, 'KW-20261001-003', true);
     await expect(k.locator('input[id^="mk-"]').first()).toHaveValue('MK-2026-310');
     await k.locator('input[id^="mk-"]').first().fill('MK-2025-309');
-    page.once('dialog', d => d.accept());
-    await k.locator('button:has-text("Als versendet markieren")').click();
+    await k.getByRole('button', { name: 'Rechnung erstellen' }).click();
     await expect(page.locator('#statusText')).toContainText('schon vergeben');
     await expect(k.locator('input[id^="mk-"]').first()).toHaveValue('MK-2026-310');
+    expect(t.blatt('Rechnungen')).toBeUndefined();                           // keine Rechnung mit falscher Nummer
     expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen.find(b => b.nr === 'KW-20261001-003').status).toBe('Neu');
   });
 
@@ -1062,10 +1073,10 @@ test.describe('Admin: MK-Seriennummern', () => {
     await expect(felder).toHaveCount(1);                                      // nur die Krone
     await expect(felder.first()).toHaveValue('MK-2026-310');
     await expect(k.locator('.serien')).not.toContainText('Traumfänger');
-    page.once('dialog', d => d.accept());                                    // ohne Sendungsnummer
-    await k.getByRole('button', { name: 'Versenden + Rechnung' }).click();
+    await k.getByRole('button', { name: 'Rechnung erstellen' }).click();      // zuerst die Rechnung
     await expect(page.locator('#statusText')).toContainText('ist festgeschrieben');
     expect(t.serien[2].slice(0, 3)).toEqual(['MK-2026-310', 'etsy', 'Party, ' + PARTY.merkmale.farbe[0].wert + ', Mini, BELLA']);
+    expect(t.serien[2].slice(6)).toEqual([nr, 'R-01272']);                   // Rechnungsnr. gleich in Saras Liste
     expect(t.serien.filter(z => /Traumfänger/.test(z[2] || ''))).toHaveLength(0);
     const re = page.frameLocator('#druckAnsicht iframe');
     await expect(re.locator('body')).toContainText('Traumfänger klein, Natur');
@@ -1073,6 +1084,17 @@ test.describe('Admin: MK-Seriennummern', () => {
     await expect(re.locator('body')).toContainText('Handgemachte Hundekrone Party');
     await expect(re.locator('body')).toContainText('42369 Wuppertal');
     await expect(re.locator('body')).not.toContainText(/DEUTSCHLAND|WUPPERTAL/);
+    // MK-Nummer steht bei ihrer Krone, der Traumfänger hat keine
+    const zeilen = re.locator('tbody tr');
+    await expect(zeilen.nth(0)).not.toContainText('MK-');
+    await expect(zeilen.nth(1)).toContainText('MK-Nummer: MK-2026-310');
+    // zuletzt: versenden (ohne Sendungsnummer)
+    await page.locator('#druckAnsicht').getByRole('button', { name: 'Schließen' }).click();
+    await expect(k.locator('.serien')).toHaveCount(0);                        // Nummer ist schon vergeben
+    page.once('dialog', d => d.accept());
+    await k.getByRole('button', { name: 'Versenden', exact: true }).click();
+    await expect(page.locator('#statusText')).toHaveText(/Als versendet markiert ✓/);
+    expect(t.serien).toHaveLength(3);                                         // keine zweite Eintragung
   });
 
   test('nur ein Traumfänger: keine MK-Felder, Versenden geht ohne MK-Nummer', async ({ page }) => {
@@ -1083,6 +1105,7 @@ test.describe('Admin: MK-Seriennummern', () => {
     const k = page.locator(`.best[data-nr="${nr}"]`);
     await k.locator('summary').first().click();
     await expect(k.locator('.serien')).toHaveCount(0);
+    await k.getByRole('button', { name: 'Ohne Rechnung versenden' }).click();
     page.once('dialog', d => d.accept());
     await k.locator('button:has-text("Als versendet markieren")').click();
     await expect(page.locator('#statusText')).toHaveText(/Als versendet markiert ✓$/);
