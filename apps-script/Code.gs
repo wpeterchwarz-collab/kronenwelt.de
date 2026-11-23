@@ -54,6 +54,9 @@
       dessen Link/ID in der Skript-Eigenschaft PAPIERKRAM_ORDNER steht. Unterordner (z. B. je Jahr) sind erlaubt;
       im Dateinamen muss die Rechnungsnummer stehen.
       Nach dem Einfügen einmal „papierkramOrdnerPruefen“ im Editor ausführen (erlaubt den Zugriff auf Drive).
+      Ab 1.15: neuer Ablauf beim Versand – zuerst die Rechnung (Aktion „rechnungVorVersand“: MK-Nummern prüfen,
+      Rechnung mit MK-Nummer je Krone festschreiben, Nummern in Saras Liste mit Rechnungsnr.), zuletzt die
+      DHL-Sendungsnummer und „Versenden“.
 
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
    werden rechts angehängt, sobald sie gebraucht werden. Nichts wird umbenannt oder gelöscht.
@@ -63,7 +66,7 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.14';
+const SCHNITTSTELLE_VERSION = '1.15';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
@@ -210,6 +213,8 @@ function adminAnfrage(data) {
         return antwort(rechnungenLesen());
       case 'rechnungErstellen':
         return antwort(rechnungErstellen(data));
+      case 'rechnungVorVersand':
+        return antwort(rechnungVorVersand(data));
       case 'rechnungStornieren':
         return antwort(rechnungStornieren(data));
       case 'rechnungBezahlt':
@@ -342,6 +347,21 @@ function versenden(data) {
     setze('Notiz', (b.notiz ? b.notiz + ' · ' : '') + 'Versandmail ' + heute);
   }
   return { ok: true, mail: mail, bestellung: bestellungLesen(sheet, kopf, zeile) };
+}
+
+// Erster Schritt beim Versand (ab 1.15): MK-Nummern prüfen, Rechnung festschreiben (jede Krone mit ihrer MK-Nummer),
+// dann die Nummern in Saras Liste eintragen – mit der neuen Rechnungsnummer. Versendet wird danach mit „versenden“.
+function rechnungVorVersand(data) {
+  const sheet = blatt();
+  const kopf = spaltenSicherstellen(sheet);
+  const zeile = zeileFinden(sheet, kopf, data.zeile, data.nr);
+  const b = bestellungLesen(sheet, kopf, zeile);
+  const liste = serienAusDaten(data);
+  if (liste.length) serienPruefen(liste);                  // zuerst: klappt das nicht, entsteht keine Rechnung
+  const e = Object.assign({}, data.rechnung || {}, { bestellnr: b.nr });
+  const re = rechnungErstellen({ rechnung: e });
+  serienEintragen(sheet, kopf, zeile, { seriennummern: liste, serienIndex: data.serienIndex, rechnungsnr: re.rechnung.nr });
+  return { ok: true, rechnung: re.rechnung, absender: re.absender, bestellung: bestellungLesen(sheet, kopf, zeile) };
 }
 
 // Bestellung von Hand anlegen (Etsy, Amazon, Markt, …)

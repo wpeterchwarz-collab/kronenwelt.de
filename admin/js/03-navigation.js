@@ -7,8 +7,8 @@
 // = ein neuer Eintrag hier + ein <div id="tab-…" class="content">. Navigation, Unterreiter
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
-const ADMIN_VERSION = '1.13';
-const ADMIN_NEU = 'Rechnungen öffnen sich jetzt auf derselben Seite (kein neues Fenster mehr). Adressen ohne „Deutschland“ und ohne Großbuchstaben. Traumfänger & Co. ohne MK-Nummer.';
+const ADMIN_VERSION = '1.14';
+const ADMIN_NEU = 'Neuer Ablauf beim Versand: zuerst „Rechnung erstellen“ (jede Krone mit ihrer MK-Nummer), zuletzt die DHL-Sendungsnummer und „Versenden“. Dafür Code.gs 1.15 bereitstellen.';
 
 // Shops: jede Bestellung gehört zu einem Shop (Farbe in Listen). Ein weiterer Shop = ein Eintrag hier.
 // etsy = Name des Etsy-Shops, so wie er in der Spalte „Shop“ steht; der erste Shop ist der Standard (Webshop, Amazon, Markt …)

@@ -167,6 +167,7 @@ function werktageSeit(datum) {
 }
 const LIEFERZEIT_WARNUNG = 4;          // ab so vielen Werktagen rot (Shop verspricht 5–6 Werktage Lieferzeit)
 const versandOffen = {};               // „Jetzt versenden“ bei neuen Bestellungen aufgeklappt
+const ohneRechnung = {};               // „Ohne Rechnung versenden“ gewählt: gleich zur Sendungsnummer
 async function adresseKopieren(nr) {
   const b = bestellungNachNr(nr);
   if (!b) return;
@@ -192,20 +193,28 @@ function bestellKarte(b) {
   const stand = b.status === 'Neu' ? 1 : b.status === 'In Arbeit' ? (markt ? 1 : 2) : 99;
   const schritte = b.status === 'Storniert' ? '' : `<ol class="schritte" aria-label="Fortschritt">${stufen.map((t, i) =>
     `<li class="${i < stand ? 'fertig' : i === stand ? 'jetzt' : ''}"><span></span>${t}</li>`).join('')}</ol>`;
-  const versandBox = `
+  // Ablauf beim Versand: 1. Rechnung (jede Krone mit ihrer MK-Nummer) – 2. zuletzt DHL-Sendungsnummer und „Versenden“
+  const rechnungZuerst = mitRechnungMoeglich(b) && !ohneRechnung[b.nr];
+  const versandSichtbar = b.status === 'In Arbeit' || (b.status === 'Neu' && !!versandOffen[b.nr]);
+  const versandBox = rechnungZuerst ? `
       <div class="versand-box">
-        <label class="titel" for="sn-${id}">DHL-Sendungsnummer</label>
+        <div class="titel">1. Rechnung erstellen</div>
+        ${serienFelder(b, pos, true)}
+        <div class="aktion-zeile"><button class="btn btn-primary" onclick="rechnungVorVersandKlick(${nr})">Rechnung erstellen</button>
+          <button class="btn btn-outline" onclick="ohneRechnung[${nr}]=true;renderBestellListe()">Ohne Rechnung versenden</button></div>
+        <div class="leise" style="font-size:12px;margin-top:6px">Zuerst die Rechnung: jede Krone steht mit ihrer MK-Nummer drauf. Danach kommt die DHL-Sendungsnummer und „Versenden“.</div>
+      </div>` : `
+      <div class="versand-box">
+        ${b.rechnungsnr ? `<div class="leise" style="margin-bottom:8px">✓ Rechnung ${medienEsc(b.rechnungsnr)} ist erstellt. Jetzt noch die Sendungsnummer.</div>` : ''}
+        <label class="titel" for="sn-${id}">${b.rechnungsnr ? '2. ' : ''}DHL-Sendungsnummer</label>
         <input type="text" id="sn-${id}" placeholder="z. B. 0034 0434 …" autocomplete="off" autocapitalize="characters">
         ${mailMoeglich ? `<label class="haken"><input type="checkbox" id="mail-${id}" ${b.kanal === 'Webshop' ? 'checked' : ''}>
           <span>Versandmail mit Sendungsverfolgung an ${medienEsc(b.email)} schicken${b.kanal !== 'Webshop' ? ` <span class="leise">(${medienEsc(b.kanal)} schickt meist selbst eine Mail)</span>` : ''}</span></label>`
           : '<div class="leise">Keine E-Mail-Adresse hinterlegt, es geht keine Versandmail raus.</div>'}
         ${serienFelder(b, pos)}
-        <div class="aktion-zeile">${mitRechnungMoeglich(b)
-          ? `<button class="btn btn-primary" onclick="versendenKlick(${nr}, true)">Versenden + Rechnung</button>
-          <button class="btn btn-outline" onclick="versendenKlick(${nr})">Als versendet markieren</button>`
-          : `<button class="btn btn-primary" onclick="versendenKlick(${nr})">Als versendet markieren</button>`}
+        <div class="aktion-zeile"><button class="btn btn-primary" onclick="versendenKlick(${nr})">${b.rechnungsnr ? 'Versenden' : 'Als versendet markieren'}</button>
+          ${ohneRechnung[b.nr] && mitRechnungMoeglich(b) ? `<button class="btn btn-outline" onclick="ohneRechnung[${nr}]=false;renderBestellListe()">Doch mit Rechnung</button>` : ''}
           ${b.kanal === 'Spende' ? `<button class="btn btn-outline" onclick="uebergebenKlick(${nr})">Persönlich übergeben</button>` : ''}</div>
-        ${mitRechnungMoeglich(b) ? '<div class="leise" style="font-size:12px;margin-top:6px">„Versenden + Rechnung“ markiert als versendet, schreibt die Rechnung fest und zeigt sie gleich zum Drucken.</div>' : ''}
       </div>`;
   // Zahlung: PRÜFEN = verdächtig (nicht versenden, bevor in PayPal nachgesehen), NICHT GEPRÜFT = Prüfung lief nicht
   const zg = b.zahlungGeprueft || '';
@@ -253,7 +262,7 @@ function bestellKarte(b) {
         </dl>
         <div class="aktion-zeile re-aktion">${/^R-\d{5}$/.test(b.rechnungsnr || '')
           ? `<span class="leise">Rechnung ${medienEsc(b.rechnungsnr)}</span><button class="btn btn-outline btn-sm" onclick="rechnungZurBestellung(${nr})">Rechnung drucken / PDF</button>`
-          : b.status !== 'Storniert' && !b.rechnungsnr ? `<button class="btn btn-outline btn-sm" onclick="rechnungAusBestellung(${nr})">Rechnung erstellen</button>` : ''}</div>
+          : b.status !== 'Storniert' && !b.rechnungsnr && !(rechnungZuerst && versandSichtbar) ? `<button class="btn btn-outline btn-sm" onclick="rechnungAusBestellung(${nr})">Rechnung erstellen</button>` : ''}</div>
         <details class="best-mehr"><summary>Weitere Aktionen</summary>
           <div class="aktion-zeile"><label class="leise" for="st-${id}">Status von Hand setzen:</label>
             <select id="st-${id}" aria-label="Status ändern" onchange="statusKlick(${nr}, this.value)">
@@ -388,12 +397,11 @@ async function zahlungKlick(nr) {
   }
 }
 
-// Rechnung beim Versenden gleich mit? Nur wenn es noch keine gibt und etwas zu berechnen ist (keine Spende)
+// Rechnung als ersten Schritt beim Versand? Nur wenn es noch keine gibt und etwas zu berechnen ist (keine Spende)
 const mitRechnungMoeglich = b => !b.rechnungsnr && b.kanal !== 'Spende' && (b.preis || 0) > 0 && b.status !== 'Storniert';
 
-// mitRechnung = true: „Versenden + Rechnung“ – danach Rechnung festschreiben und auf derselben Seite drucken.
-// Alle Rückfragen kommen vorher; es öffnet sich kein zweites Fenster.
-async function versendenKlick(nr, mitRechnung) {
+// Letzter Schritt: Sendungsnummer eintragen und versenden (die Rechnung ist da schon festgeschrieben)
+async function versendenKlick(nr) {
   const b = bestellungNachNr(nr);
   if (!b) return;
   if (/^PRÜFEN/.test(b.zahlungGeprueft || '') && !confirm('Die Zahlung dieser Bestellung ist nicht bestätigt:\n' + b.zahlungGeprueft.replace(/^PRÜFEN:\s*/, '') + '\n\nHast du in PayPal nachgesehen und willst trotzdem versenden?')) return;
@@ -413,7 +421,6 @@ async function versendenKlick(nr, mitRechnung) {
     bestellungErsetzen(r.bestellung);
     showStatus((r.mail ? 'Versendet ✓ Versandmail an ' + r.bestellung.email + ' ist raus.' : 'Als versendet markiert ✓')
       + (r.bestellung.seriennummern ? ' MK-Nummern: ' + r.bestellung.seriennummern : ''));
-    if (mitRechnung) await rechnungBeimVersand(r.bestellung);
   } catch (e) {
     if (serienFehler(nr, e)) return;
     showStatus(e.message === 'keine_email' ? 'Keine gültige E-Mail-Adresse bei dieser Bestellung.'
@@ -421,12 +428,41 @@ async function versendenKlick(nr, mitRechnung) {
   }
 }
 
+// Erster Schritt beim Versand: Rechnung festschreiben – jede Krone mit ihrer MK-Nummer – und gleich drucken.
+// Die MK-Nummern kommen dabei mit der Rechnungsnummer in die Seriennummernliste. Versendet wird erst danach.
+async function rechnungVorVersandKlick(nr) {
+  const b = bestellungNachNr(nr);
+  if (!b) return;
+  if (/^PRÜFEN/.test(b.zahlungGeprueft || '') && !confirm('Die Zahlung dieser Bestellung ist nicht bestätigt:\n' + b.zahlungGeprueft.replace(/^PRÜFEN:\s*/, '') + '\n\nHast du in PayPal nachgesehen und willst trotzdem die Rechnung schreiben?')) return;
+  const serien = serienAusFormular(nr);
+  if (serien === null) return;
+  const mk = { seriennummern: serien.seriennummern || [], serienIndex: serien.serienIndex || [] };
+  const rechnung = rechnungDatenAus(b, mk);
+  if (!rechnung.empfaenger || rechnung.positionen.some(p => !p.text) || !(rSumme(rechnung.positionen) > 0)) {
+    showStatus('Für die Rechnung fehlen Angaben. Unter „Rechnungen“ lässt sie sich von Hand schreiben.', 'error'); return;
+  }
+  showStatus('Rechnung wird festgeschrieben …', 'loading');
+  try {
+    const r = await schnittstelle('rechnungVorVersand', Object.assign({ nr, zeile: b.zeile, rechnung }, mk));
+    bestellOffen[nr] = true;
+    serienVorschlaege = {};                              // Nummern sind verbraucht
+    bestellungErsetzen(r.bestellung);
+    rechnungUebernehmen(r.rechnung, r.absender, r.bestellung);
+    showStatus('Rechnung ' + r.rechnung.nr + ' ist festgeschrieben ✓' + (r.bestellung.seriennummern ? ' MK-Nummern: ' + r.bestellung.seriennummern + '.' : '')
+      + ' Zum Schluss die DHL-Sendungsnummer eintragen und „Versenden“.');
+  } catch (e) {
+    if (serienFehler(nr, e)) return;
+    showStatus(e.message === 'unbekannte_aktion' ? 'Bitte Code.gs ab Version 1.15 im Apps Script bereitstellen.'
+      : (e.daten && e.daten.text) || apiFehlerText(e), 'error');
+  }
+}
+
 // ---------- MK-Seriennummern (GPSR): je Krone eine Nummer beim Versenden/Übergeben ----------
 let serienVorschlaege = {};                              // { nr: ['MK-2025-310', …] }
 let serienAus = false;                                   // Liste nicht eingerichtet → Felder ausblenden
 let serienLaedt = {};
-function serienFelder(b, pos) {
-  if (serienAus) return '';
+function serienFelder(b, pos, ohneReNr) {
+  if (serienAus || b.seriennummern) return '';           // schon vergeben (z. B. mit der Rechnung)
   const kr = mkPositionen(pos);
   if (!kr.length) return '';                             // keine Krone dabei: keine MK-Nummer
   const id = medienEsc(b.nr), v = serienVorschlaege[b.nr];
@@ -436,7 +472,7 @@ function serienFelder(b, pos) {
     <div class="serien-felder">${kr.map(({ x, i }, j) => `<label class="serien-feld">${medienEsc(x.variante)}${x.pers && x.pers !== 'ohne Namen' ? ' „' + medienEsc(x.pers) + '“' : ''}
       <input type="text" id="mk-${id}-${j}" data-pos="${i}" value="${medienEsc(v ? v[j] || '' : '')}" placeholder="${v ? '' : 'wird geladen …'}" autocomplete="off" autocapitalize="characters"></label>`).join('')}</div>
     <label class="haken"><input type="checkbox" id="mkan-${id}" checked><span>In die Seriennummernliste eintragen</span></label>
-    <label class="serien-feld" style="max-width:260px">Rechnungsnummer (optional)<input type="text" id="re-${id}" value="${medienEsc(b.rechnungsnr || '')}" autocomplete="off"></label>
+    ${ohneReNr ? '' : `<label class="serien-feld" style="max-width:260px">Rechnungsnummer (optional)<input type="text" id="re-${id}" value="${medienEsc(b.rechnungsnr || '')}" autocomplete="off"></label>`}
   </div>`;
 }
 async function serienLaden(nr, anzahl) {

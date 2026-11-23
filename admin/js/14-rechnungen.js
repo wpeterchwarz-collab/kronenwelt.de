@@ -96,14 +96,27 @@ function rechnungZahlungsart(b) {
   if (b.kanal === 'Webshop') return b.zahlung || 'PayPal';
   return b.zahlung || '';
 }
-function rechnungPositionenAus(b) {
+// MK-Nummer je Position (Stelle in der Bestellung → Nummer). mk = { seriennummern: [...], serienIndex: [...] } aus dem
+// Versand-Formular; ohne Angabe aus der Bestellung (dort stehen die Nummern in der Reihenfolge der Kronen).
+function mkJePosition(b, pos, mk) {
+  const nummern = mk && mk.seriennummern ? mk.seriennummern : String(b.seriennummern || '').split(/\s*,\s*/).filter(Boolean);
+  const kronen = mkPositionen(pos).map(o => o.i);
+  const stellen = mk && mk.serienIndex && mk.serienIndex.length === nummern.length ? mk.serienIndex
+    : kronen.length === nummern.length ? kronen : pos.map((x, i) => i);
+  const zu = {};
+  nummern.forEach((n, j) => { if (stellen[j] != null) zu[stellen[j]] = n; });
+  return zu;
+}
+function rechnungPositionenAus(b, mk) {
   const pos = positionen(b);
-  const liste = pos.map(p => {
+  const mkZu = mkJePosition(b, pos, mk);
+  const liste = pos.map((p, i) => {
     const teile = [p.farbe, p.groesse ? 'Größe ' + p.groesse : ''].filter(Boolean).join(', ');
     // „Handgemachte Hundekrone“ nur bei Kronen aus dem Katalog; andere Artikel (z. B. Traumfänger) mit ihrer eigenen Bezeichnung
     const krone = istKatalogKrone(p.variante);
     let text = (krone ? 'Handgemachte Hundekrone ' + p.variante : p.variante && p.variante !== SONSTIGES ? p.variante : 'Handgemachter Artikel') + (teile ? ', ' + teile : '');
     if (p.pers && p.pers !== 'ohne Namen') text += '\nPersonalisierung: ' + p.pers;
+    if (mkZu[i]) text += '\nMK-Nummer: ' + mkZu[i];
     const katalog = typeof currentPrices !== 'undefined' ? ((currentPrices[p.variante] || {})[p.groesse] || 0) : 0;
     return { text, menge: 1, preis: pos.length === 1 ? b.preis : katalog };
   });
@@ -117,38 +130,27 @@ function rechnungAusBestellung(nr) {
   entwurf = Object.assign({ bestellPreis: b.preis }, rechnungDatenAus(b));
   geheZu('rechnungen');
 }
-// Rechnungsdaten aus einer Bestellung (für den Entwurf und für „Versenden + Rechnung“)
-function rechnungDatenAus(b) {
+// Rechnungsdaten aus einer Bestellung (für den Entwurf und als ersten Schritt beim Versand). mk: MK-Nummern
+// aus dem Versand-Formular; dann wird gleich danach versendet (Leistungsdatum = heute).
+function rechnungDatenAus(b, mk) {
   const d = {
-    bestellnr: b.nr, datum: rHeute(), leistungsdatum: b.versendetAm || b.datum || rHeute(),
-    betreff: rechnungBetreff(b), empfaenger: rechnungEmpfaenger(b), positionen: rechnungPositionenAus(b),
-    hinweis: rechnungZahlungstext(b), seriennummern: b.seriennummern || '', zahlungsart: rechnungZahlungsart(b)
+    bestellnr: b.nr, datum: rHeute(), leistungsdatum: mk ? rHeute() : b.versendetAm || b.datum || rHeute(),
+    betreff: rechnungBetreff(b), empfaenger: rechnungEmpfaenger(b), positionen: rechnungPositionenAus(b, mk),
+    hinweis: rechnungZahlungstext(b), seriennummern: mk ? (mk.seriennummern || []).join(', ') : b.seriennummern || '', zahlungsart: rechnungZahlungsart(b)
   };
   d.faellig = rDatumPlus(d.datum, 14);
   d.bezahltAm = d.zahlungsart ? (b.datum || rHeute()) : '';
   return d;
 }
 
-// „Versenden + Rechnung“: Rechnung ohne Entwurf festschreiben und gleich auf derselben Seite drucken.
-// Klappt etwas nicht (z. B. fehlende Anschrift über 250 €), bleibt Sara in der Bestellung und kann den Entwurf öffnen.
-async function rechnungBeimVersand(b) {
-  const d = rechnungDatenAus(b);
-  const zumEntwurf = text => {
-    showStatus('Versendet ✓ ' + text + ' Die Rechnung ist noch nicht festgeschrieben: „Rechnung erstellen“ in der Bestellung öffnet den Entwurf.', 'error');
-  };
-  if (!d.empfaenger || d.positionen.some(p => !p.text) || !(rSumme(d.positionen) > 0)) { zumEntwurf('Für die Rechnung fehlen Angaben.'); return; }
-  try {
-    const r = await schnittstelle('rechnungErstellen', { rechnung: d });
-    if (r.absender) rechnungInfo.absender = r.absender;
-    b.rechnungsnr = r.rechnung.nr;
-    const best = (bestellungen || []).find(x => x.nr === b.nr); if (best) best.rechnungsnr = r.rechnung.nr;
-    if (rechnungen) { rechnungen.unshift(r.rechnung); rechnungInfo.naechste = 'R-' + String(parseInt(r.rechnung.nr.slice(2), 10) + 1).padStart(5, '0'); }
-    renderBestellListe();
-    druckAnsicht(rechnungHtml(r.rechnung, rechnungInfo.absender), true);
-    showStatus('Versendet ✓ Rechnung ' + r.rechnung.nr + ' ist festgeschrieben.' + (b.seriennummern ? ' MK-Nummern: ' + b.seriennummern : ''));
-  } catch (e) {
-    zumEntwurf((e.daten && e.daten.text) || apiFehlerText(e));
-  }
+// Fertige Rechnung (erster Schritt beim Versand) übernehmen und gleich auf derselben Seite drucken
+function rechnungUebernehmen(rechnung, absender, b) {
+  if (absender) rechnungInfo.absender = absender;
+  b.rechnungsnr = rechnung.nr;
+  const best = (bestellungen || []).find(x => x.nr === b.nr); if (best) best.rechnungsnr = rechnung.nr;
+  if (rechnungen) { rechnungen.unshift(rechnung); rechnungInfo.naechste = 'R-' + String(parseInt(rechnung.nr.slice(2), 10) + 1).padStart(5, '0'); }
+  renderBestellListe();
+  druckAnsicht(rechnungHtml(rechnung, rechnungInfo.absender), true);
 }
 function rechnungNeu() {
   entwurf = { bestellnr: '', bestellPreis: null, datum: rHeute(), leistungsdatum: rHeute(), betreff: '', empfaenger: '',
@@ -675,7 +677,7 @@ function rechnungHtml(r, a, istEntwurf) {
   <tbody>${(r.positionen || []).map((p, i) => `<tr><td>${i + 1}.</td><td>${zeilen(p.text)}</td><td class="z">${rMenge(p.menge)}</td><td class="z">0%</td>
     <td class="z">${rBetrag(p.preis)}</td><td class="z">${rBetrag(p.menge * p.preis)}</td></tr>`).join('')}</tbody></table>
   <div class="summe"><span>Gesamt</span><span>€ ${rBetrag(r.gesamt)}</span></div>
-  <div class="texte"><p>${RECHNUNG_19}</p>${r.hinweis ? '<p>' + zeilen(r.hinweis) + '</p>' : ''}${r.seriennummern ? '<p>' + rEsc(r.seriennummern) + '</p>' : ''}</div>
+  <div class="texte"><p>${RECHNUNG_19}</p>${r.hinweis ? '<p>' + zeilen(r.hinweis) + '</p>' : ''}${r.seriennummern && !(r.positionen || []).some(p => /MK-\d{4}-\d{3,}/.test(p.text)) ? '<p>' + rEsc(r.seriennummern) + '</p>' : ''}</div>
   <div class="fuss">
     ${fuss(a.name, [a.strasse, a.ort, a.ustid ? 'USt-ID: ' + a.ustid : '', a.inhaber ? 'Inhaber: ' + a.inhaber : ''])}
     ${fuss('Kontakt', [a.telefon ? 'Telefon: ' + a.telefon : '', a.email ? 'E-Mail: ' + a.email : ''])}
