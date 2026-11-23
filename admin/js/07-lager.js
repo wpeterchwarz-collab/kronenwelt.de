@@ -181,8 +181,8 @@ function renderLager(laedt) {
     </button>`;
   };
   box.innerHTML = `
-    <details class="card anleitung" id="lagerAnleitung" ${anleitungOffen(leer) ? 'open' : ''} ontoggle="anleitungMerken(this.open)">
-      <summary><span class="i">i</span>So funktioniert das Lager</summary>
+    <details class="card anleitung" id="lagerAnleitung" ${anleitungOffen(leer) ? 'open' : ''}>
+      <summary onclick="anleitungMerken(!this.parentElement.open)"><span class="i">i</span>So funktioniert das Lager</summary>
       <ol>
         <li>Eine Kiste antippen und <b>Zählen</b> wählen, dann eintragen, was drin liegt.</li>
         <li>Unter <b>Mindestbestand</b> festlegen, wie viele von jeder Krone in der Kiste sein sollen.</li>
@@ -230,6 +230,9 @@ function anleitungOffen(leer) {
   try { const v = localStorage.getItem('mkw_lager_anleitung'); if (v) return v === 'auf'; } catch (e) {}
   return leer;
 }
+// Gemerkt wird nur Saras Klick, und zwar sofort: „toggle“ käme erst später (verloren bei schnellem Neuladen)
+// und feuert auch beim ersten Anzeigen – dann wäre der Standard „offen, weil leer“ für immer festgeschrieben.
+// Im Klick ist open noch der alte Stand, daher !open.
 function anleitungMerken(offen) { try { localStorage.setItem('mkw_lager_anleitung', offen ? 'auf' : 'zu'); } catch (e) {} }
 
 function lagerKisteWaehlen(k) {
