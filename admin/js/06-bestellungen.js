@@ -201,8 +201,9 @@ function bestellKarte(b) {
         <div class="titel">1. Rechnung erstellen</div>
         ${serienFelder(b, pos, true)}
         <div class="aktion-zeile"><button class="btn btn-primary" onclick="rechnungVorVersandKlick(${nr})">Rechnung erstellen</button>
+          <button class="btn btn-outline" onclick="rechnungVorschauVorVersand(${nr})">Rechnungsvorschau</button>
           <button class="btn btn-outline" onclick="ohneRechnung[${nr}]=true;renderBestellListe()">Ohne Rechnung versenden</button></div>
-        <div class="leise" style="font-size:12px;margin-top:6px">Zuerst die Rechnung: jede Krone steht mit ihrer MK-Nummer drauf. Danach kommt die DHL-Sendungsnummer und „Versenden“.</div>
+        <div class="leise" style="font-size:12px;margin-top:6px">Zuerst die Rechnung: jede Krone steht mit ihrer MK-Nummer drauf. „Rechnungsvorschau“ zeigt sie vorher, ohne etwas zu speichern. Danach kommt die DHL-Sendungsnummer und „Versenden“.</div>
       </div>` : `
       <div class="versand-box">
         ${b.rechnungsnr ? `<div class="leise" style="margin-bottom:8px">✓ Rechnung ${medienEsc(b.rechnungsnr)} ist erstellt. Jetzt noch die Sendungsnummer.</div>` : ''}
@@ -430,17 +431,34 @@ async function versendenKlick(nr) {
 
 // Erster Schritt beim Versand: Rechnung festschreiben – jede Krone mit ihrer MK-Nummer – und gleich drucken.
 // Die MK-Nummern kommen dabei mit der Rechnungsnummer in die Seriennummernliste. Versendet wird erst danach.
+// Rechnung aus der Bestellung und den MK-Nummern im Formular; null = Eingabe fehlerhaft (Meldung ist schon da)
+function rechnungAusVersandFormular(b) {
+  const serien = serienAusFormular(b.nr);
+  if (serien === null) return null;
+  const mk = { seriennummern: serien.seriennummern || [], serienIndex: serien.serienIndex || [] };
+  const rechnung = rechnungDatenAus(b, mk);
+  if (!rechnung.empfaenger || rechnung.positionen.some(p => !p.text) || !(rSumme(rechnung.positionen) > 0)) {
+    showStatus('Für die Rechnung fehlen Angaben. Unter „Rechnungen“ lässt sie sich von Hand schreiben.', 'error'); return null;
+  }
+  return { rechnung, mk };
+}
+// Vorschau vor dem Festschreiben: genau die Rechnung, die „Rechnung erstellen“ schreiben würde – nichts wird gespeichert
+async function rechnungVorschauVorVersand(nr) {
+  const b = bestellungNachNr(nr);
+  if (!b) return;
+  const d = rechnungAusVersandFormular(b);
+  if (!d) return;
+  if (!rechnungen) { showStatus('Vorschau wird geladen …', 'loading'); await ladeRechnungen(); document.getElementById('statusBar').classList.remove('show'); }   // Absender und nächste Nummer
+  druckAnsicht(rechnungHtml(Object.assign({ nr: rechnungInfo.naechste || '(Entwurf)', art: 'Rechnung', gesamt: rSumme(d.rechnung.positionen) }, d.rechnung),
+    rechnungInfo.absender, true), false);
+}
 async function rechnungVorVersandKlick(nr) {
   const b = bestellungNachNr(nr);
   if (!b) return;
   if (/^PRÜFEN/.test(b.zahlungGeprueft || '') && !confirm('Die Zahlung dieser Bestellung ist nicht bestätigt:\n' + b.zahlungGeprueft.replace(/^PRÜFEN:\s*/, '') + '\n\nHast du in PayPal nachgesehen und willst trotzdem die Rechnung schreiben?')) return;
-  const serien = serienAusFormular(nr);
-  if (serien === null) return;
-  const mk = { seriennummern: serien.seriennummern || [], serienIndex: serien.serienIndex || [] };
-  const rechnung = rechnungDatenAus(b, mk);
-  if (!rechnung.empfaenger || rechnung.positionen.some(p => !p.text) || !(rSumme(rechnung.positionen) > 0)) {
-    showStatus('Für die Rechnung fehlen Angaben. Unter „Rechnungen“ lässt sie sich von Hand schreiben.', 'error'); return;
-  }
+  const d = rechnungAusVersandFormular(b);
+  if (!d) return;
+  const rechnung = d.rechnung, mk = d.mk;
   showStatus('Rechnung wird festgeschrieben …', 'loading');
   try {
     const r = await schnittstelle('rechnungVorVersand', Object.assign({ nr, zeile: b.zeile, rechnung }, mk));

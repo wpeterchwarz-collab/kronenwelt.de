@@ -1073,6 +1073,15 @@ test.describe('Admin: MK-Seriennummern', () => {
     await expect(felder).toHaveCount(1);                                      // nur die Krone
     await expect(felder.first()).toHaveValue('MK-2026-310');
     await expect(k.locator('.serien')).not.toContainText('Traumfänger');
+    // Vorschau: zeigt die Rechnung mit MK-Nummer, speichert aber nichts
+    await k.getByRole('button', { name: 'Rechnungsvorschau' }).click();
+    const vor = page.frameLocator('#druckAnsicht iframe');
+    await expect(vor.locator('.entwurf')).toHaveText('ENTWURF');
+    await expect(vor.locator('tbody tr').nth(1)).toContainText('MK-Nummer: MK-2026-310');
+    await expect(vor.locator('body')).toContainText('R-01272');
+    await page.locator('#druckAnsicht').getByRole('button', { name: 'Schließen' }).click();
+    expect((t.blatt('Rechnungen') || []).length).toBeLessThanOrEqual(1);     // höchstens der Kopf, keine Rechnung
+    expect(t.serien).toHaveLength(3);
     await k.getByRole('button', { name: 'Rechnung erstellen' }).click();      // zuerst die Rechnung
     await expect(page.locator('#statusText')).toContainText('ist festgeschrieben');
     expect(t.serien[2].slice(0, 3)).toEqual(['MK-2026-310', 'etsy', 'Party, ' + PARTY.merkmale.farbe[0].wert + ', Mini, BELLA']);
