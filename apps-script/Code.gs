@@ -57,6 +57,10 @@
       Ab 1.15: neuer Ablauf beim Versand – zuerst die Rechnung (Aktion „rechnungVorVersand“: MK-Nummern prüfen,
       Rechnung mit MK-Nummer je Krone festschreiben, Nummern in Saras Liste mit Rechnungsnr.), zuletzt die
       DHL-Sendungsnummer und „Versenden“.
+      Ab 1.16: „rechnungVorVersand“ läuft unter der Sperre wie alle schreibenden Aktionen, damit ein Doppelklick
+      nie zwei Rechnungen oder doppelte MK-Nummern erzeugt (ebenso „altrechnungPdf“, das sich den PDF-Link merkt).
+      Scheitert der Eintrag in Saras Liste nach dem Festschreiben, macht ein erneuter Klick mit denselben
+      MK-Nummern diese Rechnung fertig, statt eine zweite zu verlangen.
 
    Spalten: Die ersten 12 Spalten sind seit Beginn gleich. Neue Spalten (Status, Kanal, …)
    werden rechts angehängt, sobald sie gebraucht werden. Nichts wird umbenannt oder gelöscht.
@@ -66,7 +70,7 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.15';
+const SCHNITTSTELLE_VERSION = '1.16';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
@@ -179,7 +183,7 @@ function adminAnfrage(data) {
     Utilities.sleep(800);                                   // Ausprobieren von Schlüsseln bremsen
     return antwort({ ok: false, fehler: 'nicht_erlaubt' });
   }
-  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung', 'etsyAbruf', 'etsyArtikel', 'rechnungErstellen', 'rechnungStornieren', 'rechnungBezahlt', 'altrechnungenImport'].indexOf(data.aktion) >= 0;
+  const schreibt = ['status', 'versenden', 'anlegen', 'buchen', 'inventur', 'mindest', 'zahlung', 'rechnung', 'etsyAbruf', 'etsyArtikel', 'rechnungErstellen', 'rechnungVorVersand', 'rechnungStornieren', 'rechnungBezahlt', 'altrechnungenImport', 'altrechnungPdf'].indexOf(data.aktion) >= 0;
   const lock = LockService.getScriptLock();
   try {
     if (schreibt) lock.waitLock(20000);
@@ -359,9 +363,24 @@ function rechnungVorVersand(data) {
   const liste = serienAusDaten(data);
   if (liste.length) serienPruefen(liste);                  // zuerst: klappt das nicht, entsteht keine Rechnung
   const e = Object.assign({}, data.rechnung || {}, { bestellnr: b.nr });
-  const re = rechnungErstellen({ rechnung: e });
+  const re = rechnungUnfertig(b, liste) || rechnungErstellen({ rechnung: e });
   serienEintragen(sheet, kopf, zeile, { seriennummern: liste, serienIndex: data.serienIndex, rechnungsnr: re.rechnung.nr });
   return { ok: true, rechnung: re.rechnung, absender: re.absender, bestellung: bestellungLesen(sheet, kopf, zeile) };
+}
+
+// Ein früherer Versuch hat die Rechnung festgeschrieben, ist dann aber beim Eintrag in Saras Liste gescheitert
+// (Bestellung hat noch keine MK-Nummern). Mit denselben Nummern wird diese Rechnung fertig gemacht – keine zweite.
+// Andere Nummern: klare Meldung, denn auf der festgeschriebenen Rechnung stehen die alten.
+function rechnungUnfertig(b, liste) {
+  if (!liste.length || b.seriennummern) return null;
+  const alt = rechnungenAlle().filter(function (r) { return r.bestellnr === b.nr && r.art === 'Rechnung' && !r.storniertDurch; })[0];
+  if (!alt) return null;
+  const gleich = function (t) { return String(t || '').split(/\s*,\s*/).map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean).join(', '); };
+  if (gleich(alt.seriennummern) !== liste.join(', ')) {
+    throw fehler('rechnung_vorhanden', 'Für ' + b.nr + ' gibt es schon die Rechnung ' + alt.nr
+      + (alt.seriennummern ? ' mit den MK-Nummern ' + alt.seriennummern + '. Bitte genau diese Nummern eintragen' : '') + '.');
+  }
+  return { rechnung: alt, absender: rechnungAbsender() };
 }
 
 // Bestellung von Hand anlegen (Etsy, Amazon, Markt, …)

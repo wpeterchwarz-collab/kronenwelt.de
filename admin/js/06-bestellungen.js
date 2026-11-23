@@ -452,14 +452,18 @@ async function rechnungVorschauVorVersand(nr) {
   druckAnsicht(rechnungHtml(Object.assign({ nr: rechnungInfo.naechste || '(Entwurf)', art: 'Rechnung', gesamt: rSumme(d.rechnung.positionen) }, d.rechnung),
     rechnungInfo.absender, true), false);
 }
+let versandRechnungLaeuft = {};                          // { nr: true } solange eine Rechnung festgeschrieben wird
 async function rechnungVorVersandKlick(nr) {
   const b = bestellungNachNr(nr);
-  if (!b) return;
+  if (!b || versandRechnungLaeuft[nr]) return;           // Doppelklick: nie zwei Anfragen
   if (/^PRÜFEN/.test(b.zahlungGeprueft || '') && !confirm('Die Zahlung dieser Bestellung ist nicht bestätigt:\n' + b.zahlungGeprueft.replace(/^PRÜFEN:\s*/, '') + '\n\nHast du in PayPal nachgesehen und willst trotzdem die Rechnung schreiben?')) return;
   const d = rechnungAusVersandFormular(b);
   if (!d) return;
   const rechnung = d.rechnung, mk = d.mk;
   showStatus('Rechnung wird festgeschrieben …', 'loading');
+  versandRechnungLaeuft[nr] = true;
+  const knopf = rechnungVorVersandKnopf(nr);
+  if (knopf) knopf.disabled = true;
   try {
     const r = await schnittstelle('rechnungVorVersand', Object.assign({ nr, zeile: b.zeile, rechnung }, mk));
     bestellOffen[nr] = true;
@@ -472,7 +476,15 @@ async function rechnungVorVersandKlick(nr) {
     if (serienFehler(nr, e)) return;
     showStatus(e.message === 'unbekannte_aktion' ? 'Bitte Code.gs ab Version 1.15 im Apps Script bereitstellen.'
       : (e.daten && e.daten.text) || apiFehlerText(e), 'error');
+  } finally {
+    delete versandRechnungLaeuft[nr];
+    const k = rechnungVorVersandKnopf(nr);                // nach Erfolg ist der Knopf weg, sonst wieder frei
+    if (k) k.disabled = false;
   }
+}
+function rechnungVorVersandKnopf(nr) {
+  const onclick = 'rechnungVorVersandKlick(' + JSON.stringify(nr) + ')';
+  return [...document.querySelectorAll('button[onclick^="rechnungVorVersandKlick("]')].find(x => x.getAttribute('onclick') === onclick) || null;
 }
 
 // ---------- MK-Seriennummern (GPSR): je Krone eine Nummer beim Versenden/Übergeben ----------

@@ -9,7 +9,14 @@ const KOPF = ['Datum', 'Uhrzeit', 'Bestellnr.', 'Variante', 'Farbe', 'Grösse', 
   'Preis (€)', 'Zahlung', 'Kundenname', 'E-Mail', 'Lieferadresse'];
 
 // Ein nachgestelltes Tabellenblatt. geld = Zahlen werden wie Preise angezeigt ("17,00 €")
-function blattAttrappe(daten, geld, kaputt) {
+// kaputt = true oder eine Funktion (z. B. () => liste.includes('Serienliste')), damit ein Test das Blatt später „reparieren“ kann
+// sperre = { pruefen, gehalten } → schreiben ohne gehaltene Sperre wirft (findet Aktionen, die ohne LockService schreiben)
+function blattAttrappe(daten, geld, kaputt, sperre) {
+  // zeile = erste geschriebene Zeile; die Kopfzeile (Zeile 1) darf auch beim Lesen entstehen
+  const pruefe = zeile => {
+    if (typeof kaputt === 'function' ? kaputt() : kaputt) throw new Error('Blatt gesperrt');
+    if (sperre && sperre.pruefen && !sperre.gehalten && zeile !== 1) throw new Error('ohne Sperre geschrieben');
+  };
   const anzeige = x => typeof x === 'number' ? (geld ? x.toFixed(2).replace('.', ',') + ' €' : String(x)) : String(x == null ? '' : x);
   const zelle = (r, c) => (daten[r - 1] || [])[c - 1];
   const setze = (r, c, v) => { while (daten.length < r) daten.push([]); const z = daten[r - 1]; while (z.length < c) z.push(''); z[c - 1] = v; };
@@ -17,16 +24,16 @@ function blattAttrappe(daten, geld, kaputt) {
   return {
     getLastRow: () => daten.length,
     getLastColumn: () => Math.max(0, ...daten.map(z => { let n = z.length; while (n && (z[n - 1] === '' || z[n - 1] == null)) n--; return n; })),
-    appendRow: r => { if (kaputt) throw new Error('Blatt gesperrt'); daten.push(r.slice()); },
+    appendRow: r => { pruefe(daten.length + 1); daten.push(r.slice()); },
     setFrozenRows() {},
     getRange: (r, c, h = 1, w = 1) => ({
       getDisplayValues: () => block(r, c, h, w, anzeige),
       getValues: () => block(r, c, h, w, x => x == null ? '' : x),
       getDisplayValue: () => anzeige(zelle(r, c)),
-      setValue: v => { if (kaputt) throw new Error('Blatt gesperrt'); setze(r, c, v); },
-      setValues: vs => { if (kaputt) throw new Error('Blatt gesperrt'); vs.forEach((z, i) => z.forEach((v, j) => setze(r + i, c + j, v))); },
+      setValue: v => { pruefe(r); setze(r, c, v); },
+      setValues: vs => { pruefe(r); vs.forEach((z, i) => z.forEach((v, j) => setze(r + i, c + j, v))); },
       // wie in Sheets: Inhalt leeren; leere Zeilen am Ende zählen nicht für getLastRow
-      clearContent: () => { for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) if (daten[r - 1 + i]) setze(r + i, c + j, '');
+      clearContent: () => { pruefe(r); for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) if (daten[r - 1 + i]) setze(r + i, c + j, '');
         while (daten.length && daten[daten.length - 1].every(x => x === '' || x == null)) daten.pop(); },
       setBackground() {}, setNumberFormat() {}, setFontColor() {}, setFontWeight() {}
     })
@@ -35,7 +42,7 @@ function blattAttrappe(daten, geld, kaputt) {
 
 // zeilen = Werte wie in der Tabelle (Preis als Zahl); kopf = Kopfzeile (Standard: die 12 alten Spalten)
 // blaetter = weitere Blätter { Name: [Zeilen inkl. Kopf] }, z. B. Lagerbewegungen; kaputt = Blätter, in die nicht geschrieben werden kann
-function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [], paypal = null, eigenschaften = {}, katalogText = null, serienliste = null, github = null, cloudinary = false, etsy = null, drive = null } = {}) {
+function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}, kaputt = [], sperrePruefen = true, paypal = null, eigenschaften = {}, katalogText = null, serienliste = null, github = null, cloudinary = false, etsy = null, drive = null } = {}) {
   // drive = { dateien: ['Rechnung R-01271.pdf', …], unter: { '2025': ['…'] } } → PAPIERKRAM_ORDNER ist gesetzt
   // github = { dateien: { 'katalog.json': '…' } } → GITHUB_TOKEN ist gesetzt; cloudinary: true → CLOUDINARY_KEY/SECRET gesetzt
   // etsy = { receipts: [Etsy-Bestellungen], listings: [Etsy-Artikel], shop: 4711, falsch: true (Anmeldung scheitert), abgelaufen: true (Zugriffs-Token ungültig) }
@@ -60,7 +67,9 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
   if (etsy) etsy.tokenAbrufe = [];
   const gh = github ? { dateien: Object.assign({}, github.dateien || {}), gespeichert: [], falsch: !!github.falsch } : null;
   const serienDaten = serienliste ? serienliste.map(z => z.slice()) : null;
-  const serienSheet = serienDaten ? blattAttrappe(serienDaten, false, kaputt.includes('Serienliste')) : null;
+  // LockService: zählt, wie oft gesperrt wurde; mit sperrePruefen wirft jedes Schreiben ohne gehaltene Sperre
+  const sperre = { pruefen: sperrePruefen, gehalten: false, anzahl: 0 };
+  const serienSheet = serienDaten ? blattAttrappe(serienDaten, false, () => kaputt.includes('Serienliste'), sperre) : null;
   const abrufe = [];
   const KATALOG_TEXT = katalogText || fs.readFileSync(path.join(__dirname, '..', 'katalog.json'), 'utf8');
   const cache = {};
@@ -125,7 +134,7 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
   const tabellen = { Bestellungen: daten };
   Object.keys(blaetter).forEach(n => { tabellen[n] = blaetter[n].map(z => z.slice()); });
   const sheets = {};
-  const holen = n => tabellen[n] ? (sheets[n] = sheets[n] || blattAttrappe(tabellen[n], n === 'Bestellungen', kaputt.includes(n))) : null;
+  const holen = n => tabellen[n] ? (sheets[n] = sheets[n] || blattAttrappe(tabellen[n], n === 'Bestellungen', () => kaputt.includes(n), sperre)) : null;
   const ss = {
     getSheetByName: holen,
     insertSheet: n => { tabellen[n] = []; return holen(n); },
@@ -141,7 +150,7 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
       getFolderById: id => { if (!drive || id !== 'PK-ORDNER-1234') throw new Error('Kein Zugriff'); return ordnerAttrappe('Papierkram', drive.dateien || [], drive.unter || {}); } },
     CacheService: { getScriptCache: () => ({ get: k => cache[k] || null, put: (k, v) => { cache[k] = v; } }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: t => ({ setMimeType: () => ({ text: t }) }) },
-    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    LockService: { getScriptLock: () => ({ waitLock() { sperre.gehalten = true; sperre.anzahl++; }, releaseLock() { sperre.gehalten = false; } }) },
     MailApp: { sendEmail: m => mails.push(m), getRemainingDailyQuota: () => 100 },
     Utilities: {
       sleep() {}, getUuid: () => require('crypto').randomUUID(),
@@ -158,7 +167,7 @@ function umgebung(zeilen, schluessel = 'GEHEIM123', { kopf = KOPF, blaetter = {}
   vm.runInContext(CODE, ctx);
   const post = body => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(body) } }).text);
   // blatt('Lagerbewegungen') = Zeilen des Blatts (inkl. Kopf) oder undefined, wenn es (noch) nicht existiert
-  return { post, daten, mails, blatt: n => tabellen[n], abrufe, serien: serienDaten, github: gh, props, ctx };
+  return { post, daten, mails, blatt: n => tabellen[n], abrufe, serien: serienDaten, github: gh, props, ctx, sperre, kaputt };
 }
 
 // Antwort von PayPal auf GET /v2/checkout/orders/{id} für eine abgeschlossene Zahlung

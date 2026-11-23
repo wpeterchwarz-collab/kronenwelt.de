@@ -7,8 +7,8 @@
 // = ein neuer Eintrag hier + ein <div id="tab-…" class="content">. Navigation, Unterreiter
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
-const ADMIN_VERSION = '1.15';
-const ADMIN_NEU = 'Knopf „Rechnungsvorschau“ im Versand: zeigt die Rechnung mit MK-Nummern vorher, ohne etwas zu speichern.';
+const ADMIN_VERSION = '1.16';
+const ADMIN_NEU = '„Rechnung erstellen“ ist gegen Doppelklick geschützt; scheitert der Eintrag in die Seriennummernliste, macht ein zweiter Klick dieselbe Rechnung fertig (Code.gs 1.16).';
 
 // Shops: jede Bestellung gehört zu einem Shop (Farbe in Listen). Ein weiterer Shop = ein Eintrag hier.
 // etsy = Name des Etsy-Shops, so wie er in der Spalte „Shop“ steht; der erste Shop ist der Standard (Webshop, Amazon, Markt …)
