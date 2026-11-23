@@ -2,7 +2,7 @@
 // Admin und Google-Produktdatei. Diese Tests prüfen, dass der Katalog in sich stimmig ist
 // und dass die Website wirklich aus ihm gebaut wird.
 const { test, expect } = require('@playwright/test');
-const { openShop, katalog, fotos, euro } = require('./helpers');
+const { openShop, katalog, fotos, preise, euro } = require('./helpers');
 
 const KRONEN = katalog.produkte.map(p => p.name);
 const GROESSEN = katalog.merkmale.groesse.werte;
@@ -163,7 +163,12 @@ test.describe('Katalog ⇔ Website', () => {
     await openShop(page, { errors });
     await page.click('.chip[data-v="Party"]');
     await page.click('.szcard[data-s="Gross"]');
-    await expect(page.locator('#totP')).toHaveText(/\d+,\d{2} €/);
+    await expect(page.locator('#totP')).toHaveText(euro(preise['Party']['Gross']));   // Preis wie im Katalog
+    // alle Kronen und Farben aus dem Katalog sind auswählbar (Notfall-Stand wird aus katalog.json erzeugt)
+    for (const p of katalog.produkte) await expect(page.locator(`.chip[data-v="${p.name}"]`)).toHaveCount(1);
+    await page.click('.chip[data-v="Einfarbig"]');
+    const einfarbig = katalog.produkte.find(p => p.name === 'Einfarbig');
+    await expect(page.locator('#colorChips [data-c]')).toHaveCount(einfarbig.merkmale.farbe.length);
     expect(errors).toEqual([]);
   });
 });
