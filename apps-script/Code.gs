@@ -63,7 +63,7 @@
    ============================================================ */
 
 const SHEET_NAME = 'Bestellungen';
-const SCHNITTSTELLE_VERSION = '1.13';
+const SCHNITTSTELLE_VERSION = '1.14';
 const SPALTEN = [
   'Datum', 'Uhrzeit', 'Bestellnr.',
   'Variante', 'Farbe', 'Grösse', 'Personalisierung',
@@ -145,7 +145,7 @@ function bestellungSpeichern(data) {
       'Zahlung': data.zahlung || 'PayPal',
       'Kundenname': data.kunde_name || '',
       'E-Mail': data.kunde_email || '',
-      'Lieferadresse': data.lieferadresse || '',
+      'Lieferadresse': adresseSauber(data.lieferadresse),
       'Status': 'Neu',
       'Kanal': 'Webshop',
       'Artikelnr.': artikelListe(String(data.artikel || '').split(',')),
@@ -379,7 +379,7 @@ function anlegen(data) {
     'Zahlung': text(data.zahlung, 40),
     'Kundenname': text(data.kunde, 100),
     'E-Mail': text(data.email, 120),
-    'Lieferadresse': text(data.adresse, 300),
+    'Lieferadresse': text(adresseSauber(data.adresse), 300),
     'Status': STATUS.indexOf(data.status) >= 0 ? data.status : 'Neu',
     'Kanal': kanal,
     'Notiz': text(data.notiz, 500),
@@ -840,8 +840,11 @@ function serienEintragen(sheet, kopf, zeile, data) {
   const alt = n > 1 ? sh.getRange(2, 1, n - 1, 6).getDisplayValues().filter(function (z) { return String(z[2]).trim(); }) : [];
   const vorlage = alt.length ? alt[alt.length - 1] : ['', '', '', '', SHOP_NAME + ', ' + SHOP_ADRESSE, ''];
   const heute = Utilities.formatDate(new Date(), 'Europe/Berlin', 'dd.MM.yyyy');
+  // serienIndex: zu welcher Position (Stelle in der Bestellung) die i-te Nummer gehört; Artikel ohne Krone bekommen keine
+  const idx = Array.isArray(data.serienIndex) && data.serienIndex.length === liste.length ? data.serienIndex.map(function (x) { return parseInt(x, 10); }) : null;
   liste.forEach(function (sn, i) {
-    const p = pos[i] || pos[pos.length - 1] || { name: b.variante, details: '', pers: '' };
+    const stelle = idx && idx[i] >= 0 && idx[i] < pos.length ? idx[i] : i;
+    const p = pos[stelle] || pos[pos.length - 1] || { name: b.variante, details: '', pers: '' };
     const bez = [p.name].concat(String(p.details || '').split(' · ')).concat(p.pers ? [p.pers] : []).filter(Boolean).join(', ');
     const werte = [sn, SERIEN_PLATTFORM[b.kanal] || String(b.kanal || '').toLowerCase(), bez, heute, vorlage[4], vorlage[5]];
     const frei = info.frei.filter(function (f) { return f.zahl === serienZahl(sn); })[0];   // vorbereitete Zeile, Jahr wird angepasst
@@ -877,11 +880,22 @@ function positionenListe(b) {
   });
 }
 
-// Adresse wie von PayPal („8 Vogesenweg, 75045 WALZBACHTAL, DE“) als Zeilen
+// Adresse wie von PayPal („8 Vogesenweg, 75045 WALZBACHTAL, DE“) als Zeilen, aufgeräumt (ohne Land, ohne Großbuchstaben)
 function adresseZeilen(b) {
-  const z = String(b.adresse || '').split(/\s*,\s*/).filter(Boolean).map(function (x) { return x === 'DE' ? 'Deutschland' : x; });
+  const z = adresseSauber(b.adresse).split(', ').filter(Boolean);
   return [b.kunde].concat(z).filter(Boolean);
 }
+
+// Adresse aufräumen: Landzeile (DE, Deutschland, Germany) weg, Zeilen ganz in GROSSBUCHSTABEN normal schreiben
+// („42369 WUPPERTAL“ → „42369 Wuppertal“). Ergebnis: Teile mit „, “ getrennt, wie in der Tabelle.
+function adresseSauber(t) {
+  const gross = function (z) { return /\p{L}.*\p{L}/u.test(z) && z === z.toUpperCase() && z !== z.toLowerCase(); };
+  const normal = function (z) { return z.toLowerCase().replace(/(^|[\s\-\/(.])(\p{L})/gu, function (m, a, b) { return a + b.toUpperCase(); }); };
+  return String(t || '').split(/\s*(?:\r?\n|,)\s*/).map(function (x) { return x.trim(); }).filter(Boolean)
+    .filter(function (x) { return !/^(DE|DEU|Deutschland|Germany)$/i.test(x); })
+    .map(function (x) { return gross(x) ? normal(x) : x; }).join(', ');
+}
+
 
 function mailLayout(o) {
   const e = htmlEsc;
@@ -1830,8 +1844,7 @@ function etsyAbruf() {
       'Zahlung': 'Etsy',
       'Kundenname': String(rc.name || '').trim().slice(0, 100),
       'E-Mail': String(rc.buyer_email || '').trim().slice(0, 120),
-      'Lieferadresse': String(rc.formatted_address || '').split(/\r?\n/).map(function (x) { return x.trim(); })
-        .filter(function (x, i) { return x && !(i === 0 && x === String(rc.name || '').trim()); }).join(', ').slice(0, 300),
+      'Lieferadresse': etsyAdresse(rc).slice(0, 300),
       'Status': 'Neu',
       'Kanal': 'Etsy',
       'Notiz': (alleSkus ? '' : 'Von Etsy übernommen, Krone noch nicht dem Katalog zugeordnet (Blatt „Etsy-Artikel“). ')
@@ -1845,6 +1858,17 @@ function etsyAbruf() {
     angelegt.push(nr);
   });
   return { ok: true, neu: angelegt.length, bestellnummern: angelegt };
+}
+
+// Lieferadresse aus den Einzelfeldern (Straße, Zusatz, PLZ Ort) – so wie die Kundin sie eingegeben hat.
+// Der fertige Etsy-Block („formatted_address“) hat den Ort in Großbuchstaben und das Land dabei; er ist nur der Notnagel.
+function etsyAdresse(rc) {
+  const ort = [rc.zip, rc.city].map(function (x) { return String(x || '').trim(); }).filter(Boolean).join(' ');
+  const land = String(rc.country_iso || '').trim().toUpperCase();
+  const teile = [rc.first_line, rc.second_line].map(function (x) { return String(x || '').trim(); }).filter(Boolean).concat(ort ? [ort] : []);
+  if (teile.length >= 2 && (!land || land === 'DE')) return adresseSauber(teile.join(', '));
+  return adresseSauber(String(rc.formatted_address || '').split(/\r?\n/).map(function (x) { return x.trim(); })
+    .filter(function (x, i) { return x && !(i === 0 && x === String(rc.name || '').trim()); }).join(', '));
 }
 
 // Läuft per Zeitplan alle 15 Minuten (siehe etsyZeitplan). Fehler landen nur im Protokoll.

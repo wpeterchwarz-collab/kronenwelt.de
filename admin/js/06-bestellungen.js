@@ -37,6 +37,22 @@ function positionen(b) {
   }
   return [{ variante: b.variante, farbe: b.farbe, groesse: b.groesse, pers: b.personalisierung }];
 }
+// Ist die Position eine Krone aus dem Katalog? Nur die heißen auf der Rechnung „Hundekrone“ und bekommen eine MK-Nummer.
+const istKatalogKrone = v => !!v && v !== SONSTIGES && typeof kronenListe === 'function' && kronenListe().includes(String(v).trim());
+// Braucht die Position eine MK-Nummer (GPSR)? Kronen ja, andere Artikel (z. B. Traumfänger) nein.
+// Auch Etsy-Kronen, die noch nicht dem Katalog zugeordnet sind, erkennt man am Wort „Krone“.
+const brauchtMkNummer = v => istKatalogKrone(v) || (v !== SONSTIGES && /krone/i.test(String(v || '')));
+// Nur die Positionen mit MK-Nummer, jeweils mit ihrer Stelle in der Bestellung
+const mkPositionen = pos => pos.map((x, i) => ({ x, i })).filter(o => brauchtMkNummer(o.x.variante));
+// Adresse aufräumen: Landzeile (DE, Deutschland, Germany) weg, Zeilen ganz in GROSSBUCHSTABEN normal schreiben
+// („42369 WUPPERTAL“ → „42369 Wuppertal“). Gleiche Regel wie im Apps Script; wirkt auch auf alte Bestellungen.
+function adresseSauber(t) {
+  const gross = z => /\p{L}.*\p{L}/u.test(z) && z === z.toUpperCase() && z !== z.toLowerCase();
+  const normal = z => z.toLowerCase().replace(/(^|[\s\-\/(.])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+  return String(t || '').split(/\s*(?:\r?\n|,)\s*/).map(x => x.trim()).filter(Boolean)
+    .filter(x => !/^(DE|DEU|Deutschland|Germany)$/i.test(x))
+    .map(x => gross(x) ? normal(x) : x).join(', ');
+}
 const persText = t => !t || t === 'ohne Namen' ? 'ohne Namen' : '„' + t + '“';
 const euro = x => (Math.round((x || 0) * 100) / 100).toFixed(2).replace('.', ',') + ' €';
 function datumTeile(d) {               // "01.10.2026" → { tag: '1.', monat: 'Okt' }
@@ -154,7 +170,7 @@ const versandOffen = {};               // „Jetzt versenden“ bei neuen Bestel
 async function adresseKopieren(nr) {
   const b = bestellungNachNr(nr);
   if (!b) return;
-  const text = [b.kunde, ...String(b.adresse || '').split(/,\s*/)].filter(Boolean).join('\n');
+  const text = [b.kunde, ...adresseSauber(b.adresse).split(', ')].filter(Boolean).join('\n');
   try { await navigator.clipboard.writeText(text); showStatus('Adresse kopiert ✓'); }
   catch (e) { showStatus('Kopieren ging nicht. Bitte von Hand markieren.', 'error'); }
 }
@@ -189,7 +205,7 @@ function bestellKarte(b) {
           <button class="btn btn-outline" onclick="versendenKlick(${nr})">Als versendet markieren</button>`
           : `<button class="btn btn-primary" onclick="versendenKlick(${nr})">Als versendet markieren</button>`}
           ${b.kanal === 'Spende' ? `<button class="btn btn-outline" onclick="uebergebenKlick(${nr})">Persönlich übergeben</button>` : ''}</div>
-        ${mitRechnungMoeglich(b) ? '<div class="leise" style="font-size:12px;margin-top:6px">„Versenden + Rechnung“ markiert als versendet, schreibt die Rechnung fest und öffnet gleich den Druck.</div>' : ''}
+        ${mitRechnungMoeglich(b) ? '<div class="leise" style="font-size:12px;margin-top:6px">„Versenden + Rechnung“ markiert als versendet, schreibt die Rechnung fest und zeigt sie gleich zum Drucken.</div>' : ''}
       </div>`;
   // Zahlung: PRÜFEN = verdächtig (nicht versenden, bevor in PayPal nachgesehen), NICHT GEPRÜFT = Prüfung lief nicht
   const zg = b.zahlungGeprueft || '';
@@ -226,7 +242,7 @@ function bestellKarte(b) {
         <div class="best-schritt">${zahlungBox}${schritte}${naechster}</div>
         <dl class="best-details">
           <div class="best-artikel was-naehen"><dt>${offen ? 'Was zu tun ist' : 'Artikel'}</dt><dd><ul>${pos.map(x => `<li>${medienEsc(x.variante)} · ${medienEsc(x.farbe)} · ${medienEsc(x.groesse)} · <em>${medienEsc(persText(x.pers))}</em></li>`).join('')}</ul></dd></div>
-          <div><dt>Lieferadresse</dt><dd>${b.adresse ? medienEsc(b.kunde) + '<br>' + medienEsc(b.adresse).replace(/, /g, '<br>')
+          <div><dt>Lieferadresse</dt><dd>${b.adresse ? medienEsc(b.kunde) + '<br>' + medienEsc(adresseSauber(b.adresse)).replace(/, /g, '<br>')
             + `<br><button class="kopier-knopf" onclick="adresseKopieren(${nr})">Adresse kopieren</button>` : '–'}</dd></div>
           <div><dt>Kontakt</dt><dd>${b.email ? `<a href="mailto:${medienEsc(b.email)}?subject=${encodeURIComponent('Deine Bestellung ' + b.nr)}">${medienEsc(b.email)}</a>` : '–'}</dd></div>
           <div><dt>Bestellung</dt><dd>${medienEsc(b.nr)}<br>${medienEsc(b.datum)}${b.uhrzeit ? ' um ' + medienEsc(b.uhrzeit) + ' Uhr' : ''} · ${medienEsc(b.kanal)}${b.plattformNr ? '<br>' + medienEsc(b.kanal) + '-Nr. ' + medienEsc(b.plattformNr) + (b.shop ? ' (' + medienEsc(b.shop) + ')' : '') : ''}${b.artikel && b.kiste ? '<br><span class="leise">Lager: ' + medienEsc(b.kiste === 'nicht vom Lager' ? 'nicht vom Lager' : 'aus Kiste ' + b.kiste) + '</span>' : ''}</dd></div>
@@ -375,26 +391,20 @@ async function zahlungKlick(nr) {
 // Rechnung beim Versenden gleich mit? Nur wenn es noch keine gibt und etwas zu berechnen ist (keine Spende)
 const mitRechnungMoeglich = b => !b.rechnungsnr && b.kanal !== 'Spende' && (b.preis || 0) > 0 && b.status !== 'Storniert';
 
-// mitRechnung = true: „Versenden + Rechnung“ – danach Rechnung festschreiben und Druck öffnen
+// mitRechnung = true: „Versenden + Rechnung“ – danach Rechnung festschreiben und auf derselben Seite drucken.
+// Alle Rückfragen kommen vorher; es öffnet sich kein zweites Fenster.
 async function versendenKlick(nr, mitRechnung) {
   const b = bestellungNachNr(nr);
   if (!b) return;
-  // Druckfenster gleich im Klick öffnen, sonst blockiert der Browser es
-  let w = null;
-  const abbrechen = () => { if (w) w.close(); };
-  if (mitRechnung) {
-    w = window.open('', '_blank');
-    if (w) w.document.write('<p style="font-family:Arial;padding:20px">Rechnung wird erstellt …</p>');
-  }
-  if (/^PRÜFEN/.test(b.zahlungGeprueft || '') && !confirm('Die Zahlung dieser Bestellung ist nicht bestätigt:\n' + b.zahlungGeprueft.replace(/^PRÜFEN:\s*/, '') + '\n\nHast du in PayPal nachgesehen und willst trotzdem versenden?')) { abbrechen(); return; }
+  if (/^PRÜFEN/.test(b.zahlungGeprueft || '') && !confirm('Die Zahlung dieser Bestellung ist nicht bestätigt:\n' + b.zahlungGeprueft.replace(/^PRÜFEN:\s*/, '') + '\n\nHast du in PayPal nachgesehen und willst trotzdem versenden?')) return;
   const sn = (document.getElementById('sn-' + nr) || {}).value || '';
   const mailEl = document.getElementById('mail-' + nr);
   const mail = !!(mailEl && mailEl.checked);
   const nummer = sn.replace(/\s+/g, '').toUpperCase();
-  if (nummer && !/^[A-Z0-9]{8,40}$/.test(nummer)) { abbrechen(); showStatus('Die Sendungsnummer sieht nicht richtig aus. Bitte prüfen.', 'error'); return; }
+  if (nummer && !/^[A-Z0-9]{8,40}$/.test(nummer)) { showStatus('Die Sendungsnummer sieht nicht richtig aus. Bitte prüfen.', 'error'); return; }
   const serien = serienAusFormular(nr);                  // erst die MK-Nummern prüfen, dann nachfragen
-  if (serien === null) { abbrechen(); return; }
-  if (!nummer && !confirm('Ohne Sendungsnummer als versendet markieren?')) { abbrechen(); return; }
+  if (serien === null) return;
+  if (!nummer && !confirm('Ohne Sendungsnummer als versendet markieren?')) return;
   showStatus(mail ? 'Wird gespeichert und Versandmail verschickt …' : 'Wird gespeichert …', 'loading');
   try {
     const r = await schnittstelle('versenden', Object.assign({ nr, zeile: b.zeile, sendungsnummer: nummer, mail }, serien));
@@ -403,9 +413,8 @@ async function versendenKlick(nr, mitRechnung) {
     bestellungErsetzen(r.bestellung);
     showStatus((r.mail ? 'Versendet ✓ Versandmail an ' + r.bestellung.email + ' ist raus.' : 'Als versendet markiert ✓')
       + (r.bestellung.seriennummern ? ' MK-Nummern: ' + r.bestellung.seriennummern : ''));
-    if (mitRechnung) await rechnungBeimVersand(r.bestellung, w);
+    if (mitRechnung) await rechnungBeimVersand(r.bestellung);
   } catch (e) {
-    abbrechen();
     if (serienFehler(nr, e)) return;
     showStatus(e.message === 'keine_email' ? 'Keine gültige E-Mail-Adresse bei dieser Bestellung.'
       : e.message === 'ungueltige_sendungsnummer' ? 'Die Sendungsnummer sieht nicht richtig aus. Bitte prüfen.' : apiFehlerText(e), 'error');
@@ -418,12 +427,14 @@ let serienAus = false;                                   // Liste nicht eingeric
 let serienLaedt = {};
 function serienFelder(b, pos) {
   if (serienAus) return '';
+  const kr = mkPositionen(pos);
+  if (!kr.length) return '';                             // keine Krone dabei: keine MK-Nummer
   const id = medienEsc(b.nr), v = serienVorschlaege[b.nr];
-  if (!v && !serienLaedt[b.nr]) { serienLaedt[b.nr] = true; setTimeout(() => serienLaden(b.nr, pos.length), 0); }
+  if (!v && !serienLaedt[b.nr]) { serienLaedt[b.nr] = true; setTimeout(() => serienLaden(b.nr, kr.length), 0); }
   return `<div class="serien" id="serien-${id}">
     <label class="titel">MK-Nummern für den Beileger</label>
-    <div class="serien-felder">${pos.map((x, i) => `<label class="serien-feld">${medienEsc(x.variante)}${x.pers && x.pers !== 'ohne Namen' ? ' „' + medienEsc(x.pers) + '“' : ''}
-      <input type="text" id="mk-${id}-${i}" value="${medienEsc(v ? v[i] || '' : '')}" placeholder="${v ? '' : 'wird geladen …'}" autocomplete="off" autocapitalize="characters"></label>`).join('')}</div>
+    <div class="serien-felder">${kr.map(({ x, i }, j) => `<label class="serien-feld">${medienEsc(x.variante)}${x.pers && x.pers !== 'ohne Namen' ? ' „' + medienEsc(x.pers) + '“' : ''}
+      <input type="text" id="mk-${id}-${j}" data-pos="${i}" value="${medienEsc(v ? v[j] || '' : '')}" placeholder="${v ? '' : 'wird geladen …'}" autocomplete="off" autocapitalize="characters"></label>`).join('')}</div>
     <label class="haken"><input type="checkbox" id="mkan-${id}" checked><span>In die Seriennummernliste eintragen</span></label>
     <label class="serien-feld" style="max-width:260px">Rechnungsnummer (optional)<input type="text" id="re-${id}" value="${medienEsc(b.rechnungsnr || '')}" autocomplete="off"></label>
   </div>`;
@@ -443,10 +454,11 @@ function serienAusFormular(nr) {
   if (!box) return {};
   const re = (document.getElementById('re-' + nr) || {}).value || '';
   if (!document.getElementById('mkan-' + nr).checked) return { rechnungsnr: re.trim() };
-  const l = [...box.querySelectorAll('input[id^="mk-"]')].map(x => x.value.trim().toUpperCase());
+  const felder = [...box.querySelectorAll('input[id^="mk-"]')];
+  const l = felder.map(x => x.value.trim().toUpperCase());
   if (l.some(x => !/^MK-\d{4}-\d{3,}$/.test(x))) { showStatus('Bitte bei jeder Krone eine MK-Nummer eintragen (z. B. MK-2026-310) oder den Haken „In die Seriennummernliste eintragen“ entfernen.', 'error'); return null; }
   if (new Set(l).size !== l.length) { showStatus('Eine MK-Nummer steht doppelt.', 'error'); return null; }
-  return { seriennummern: l, rechnungsnr: re.trim() };
+  return { seriennummern: l, serienIndex: felder.map(x => parseInt(x.dataset.pos, 10) || 0), rechnungsnr: re.trim() };
 }
 // Nummer schon vergeben: freie Nummern einsetzen und Bescheid geben
 function serienFehler(nr, e) {
@@ -572,8 +584,8 @@ function renderFormular() {
     ${f.direkt ? `<div class="versand-box">
       ${f.kanal === 'Markt' ? '' : `<label class="titel" for="bfSendung">DHL-Sendungsnummer</label>
       <input type="text" id="bfSendung" value="${medienEsc(f.sendung)}" oninput="formular.sendung=this.value" placeholder="optional" autocomplete="off" autocapitalize="characters">`}
-      ${serienAus ? '' : `<div class="serien"><label class="titel">MK-Nummern für den Beileger</label>
-        <div class="serien-felder">${f.positionen.map((p, i) => `<label class="serien-feld">${medienEsc(p.variante)}${p.pers ? ' „' + medienEsc(p.pers) + '“' : ''}
+      ${serienAus || !formularKronen().length ? '' : `<div class="serien"><label class="titel">MK-Nummern für den Beileger</label>
+        <div class="serien-felder">${formularKronen().map(({ p }, i) => `<label class="serien-feld">${medienEsc(p.variante)}${p.pers ? ' „' + medienEsc(p.pers) + '“' : ''}
           <input type="text" id="bfMk-${i}" value="${medienEsc(f.mk[i] || '')}" placeholder="${f.mk.length ? '' : 'wird geladen …'}" oninput="formular.mk[${i}]=this.value" autocomplete="off" autocapitalize="characters"></label>`).join('')}</div>
         <label class="haken"><input type="checkbox" id="bfMkAn" ${f.mkEintragen ? 'checked' : ''} onchange="formular.mkEintragen=this.checked"><span>In die Seriennummernliste eintragen</span></label></div>`}
       <label class="serien-feld" style="max-width:260px">Rechnungsnummer (optional)<input type="text" id="bfRechnung" value="${medienEsc(f.rechnungsnr)}" oninput="formular.rechnungsnr=this.value" autocomplete="off"></label>
@@ -582,15 +594,18 @@ function renderFormular() {
       <button class="btn btn-outline" onclick="formularSchliessen()">Abbrechen</button></div>
   </div>`;
 }
+// Positionen im Formular, die eine MK-Nummer bekommen („Sonstiges“ nicht), mit ihrer Stelle
+const formularKronen = () => formular.positionen.map((p, i) => ({ p, i })).filter(o => o.p.variante !== SONSTIGES);
 // „Schon verschickt“: MK-Nummern für alle Kronen vorschlagen
 async function formularDirekt(an) {
   formular.direkt = an;
   renderFormular();
-  if (!an || serienAus) return;
+  const anzahl = formularKronen().length;
+  if (!an || serienAus || !anzahl) return;
   try {
-    const r = await schnittstelle('seriennummern', { anzahl: formular.positionen.length });
+    const r = await schnittstelle('seriennummern', { anzahl });
     if (!formular || !formular.direkt) return;
-    formular.mk = r.nummern.slice(0, formular.positionen.length);
+    formular.mk = r.nummern.slice(0, anzahl);
     renderFormular();
   } catch (e) {
     if (e.message === 'serienliste_fehlt' || e.message === 'unbekannte_aktion') { serienAus = true; renderFormular(); }
@@ -621,11 +636,13 @@ async function formularSpeichern() {
     const sendung = (f.sendung || '').replace(/\s+/g, '').toUpperCase();
     if (sendung && !/^[A-Z0-9]{8,40}$/.test(sendung)) { showStatus('Die Sendungsnummer sieht nicht richtig aus. Bitte prüfen.', 'error'); return; }
     Object.assign(daten, { direkt: true, sendungsnummer: sendung, rechnungsnr: (f.rechnungsnr || '').trim() });
-    if (!serienAus && f.mkEintragen) {
-      const l = f.positionen.map((p, i) => String(f.mk[i] || '').trim().toUpperCase());
+    const kronen = formularKronen();
+    if (!serienAus && f.mkEintragen && kronen.length) {
+      const l = kronen.map((o, j) => String(f.mk[j] || '').trim().toUpperCase());
       if (l.some(x => !/^MK-\d{4}-\d{3,}$/.test(x))) { showStatus('Bitte bei jeder Krone eine MK-Nummer eintragen (z. B. MK-2026-310) oder den Haken „In die Seriennummernliste eintragen“ entfernen.', 'error'); return; }
       if (new Set(l).size !== l.length) { showStatus('Eine MK-Nummer steht doppelt.', 'error'); return; }
       daten.seriennummern = l;
+      daten.serienIndex = kronen.map(o => o.i);
     }
   }
   const knopf = document.getElementById('bfSpeichern');

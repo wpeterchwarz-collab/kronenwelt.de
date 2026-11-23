@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.13', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.14', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -423,11 +423,12 @@ test.describe('Schnittstelle: Bestellbestätigung und Versandmail', () => {
     expect(m).toMatchObject({ to: 'p@example.de', name: "Mila's Kronenwelt", replyTo: 'm.kronenwelt@gmail.com' });
     expect(m.subject).toBe('Danke für deine Bestellung ' + r.bestellnr + ' 👑');
     for (const t of [r.bestellnr, 'Hallo Peter,', 'Party', 'Extra Mini', '„MILA“', 'Glitzer', euroLaut(preisVon('Party', 'Extra Mini')),
-      euroLaut(preisVon('Glitzer', 'Mini')), 'kostenlos', '8 Vogesenweg<br>75045 WALZBACHTAL<br>Deutschland', 'https://wa.me/4917631242035',
+      euroLaut(preisVon('Glitzer', 'Mini')), 'kostenlos', 'Peter Schwarz<br>8 Vogesenweg<br>75045 Walzbachtal</p>', 'https://wa.me/4917631242035',
       'Gemäß § 19 UStG', '/agb.html', '/widerruf.html', 'vom Widerrufsrecht ausgeschlossen', '5–6 Werktage']) expect(m.htmlBody).toContain(t);
     expect(m.body).toContain('Bestellnummer: ' + r.bestellnr);
     expect(m.body).toContain('- Party, ' + PARTY_ROSA + ', Extra Mini „MILA“');
-    expect(m.body).toContain('Peter Schwarz\n8 Vogesenweg\n75045 WALZBACHTAL\nDeutschland');
+    expect(m.body).toContain('Peter Schwarz\n8 Vogesenweg\n75045 Walzbachtal\n');   // ohne Land, ohne Großbuchstaben
+    expect(m.body).not.toContain('Deutschland');
     for (const x of [m.body, m.htmlBody]) { expect(x).not.toMatch(/[─━]{3,}/); expect(x).not.toContain('freuen uns werden'); expect(x).not.toContain('EmailJS'); }
     expect(m.htmlBody).toContain('max-width:560px');                     // passt aufs Handy
   });
@@ -459,8 +460,8 @@ test.describe('Schnittstelle: Bestellbestätigung und Versandmail', () => {
     post({ aktion: 'versenden', schluessel: S, nr: 'KW-20261001-003', sendungsnummer: '00340434123456789012', mail: true });
     const m = mails[0];
     for (const t of ['Deine Kronen sind unterwegs!', 'SENDUNG VERFOLGEN', 'piececode=00340434123456789012', '00340434123456789012',
-      'Einfarbig', '„FRIDOLIN“', 'Moorblick 4<br>24329 Dannau<br>Deutschland', '@kronenwelt', 'https://wa.me/4917631242035']) expect(m.htmlBody).toContain(t);
-    expect(m.body).toContain('Kim Muster\nMoorblick 4\n24329 Dannau\nDeutschland');
+      'Einfarbig', '„FRIDOLIN“', 'Moorblick 4<br>24329 Dannau</p>', '@kronenwelt', 'https://wa.me/4917631242035']) expect(m.htmlBody).toContain(t);
+    expect(m.body).toContain('Kim Muster\nMoorblick 4\n24329 Dannau\n');
     expect(m.body).not.toMatch(/[─━]{3,}/);
   });
 });
@@ -719,7 +720,8 @@ test.describe('Schnittstelle: Etsy (ab 1.9)', () => {
   const JETZT = Math.floor(Date.now() / 1000);
   const receipt = (id, extra = {}) => Object.assign({
     receipt_id: id, status: 'paid', name: 'Erika Etsy', buyer_email: '', created_timestamp: JETZT + 60,
-    formatted_address: 'Erika Etsy\nHundeweg 3\n76131 Karlsruhe\nDeutschland',
+    formatted_address: 'Erika Etsy\nHundeweg 3\n76131 KARLSRUHE\nDEUTSCHLAND',          // so liefert Etsy den fertigen Block
+    first_line: 'Hundeweg 3', second_line: '', zip: '76131', city: 'Karlsruhe', country_iso: 'DE',
     grandtotal: { amount: 1500, divisor: 100, currency_code: 'EUR' },
     transactions: [{ title: 'Personalisierte handgemachte Hundekrone, individuelle Krone, perfekt für Geburtstag, blau', quantity: 1, sku: '',
       variations: [{ formatted_name: 'Größe', formatted_value: 'Groß' }, { formatted_name: 'Personalisierung', formatted_value: 'BELLO' }] }]
@@ -787,11 +789,20 @@ test.describe('Schnittstelle: Etsy (ab 1.9)', () => {
     const b = u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0];
     expect(b).toMatchObject({ kanal: 'Etsy', status: 'Neu', zahlung: 'Etsy', preis: 15, kunde: 'Erika Etsy', plattformNr: '111',
       groesse: 'Gross', personalisierung: 'BELLO', artikel: '', kiste: 'nicht vom Lager',
-      adresse: 'Hundeweg 3, 76131 Karlsruhe, Deutschland' });
+      adresse: 'Hundeweg 3, 76131 Karlsruhe' });                // aus den Einzelfeldern: ohne Land, Ort normal geschrieben
     expect(b.variante).not.toContain(',');                       // Kommas im Etsy-Titel dürfen die Positionen nicht zerlegen
     expect(b.variante.length).toBeLessThanOrEqual(60);
     expect(b.notiz).toContain('noch nicht dem Katalog zugeordnet');
     expect(u.blatt('Lagerbewegungen')).toBeUndefined();
+  });
+
+  test('Adresse ohne Einzelfelder: aus dem Etsy-Block, ohne „DEUTSCHLAND“ und ohne Großbuchstaben', async () => {
+    const rc = receipt(333, { first_line: undefined, zip: undefined, city: undefined, country_iso: undefined,
+      name: 'Luca Adomeit', formatted_address: 'Luca Adomeit\nScheidtstraße 62\n42369 WUPPERTAL\nDEUTSCHLAND' });
+    const u = umgebung([], S, { etsy: { receipts: [rc] } });
+    verbinden(u); etsyAb(u);
+    u.post({ aktion: 'etsyAbruf', schluessel: S });
+    expect(u.post({ aktion: 'bestellungen', schluessel: S }).bestellungen[0].adresse).toBe('Scheidtstraße 62, 42369 Wuppertal');
   });
 
   test('mit unserer Artikelnummer als SKU: Krone aus dem Katalog, Lager aus der Etsy-Kiste abgebucht', async () => {

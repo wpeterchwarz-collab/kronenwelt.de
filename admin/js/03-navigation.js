@@ -7,8 +7,8 @@
 // = ein neuer Eintrag hier + ein <div id="tab-…" class="content">. Navigation, Unterreiter
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
-const ADMIN_VERSION = '1.12';
-const ADMIN_NEU = 'Neuer Knopf „Versenden + Rechnung“: markiert als versendet, schreibt die Rechnung fest und öffnet gleich den Druck.';
+const ADMIN_VERSION = '1.13';
+const ADMIN_NEU = 'Rechnungen öffnen sich jetzt auf derselben Seite (kein neues Fenster mehr). Adressen ohne „Deutschland“ und ohne Großbuchstaben. Traumfänger & Co. ohne MK-Nummer.';
 
 // Shops: jede Bestellung gehört zu einem Shop (Farbe in Listen). Ein weiterer Shop = ein Eintrag hier.
 // etsy = Name des Etsy-Shops, so wie er in der Spalte „Shop“ steht; der erste Shop ist der Standard (Webshop, Amazon, Markt …)
