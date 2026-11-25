@@ -852,6 +852,55 @@ test.describe('Admin: Zahlung prüfen', () => {
     await expect(k2.locator('.badge-pruefen')).toHaveCount(0);
   });
 
+  test('nicht geprüft (PayPal kurz gestört): unter „Jetzt wichtig“; Versenden holt die Prüfung nach, ohne Rückfrage', async ({ page }) => {
+    const paypal = { orders: { SPAETER12345: paypalZahlung(partyPreis) }, falsch: true };
+    const t = await openAdmin(page, [], { seite: '#produkte/preise', api: true, paypal });
+    const nr = shopBestellung(t, partyPreis, 'SPAETER12345');
+    await page.click('.nav-item[data-nav="start"]');
+    await expect(page.locator('#startTodo .todo').first()).toContainText('1 Bestellung: Zahlung noch nicht geprüft');
+    await expect(page.locator('#navZahlBestellungen')).toHaveClass(/rot/);
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await k.locator('summary').first().click();
+    await expect(k.locator('.zahlung-warnung.grau')).toContainText('Zahlung noch nicht geprüft');
+    paypal.falsch = false;                                                     // PayPal wieder erreichbar
+    let dialog = '';
+    page.on('dialog', d => { dialog = d.message(); d.dismiss(); });
+    await k.locator('button:has-text("Jetzt versenden")').click();
+    await k.getByRole('button', { name: 'Ohne Rechnung versenden' }).click();
+    await k.locator('input[id^="sn-"]').fill('00340434123456789012');          // Eingabe bleibt trotz Nachprüfung erhalten
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    await expect(page.locator('#statusText')).toHaveText(/^Versendet ✓/);
+    expect(dialog).toBe('');
+    const b = t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen.find(x => x.nr === nr);
+    expect(b.status).toBe('Versendet');
+    expect(b.sendungsnummer).toBe('00340434123456789012');
+    expect(b.zahlungGeprueft).toMatch(/^OK/);
+  });
+
+  test('bleibt nicht geprüft: Versenden und Rechnung erst nach Rückfrage', async ({ page }) => {
+    const t = await openAdmin(page, [], { seite: '#produkte/preise', api: true, paypal: { orders: {}, falsch: true } });
+    const nr = shopBestellung(t, partyPreis, 'GESTOERT1234');
+    await page.click('.nav-item[data-nav="bestellungen"]');
+    const k = page.locator(`.best[data-nr="${nr}"]`);
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();
+    const meldungen = [];
+    page.on('dialog', d => { meldungen.push(d.message()); d.dismiss(); });
+    await k.getByRole('button', { name: 'Rechnung erstellen' }).click();
+    await expect.poll(() => meldungen.length).toBe(1);
+    expect(meldungen[0]).toContain('konnte nicht geprüft werden');
+    expect(meldungen[0]).toContain('die Rechnung schreiben');
+    expect(t.blatt('Rechnungen')).toBeUndefined();                             // keine Rechnung
+    await k.getByRole('button', { name: 'Ohne Rechnung versenden' }).click();
+    await k.locator('input[id^="sn-"]').fill('00340434123456789012');
+    await k.locator('button:has-text("Als versendet markieren")').click();
+    await expect.poll(() => meldungen.length).toBe(2);
+    expect(meldungen[1]).toContain('trotzdem versenden');
+    expect(t.post({ aktion: 'bestellungen', schluessel: 'GEHEIM123' }).bestellungen.find(x => x.nr === nr).status).toBe('Neu');
+    expect(t.mails).toHaveLength(0);
+  });
+
   test('Einstellungen zeigen, ob die PayPal-Prüfung eingerichtet ist', async ({ page }) => {
     await openAdmin(page, [], { seite: '#einstellungen', api: true, paypal: { orders: {} } });
     await page.click('button[onclick="saveSchnittstelle()"]');

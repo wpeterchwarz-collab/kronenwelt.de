@@ -119,6 +119,10 @@ function startPunkte() {
     if (verdacht) punkte.push({ stufe: 'wichtig', bestellungen: true,
       titel: verdacht === 1 ? '1 Bestellung: Zahlung prüfen' : verdacht + ' Bestellungen: Zahlung prüfen',
       text: 'PayPal hat den Betrag nicht bestätigt. Erst nachsehen, dann nähen.' });
+    const ungeprueft = bestellungen.filter(b => /^NICHT GEPRÜFT/.test(b.zahlungGeprueft || '') && offen(b)).length;
+    if (ungeprueft) punkte.push({ stufe: 'wichtig', bestellungen: true,
+      titel: ungeprueft === 1 ? '1 Bestellung: Zahlung noch nicht geprüft' : ungeprueft + ' Bestellungen: Zahlung noch nicht geprüft',
+      text: 'Die Prüfung bei PayPal lief nicht. In der Bestellung auf „Jetzt prüfen“ tippen.' });
     const neu = bestellungen.filter(b => b.status === 'Neu');
     if (neu.length) punkte.push({ stufe: 'wichtig', titel: neu.length === 1 ? '1 neue Bestellung' : neu.length + ' neue Bestellungen',
       text: '', bestellungen: true, liste: neu });
