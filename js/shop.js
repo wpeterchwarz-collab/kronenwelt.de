@@ -1267,7 +1267,8 @@ function updateProduktSchema() {
 
 /* ---- 9. START ---- */
 // Zuerst der Notfall-Stand (sofort da, ohne Laden), danach ersetzt katalog.json ihn
-try { if (typeof KATALOG_NOTFALL !== 'undefined') applyKatalog(KATALOG_NOTFALL); } catch (e) { console.warn('Notfall-Katalog:', e); }
+try { if (typeof KATALOG_NOTFALL !== 'undefined' && applyKatalog(KATALOG_NOTFALL)) repriceCart(); }   // Warenkorb sofort prüfen, nicht erst nach katalog.json
+catch (e) { console.warn('Notfall-Katalog:', e); }
 initNav();
 initInstagram();
 initCookies();
@@ -1284,6 +1285,7 @@ Promise.all([
   if (medien && typeof medien === 'object') { MEDIEN = medien; previewKey = ''; }
   try { renderProduktMedien(); } catch (e) { console.warn('Medien:', e); }
   repriceCart();
+  if (document.getElementById('cartPanel').classList.contains('open')) renderCart();   // schon offen: neu zeichnen
   updateAbPreise();
   updateProduktSchema();
   try { renderGalerie(galerie); } catch (e) { console.warn('Galerie:', e); }
