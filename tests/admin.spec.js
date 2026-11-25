@@ -189,6 +189,20 @@ test.describe('Admin: Navigation und Start', () => {
     await expect(page.locator('.subnav-item.active')).toHaveText('Galerie');
   });
 
+  test('Galerie: Anführungszeichen und HTML in Namen werden angezeigt, nicht ausgeführt', async ({ page }) => {
+    await openAdmin(page, [], { seite: '#produkte/galerie' });
+    await expect(page.locator('.galerie-item').first()).toBeVisible();
+    const boese = { datei: 'x"><img src=y onerror="window.__xss=1">', name: 'Bonnie "die Große" <b>fett</b>', rasse: "Jack O'Lantern", krone: 'Party · Rosa' };
+    await page.evaluate(h => { currentGalerie.unshift(h); renderGalerie(); }, boese);
+    const felder = page.locator('#galerieItem_0 .galerie-fields input');
+    await expect(felder.nth(0)).toHaveValue(boese.datei);
+    await expect(felder.nth(1)).toHaveValue(boese.name);
+    await expect(felder.nth(2)).toHaveValue(boese.rasse);
+    await expect(page.locator('#galerieList b')).toHaveCount(0);
+    await page.waitForTimeout(200);
+    expect(await page.evaluate(() => !!window.__xss)).toBe(false);
+  });
+
   test('Start zeigt Zahlen aus Katalog und medien.json', async ({ page }) => {
     await openAdmin(page, [], { seite: '' });
     const medien = require('../medien.json');
