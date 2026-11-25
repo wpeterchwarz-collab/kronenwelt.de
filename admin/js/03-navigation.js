@@ -7,8 +7,8 @@
 // = ein neuer Eintrag hier + ein <div id="tab-…" class="content">. Navigation, Unterreiter
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
-const ADMIN_VERSION = '1.17';
-const ADMIN_NEU = 'Konnte die Zahlung nicht bei PayPal geprüft werden, holt „Versenden“ und „Rechnung erstellen“ die Prüfung zuerst nach und fragen sonst nach. Solche Bestellungen stehen unter „Jetzt wichtig“.';
+const ADMIN_VERSION = '1.18';
+const ADMIN_NEU = 'Galerie: Namen mit Anführungszeichen werden richtig angezeigt.';
 
 // Shops: jede Bestellung gehört zu einem Shop (Farbe in Listen). Ein weiterer Shop = ein Eintrag hier.
 // etsy = Name des Etsy-Shops, so wie er in der Spalte „Shop“ steht; der erste Shop ist der Standard (Webshop, Amazon, Markt …)
