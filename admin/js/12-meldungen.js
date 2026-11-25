@@ -29,7 +29,7 @@ function bestellungenAktualisiert() {
 
 function bestellZaehler(liste) {
   const neu = (liste || []).filter(b => b.status === 'Neu').length;
-  const pruefen = (liste || []).some(b => /^PRÜFEN/.test(b.zahlungGeprueft || '') && (b.status === 'Neu' || b.status === 'In Arbeit'));
+  const pruefen = (liste || []).some(b => /^(PRÜFEN|NICHT GEPRÜFT)/.test(b.zahlungGeprueft || '') && (b.status === 'Neu' || b.status === 'In Arbeit'));
   const el = document.getElementById('navZahlBestellungen');
   if (el) {
     el.hidden = !neu && !pruefen;

@@ -401,11 +401,34 @@ async function zahlungKlick(nr) {
 // Rechnung als ersten Schritt beim Versand? Nur wenn es noch keine gibt und etwas zu berechnen ist (keine Spende)
 const mitRechnungMoeglich = b => !b.rechnungsnr && b.kanal !== 'Spende' && (b.preis || 0) > 0 && b.status !== 'Storniert';
 
+// Vor Versenden/Rechnung: Zahlung muss bestätigt sein. Lief die Prüfung nicht (NICHT GEPRÜFT, z. B. PayPal kurz
+// nicht erreichbar), wird sie zuerst still nachgeholt. Bleibt ein Zweifel, entscheidet Sara nach einer Rückfrage.
+// Die Bestellung wird nur im Speicher ersetzt (kein Neuzeichnen), damit Eingaben im Formular erhalten bleiben.
+// Gibt die (ggf. aktualisierte) Bestellung zurück oder null = abbrechen.
+async function zahlungFreigegeben(nr, was) {
+  let b = bestellungNachNr(nr);
+  if (!b) return null;
+  if (/^NICHT GEPRÜFT/.test(b.zahlungGeprueft || '')) {
+    showStatus('Zahlung wird bei PayPal geprüft …', 'loading');
+    try {
+      const r = await schnittstelle('zahlung', { nr, zeile: b.zeile });
+      const i = bestellungen.findIndex(x => x.nr === nr);
+      if (i >= 0 && r.bestellung) bestellungen[i] = b = r.bestellung;
+    } catch (e) { /* bleibt „nicht geprüft“ → Rückfrage */ }
+    document.getElementById('statusBar').classList.remove('show');
+  }
+  const z = b.zahlungGeprueft || '';
+  const grund = /^PRÜFEN/.test(z) ? 'Die Zahlung dieser Bestellung ist nicht bestätigt:\n' + z.replace(/^PRÜFEN:\s*/, '')
+    : /^NICHT GEPRÜFT/.test(z) ? 'Die Zahlung dieser Bestellung konnte nicht geprüft werden:\n' + z.replace(/^NICHT GEPRÜFT:\s*/, '')
+    : '';
+  if (grund && !confirm(grund + '\n\nHast du in PayPal nachgesehen und willst trotzdem ' + was + '?')) return null;
+  return b;
+}
+
 // Letzter Schritt: Sendungsnummer eintragen und versenden (die Rechnung ist da schon festgeschrieben)
 async function versendenKlick(nr) {
-  const b = bestellungNachNr(nr);
+  const b = await zahlungFreigegeben(nr, 'versenden');
   if (!b) return;
-  if (/^PRÜFEN/.test(b.zahlungGeprueft || '') && !confirm('Die Zahlung dieser Bestellung ist nicht bestätigt:\n' + b.zahlungGeprueft.replace(/^PRÜFEN:\s*/, '') + '\n\nHast du in PayPal nachgesehen und willst trotzdem versenden?')) return;
   const sn = (document.getElementById('sn-' + nr) || {}).value || '';
   const mailEl = document.getElementById('mail-' + nr);
   const mail = !!(mailEl && mailEl.checked);
@@ -454,11 +477,14 @@ async function rechnungVorschauVorVersand(nr) {
 }
 let versandRechnungLaeuft = {};                          // { nr: true } solange eine Rechnung festgeschrieben wird
 async function rechnungVorVersandKlick(nr) {
-  const b = bestellungNachNr(nr);
-  if (!b || versandRechnungLaeuft[nr]) return;           // Doppelklick: nie zwei Anfragen
-  if (/^PRÜFEN/.test(b.zahlungGeprueft || '') && !confirm('Die Zahlung dieser Bestellung ist nicht bestätigt:\n' + b.zahlungGeprueft.replace(/^PRÜFEN:\s*/, '') + '\n\nHast du in PayPal nachgesehen und willst trotzdem die Rechnung schreiben?')) return;
+  if (!bestellungNachNr(nr) || versandRechnungLaeuft[nr]) return;   // Doppelklick: nie zwei Anfragen
+  versandRechnungLaeuft[nr] = true;                      // schon während der Zahlungsprüfung
+  let b = null;
+  try { b = await zahlungFreigegeben(nr, 'die Rechnung schreiben'); }
+  finally { if (!b) delete versandRechnungLaeuft[nr]; }
+  if (!b) return;
   const d = rechnungAusVersandFormular(b);
-  if (!d) return;
+  if (!d) { delete versandRechnungLaeuft[nr]; return; }
   const rechnung = d.rechnung, mk = d.mk;
   showStatus('Rechnung wird festgeschrieben …', 'loading');
   versandRechnungLaeuft[nr] = true;
