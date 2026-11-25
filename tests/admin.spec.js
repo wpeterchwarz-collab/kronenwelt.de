@@ -713,6 +713,8 @@ test.describe('Admin: Lager – Buchungen und Sonderfälle', () => {
   test('Anleitung: eingeklappt bleibt eingeklappt, auch nach dem Neuladen', async ({ page }) => {
     await openAdmin(page, [], { seite: '#lager', api: true });
     await expect(page.locator('#lagerAnleitung')).toHaveAttribute('open', '');   // leeres Lager: offen
+    await page.evaluate(() => new Promise(r => setTimeout(() => setTimeout(r))));  // ein „toggle“ hätte jetzt gefeuert
+    expect(await page.evaluate(() => localStorage.getItem('mkw_lager_anleitung'))).toBeNull();  // nur Klicks werden gemerkt
     await page.click('#lagerAnleitung summary');
     await expect(page.locator('#lagerAnleitung')).not.toHaveAttribute('open', '');
     await page.reload();
