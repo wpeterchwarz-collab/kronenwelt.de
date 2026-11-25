@@ -349,6 +349,19 @@ test.describe('Admin: Bestellungen bearbeiten', () => {
     expect(tabelle.blatt('Rechnungen')).toHaveLength(2);                       // keine zweite Rechnung
   });
 
+  test('Doppelklick auf „Rechnung erstellen“: nur eine Anfrage, nur eine Rechnung', async ({ page }) => {
+    const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
+    const anfragen = [];
+    page.on('request', r => { if (/script\.google\.com/.test(r.url()) && /"aktion":"rechnungVorVersand"/.test(r.postData() || '')) anfragen.push(r); });
+    const k = karte(page, 'KW-20261001-003');
+    await k.locator('summary').first().click();
+    await k.locator('button:has-text("Jetzt versenden")').click();
+    await k.getByRole('button', { name: 'Rechnung erstellen' }).dblclick();
+    await expect(page.locator('#statusText')).toContainText('Rechnung R-01272 ist festgeschrieben');
+    expect(anfragen).toHaveLength(1);
+    expect(tabelle.blatt('Rechnungen')).toHaveLength(2);                       // Kopf + eine Rechnung
+  });
+
   test('nach der Rechnung: falsche Sendungsnummer wird abgefangen, nichts versendet', async ({ page }) => {
     const tabelle = await openAdmin(page, [], { seite: '#bestellungen', api: true });
     const k = karte(page, 'KW-20261001-003');

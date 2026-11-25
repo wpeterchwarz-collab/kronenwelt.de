@@ -28,7 +28,7 @@ test.describe('Schnittstelle: Zugang', () => {
 
   test('ping meldet Version und Tabelle, unbekannte Aktion wird abgelehnt', async () => {
     const { post } = umgebung([]);
-    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.15', tabelle: 'Kronenwelt Bestellungen' });
+    expect(post({ aktion: 'ping', schluessel: S })).toMatchObject({ ok: true, version: '1.16', tabelle: 'Kronenwelt Bestellungen' });
     expect(post({ aktion: 'loeschen', schluessel: S })).toEqual({ ok: false, fehler: 'unbekannte_aktion' });
   });
 });
@@ -567,6 +567,63 @@ test.describe('Schnittstelle: Seriennummern', () => {
     liste.push(['MK-2025-315', 'etsy', 'von Hand', '11.11.2026', HERST, 'x']);
     const { post } = umgebung([], S, { serienliste: liste });
     expect(post({ aktion: 'seriennummern', schluessel: S, anzahl: 2 }).nummern).toEqual(['MK-2026-316', 'MK-2026-317']);
+  });
+});
+
+test.describe('Schnittstelle: Rechnung vor dem Versand', () => {
+  const MK = ['MK-2026-310', 'MK-2026-311'];
+  const vorVersand = (t, seriennummern = MK) => t.post({ aktion: 'rechnungVorVersand', schluessel: S, nr: 'KW-20261001-003', zeile: 2,
+    seriennummern, serienIndex: [0, 1], rechnung: { empfaenger: 'Kim Muster\nMoorblick 4\n24329 Dannau', seriennummern: seriennummern.join(', '),
+      positionen: [{ text: 'Einfarbig, Grün, Extra Mini „FRIDOLIN“ · ' + seriennummern[0], menge: 1, preis: 15 },
+        { text: 'Glitzer, Blau, Gross · ' + seriennummern[1], menge: 1, preis: 14 }] } });
+
+  test('Rechnung mit MK-Nummern, Saras Liste mit Rechnungsnummer – unter der Sperre; ein zweiter Klick macht keine zweite Rechnung', () => {
+    const t = umgebung([ZWEI_KRONEN], S, { serienliste: SARAS_LISTE() });
+    const r = vorVersand(t);
+    expect(r).toMatchObject({ ok: true, rechnung: { nr: 'R-01272', gesamt: 29 },
+      bestellung: { seriennummern: 'MK-2026-310, MK-2026-311', rechnungsnr: 'R-01272', status: 'Neu' } });
+    expect(t.sperre.anzahl).toBe(1);                                    // Rechnungsnummer und MK-Nummern unter der Sperre vergeben
+    expect(t.serien.slice(3).map(z => [z[0], z[6], z[7]])).toEqual([['MK-2026-310', 'KW-20261001-003', 'R-01272'], ['MK-2026-311', 'KW-20261001-003', 'R-01272']]);
+    const nochmal = vorVersand(t);                                      // Doppelklick / zweites Gerät
+    expect(nochmal).toMatchObject({ ok: false, fehler: 'seriennummer_vergeben' });
+    expect(vorVersand(t, ['MK-2026-312', 'MK-2026-313'])).toMatchObject({ ok: false, fehler: 'rechnung_vorhanden' });
+    expect(t.blatt('Rechnungen')).toHaveLength(2);                      // Kopf + genau eine Rechnung
+    expect(t.serien).toHaveLength(5);
+  });
+
+  test('Saras Liste fällt nach dem Festschreiben aus: der zweite Klick macht dieselbe Rechnung fertig', () => {
+    const t = umgebung([ZWEI_KRONEN], S, { serienliste: SARAS_LISTE(), kaputt: ['Serienliste'] });
+    const r = vorVersand(t);
+    expect(r).toMatchObject({ ok: false, text: 'Blatt gesperrt' });
+    expect(t.blatt('Rechnungen')).toHaveLength(2);                      // die Rechnung ist schon festgeschrieben …
+    expect(t.daten[1][spalte(t.daten, 'Seriennummern')] || '').toBe('');   // … die MK-Nummern fehlen noch
+    expect(t.serien).toHaveLength(4);
+    t.kaputt.length = 0;                                                 // Liste wieder erreichbar
+    const weiter = vorVersand(t);
+    expect(weiter).toMatchObject({ ok: true, rechnung: { nr: 'R-01272' },
+      bestellung: { seriennummern: 'MK-2026-310, MK-2026-311', rechnungsnr: 'R-01272' } });
+    expect(t.blatt('Rechnungen')).toHaveLength(2);                      // keine zweite Rechnung, keine Lücke
+    expect(t.serien.slice(3).map(z => [z[0], z[7]])).toEqual([['MK-2026-310', 'R-01272'], ['MK-2026-311', 'R-01272']]);
+    expect(t.post({ aktion: 'rechnungen', schluessel: S }).naechste).toBe('R-01273');
+  });
+
+  test('nach dem Ausfall andere MK-Nummern: klare Meldung mit den Nummern der Rechnung, nichts wird geändert', () => {
+    const t = umgebung([ZWEI_KRONEN], S, { serienliste: SARAS_LISTE(), kaputt: ['Serienliste'] });
+    vorVersand(t);
+    t.kaputt.length = 0;
+    const r = vorVersand(t, ['MK-2026-312', 'MK-2026-313']);
+    expect(r).toMatchObject({ ok: false, fehler: 'rechnung_vorhanden' });
+    expect(r.text).toContain('R-01272');
+    expect(r.text).toContain('MK-2026-310, MK-2026-311');
+    expect(t.blatt('Rechnungen')).toHaveLength(2);
+    expect(t.serien).toHaveLength(4);
+    expect(vorVersand(t).ok).toBe(true);                                 // mit den Nummern der Rechnung klappt es
+  });
+
+  test('Sicherheitsnetz: die Tabellen-Attrappe meldet jedes Schreiben ohne Sperre', () => {
+    const t = umgebung([ZWEI_KRONEN], S);
+    expect(() => t.ctx.statusSetzen({ nr: 'KW-20261001-003', zeile: 2, status: 'In Arbeit' })).toThrow('ohne Sperre geschrieben');
+    expect(t.post({ aktion: 'status', schluessel: S, nr: 'KW-20261001-003', zeile: 2, status: 'In Arbeit' }).ok).toBe(true);
   });
 });
 
