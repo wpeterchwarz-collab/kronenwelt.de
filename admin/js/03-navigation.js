@@ -7,8 +7,8 @@
 // = ein neuer Eintrag hier + ein <div id="tab-…" class="content">. Navigation, Unterreiter
 // und Adresszeile (#produkte/medien) bauen sich daraus von selbst.
 // ============================================================
-const ADMIN_VERSION = '1.18';
-const ADMIN_NEU = 'Galerie: Namen mit Anführungszeichen werden richtig angezeigt.';
+const ADMIN_VERSION = '1.19';
+const ADMIN_NEU = 'Aufgeräumt: gemeinsame Hilfsfunktionen für Texte und Euro-Beträge. Sonst keine Änderungen.';
 
 // Shops: jede Bestellung gehört zu einem Shop (Farbe in Listen). Ein weiterer Shop = ein Eintrag hier.
 // etsy = Name des Etsy-Shops, so wie er in der Spalte „Shop“ steht; der erste Shop ist der Standard (Webshop, Amazon, Markt …)
@@ -40,15 +40,15 @@ function filterLeisteHtml(basis, shopFn, kanalFn, neuZeichnen) {
   const kanaele = [...vorhanden].filter(Boolean).sort((a, b) => (KANAL_REIHENFOLGE.indexOf(a) + 99) % 99 - (KANAL_REIHENFOLGE.indexOf(b) + 99) % 99 || a.localeCompare(b));
   return `<div class="filter-leiste" role="group" aria-label="Nach Shop und Kanal filtern">
     ${chip('', 'Alle Shops', null)}
-    ${SHOPS.map(s => chip(s.id, `<span class="shop-punkt" style="background:${s.farbe}" aria-hidden="true"></span>${medienEsc(s.kurz)}`,
+    ${SHOPS.map(s => chip(s.id, `<span class="shop-punkt" style="background:${s.farbe}" aria-hidden="true"></span>${esc(s.kurz)}`,
       mitKanal.filter(x => shopFn(x).id === s.id).length)).join('')}
     <select class="kanal-wahl ${kanalFilter ? 'active' : ''}" aria-label="Kanal" onchange="kanalFilter=this.value;${neuZeichnen}">
-      <option value="">Alle Kanäle</option>${kanaele.map(k => `<option ${k === kanalFilter ? 'selected' : ''}>${medienEsc(k)}</option>`).join('')}</select>
+      <option value="">Alle Kanäle</option>${kanaele.map(k => `<option ${k === kanalFilter ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select>
     ${filterAktiv() ? `<button type="button" class="filter-weg" onclick="shopFilter='';kanalFilter='';${neuZeichnen}">Filter zurücksetzen</button>` : ''}
   </div>`;
 }
 
-const shopPunkt = b => { const s = shopVon(b); return `<span class="shop-punkt" style="background:${s.farbe}" title="${medienEsc(s.name)}" aria-label="${medienEsc(s.name)}" role="img"></span>`; };
+const shopPunkt = b => { const s = shopVon(b); return `<span class="shop-punkt" style="background:${s.farbe}" title="${esc(s.name)}" aria-label="${esc(s.name)}" role="img"></span>`; };
 const ICON = {
   start:    '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/></svg>',
   bestellungen: '<svg viewBox="0 0 24 24"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5"/><path d="M12 12v9"/></svg>',
@@ -85,7 +85,7 @@ function geheZu(ziel, ohneVerlauf) {
   const mitUnter = bereich.seiten.length > 1;
   sub.classList.toggle('show', mitUnter);
   sub.innerHTML = mitUnter ? bereich.seiten.map(s =>
-    `<button class="subnav-item ${s.id === seite ? 'active' : ''}" role="tab" data-seite="${s.id}" onclick="geheZu('${s.id}')">${medienEsc(s.titel)}</button>`).join('') : '';
+    `<button class="subnav-item ${s.id === seite ? 'active' : ''}" role="tab" data-seite="${s.id}" onclick="geheZu('${s.id}')">${esc(s.titel)}</button>`).join('') : '';
   const hash = '#' + bereich.id + (mitUnter ? '/' + seite : '');
   if (!ohneVerlauf && location.hash !== hash) history.pushState(null, '', hash);
   window.scrollTo(0, 0);

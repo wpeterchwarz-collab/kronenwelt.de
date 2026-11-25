@@ -4,10 +4,10 @@
 // ============================================================
 // GALERIE
 // ============================================================
-// Alle Werte entschärft (medienEsc): ein " oder < in Name/Dateiname darf das Formular nicht zerbrechen.
+// Alle Werte entschärft (esc): ein " oder < in Name/Dateiname darf das Formular nicht zerbrechen.
 function renderGalerie() {
-  const clName = medienEsc(localStorage.getItem('mkw_cl_name') || 'dw6amyijc');
-  const e = medienEsc;
+  const clName = esc(localStorage.getItem('mkw_cl_name') || 'dw6amyijc');
+  const e = esc;
   const list = document.getElementById('galerieList');
   list.innerHTML = currentGalerie.map((item, i) => `
     <div class="galerie-item" id="galerieItem_${i}">

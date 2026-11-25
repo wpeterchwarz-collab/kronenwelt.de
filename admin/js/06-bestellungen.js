@@ -54,7 +54,6 @@ function adresseSauber(t) {
     .map(x => gross(x) ? normal(x) : x).join(', ');
 }
 const persText = t => !t || t === 'ohne Namen' ? 'ohne Namen' : '„' + t + '“';
-const euro = x => (Math.round((x || 0) * 100) / 100).toFixed(2).replace('.', ',') + ' €';
 function datumTeile(d) {               // "01.10.2026" → { tag: '1.', monat: 'Okt' }
   const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(d || '');
   if (!m) return { tag: '–', monat: '' };
@@ -76,7 +75,7 @@ function renderBestellungen(laedt) {
   }
   if (laedt) { box.innerHTML = '<div class="card best-leer"><p>Bestellungen werden geladen …</p></div>'; return; }
   if (bestellFehler && !bestellungen) {
-    box.innerHTML = `<div class="card best-leer"><div class="card-title">Keine Verbindung</div><p>${medienEsc(bestellFehler)}</p>
+    box.innerHTML = `<div class="card best-leer"><div class="card-title">Keine Verbindung</div><p>${esc(bestellFehler)}</p>
       <button class="btn btn-teal" onclick="ladeBestellungen(true)">Nochmal versuchen</button></div>`;
     return;
   }
@@ -84,7 +83,7 @@ function renderBestellungen(laedt) {
     <div class="best-werkzeug2">
       <div class="best-filter" id="bestFilterLeiste" role="tablist"></div>
       <input class="best-suche" id="bestSuche" type="search" placeholder="Suchen: Name, Nr., Krone, Ort …"
-        value="${medienEsc(bestellSuche)}" oninput="bestellSuche=this.value;renderBestellListe()">
+        value="${esc(bestellSuche)}" oninput="bestellSuche=this.value;renderBestellListe()">
     </div>
     <div id="bestFilter2"></div>
     <div class="best-summe" id="bestSumme"></div>
@@ -181,9 +180,9 @@ function bestellKarte(b) {
   const offen = b.status === 'Neu' || b.status === 'In Arbeit';
   const markt = b.kanal === 'Markt';
   const mailMoeglich = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email || '');
-  const nr = jsArg(b.nr), id = medienEsc(b.nr);
+  const nr = jsArg(b.nr), id = esc(b.nr);
   const kanalStil = typeof kisteStil === 'function' && kisteFuerKanal(b.kanal) ? kisteStil(kisteFuerKanal(b.kanal)) : '';
-  const posZeile = x => medienEsc(x.variante + ' · ' + x.farbe + ' · ' + x.groesse) + (x.pers && x.pers !== 'ohne Namen' ? ' <em>„' + medienEsc(x.pers) + '“</em>' : '');
+  const posZeile = x => esc(x.variante + ' · ' + x.farbe + ' · ' + x.groesse) + (x.pers && x.pers !== 'ohne Namen' ? ' <em>„' + esc(x.pers) + '“</em>' : '');
   const wt = offen ? werktageSeit(b.datum) : null;
   const alter = wt == null ? '' : `<div class="best-alter ${wt >= LIEFERZEIT_WARNUNG && !markt ? 'warn' : ''}">${wt === 0 ? 'heute bestellt'
     : 'seit ' + wt + (wt === 1 ? ' Werktag' : ' Werktagen') + ' offen'}${wt >= LIEFERZEIT_WARNUNG && !markt ? ' · bitte bald versenden' : ''}</div>`;
@@ -206,11 +205,11 @@ function bestellKarte(b) {
         <div class="leise" style="font-size:12px;margin-top:6px">Zuerst die Rechnung: jede Krone steht mit ihrer MK-Nummer drauf. „Rechnungsvorschau“ zeigt sie vorher, ohne etwas zu speichern. Danach kommt die DHL-Sendungsnummer und „Versenden“.</div>
       </div>` : `
       <div class="versand-box">
-        ${b.rechnungsnr ? `<div class="leise" style="margin-bottom:8px">✓ Rechnung ${medienEsc(b.rechnungsnr)} ist erstellt. Jetzt noch die Sendungsnummer.</div>` : ''}
+        ${b.rechnungsnr ? `<div class="leise" style="margin-bottom:8px">✓ Rechnung ${esc(b.rechnungsnr)} ist erstellt. Jetzt noch die Sendungsnummer.</div>` : ''}
         <label class="titel" for="sn-${id}">${b.rechnungsnr ? '2. ' : ''}DHL-Sendungsnummer</label>
         <input type="text" id="sn-${id}" placeholder="z. B. 0034 0434 …" autocomplete="off" autocapitalize="characters">
         ${mailMoeglich ? `<label class="haken"><input type="checkbox" id="mail-${id}" ${b.kanal === 'Webshop' ? 'checked' : ''}>
-          <span>Versandmail mit Sendungsverfolgung an ${medienEsc(b.email)} schicken${b.kanal !== 'Webshop' ? ` <span class="leise">(${medienEsc(b.kanal)} schickt meist selbst eine Mail)</span>` : ''}</span></label>`
+          <span>Versandmail mit Sendungsverfolgung an ${esc(b.email)} schicken${b.kanal !== 'Webshop' ? ` <span class="leise">(${esc(b.kanal)} schickt meist selbst eine Mail)</span>` : ''}</span></label>`
           : '<div class="leise">Keine E-Mail-Adresse hinterlegt, es geht keine Versandmail raus.</div>'}
         ${serienFelder(b, pos)}
         <div class="aktion-zeile"><button class="btn btn-primary" onclick="versendenKlick(${nr})">${b.rechnungsnr ? 'Versenden' : 'Als versendet markieren'}</button>
@@ -220,10 +219,10 @@ function bestellKarte(b) {
   // Zahlung: PRÜFEN = verdächtig (nicht versenden, bevor in PayPal nachgesehen), NICHT GEPRÜFT = Prüfung lief nicht
   const zg = b.zahlungGeprueft || '';
   const zPruefen = /^PRÜFEN/.test(zg), zOffen = /^NICHT GEPRÜFT/.test(zg), zOk = /^OK/.test(zg);
-  const zahlungBox = zPruefen && b.status !== 'Storniert' ? `<div class="zahlung-warnung"><b>⚠ Zahlung prüfen:</b> ${medienEsc(zg.replace(/^PRÜFEN:\s*/, ''))}.<br>
+  const zahlungBox = zPruefen && b.status !== 'Storniert' ? `<div class="zahlung-warnung"><b>⚠ Zahlung prüfen:</b> ${esc(zg.replace(/^PRÜFEN:\s*/, ''))}.<br>
       Bitte erst in PayPal nachsehen, ob das Geld wirklich da ist, bevor du nähst oder versendest.
       <div><button class="btn btn-outline btn-sm" onclick="zahlungKlick(${nr})">Nochmal prüfen</button></div></div>`
-    : zOffen ? `<div class="zahlung-warnung grau"><b>Zahlung noch nicht geprüft</b> (${medienEsc(zg.replace(/^NICHT GEPRÜFT:\s*/, ''))}).
+    : zOffen ? `<div class="zahlung-warnung grau"><b>Zahlung noch nicht geprüft</b> (${esc(zg.replace(/^NICHT GEPRÜFT:\s*/, ''))}).
       <div><button class="btn btn-outline btn-sm" onclick="zahlungKlick(${nr})">Jetzt prüfen</button></div></div>` : '';
   let naechster = '';
   if (b.status === 'Storniert') naechster = '<div class="schritt-text"><b>Storniert.</b> Die Kronen sind wieder im Lager. Unter „Weitere Aktionen“ lässt sich das rückgängig machen.</div>';
@@ -236,33 +235,33 @@ function bestellKarte(b) {
         ${versandOffen[b.nr] ? '' : `<button class="btn btn-teal btn-sm" onclick="versandOffen[${nr}]=true;bestellOffen[${nr}]=true;renderBestellListe()">Schon fertig? Jetzt versenden</button>`}</div>
       ${versandOffen[b.nr] ? versandBox : ''}`;
   else if (b.status === 'In Arbeit') naechster = `<div class="schritt-text"><b>Nächster Schritt:</b> verpacken und versenden.</div>${versandBox}`;
-  else if (b.status === 'Versendet') naechster = `<div class="schritt-text"><b>Versendet</b> am ${medienEsc(b.versendetAm || '–')}${b.sendungsnummer
-      ? ` · <a href="https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${encodeURIComponent(b.sendungsnummer)}" target="_blank" rel="noopener">${medienEsc(b.sendungsnummer)} ↗</a>`
+  else if (b.status === 'Versendet') naechster = `<div class="schritt-text"><b>Versendet</b> am ${esc(b.versendetAm || '–')}${b.sendungsnummer
+      ? ` · <a href="https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${encodeURIComponent(b.sendungsnummer)}" target="_blank" rel="noopener">${esc(b.sendungsnummer)} ↗</a>`
       : ' · ohne Sendungsnummer'}${/Versandmail/.test(b.notiz || '') ? ' · Versandmail ist raus' : ''}</div>`;
   else if (b.status === 'Übergeben') naechster = '<div class="schritt-text"><b>Übergeben.</b> Erledigt.</div>';
 
   return `<details class="best ${b.status === 'Storniert' ? 'storniert' : ''}" data-nr="${id}" ${bestellOffen[b.nr] ? 'open' : ''} ontoggle="bestellOffen[this.dataset.nr]=this.open">
       <summary>
-        <div class="best-datum"><b>${d.tag}</b><span>${medienEsc(d.monat)}</span></div>
-        <div><div class="best-kunde">${istUngesehen(b) ? '<span class="frisch-punkt" title="Neu seit deinem letzten Besuch"></span>' : ''}${shopPunkt(b)}${medienEsc(b.kunde || 'ohne Namen')} <span class="${statusKlasse(b.status)}">${medienEsc(b.status)}</span><span class="best-kanal" style="${kanalStil}">${medienEsc(b.kanal)}</span>${zPruefen && b.status !== 'Storniert' ? '<span class="badge-pruefen">Zahlung prüfen</span>' : ''}</div>
+        <div class="best-datum"><b>${d.tag}</b><span>${esc(d.monat)}</span></div>
+        <div><div class="best-kunde">${istUngesehen(b) ? '<span class="frisch-punkt" title="Neu seit deinem letzten Besuch"></span>' : ''}${shopPunkt(b)}${esc(b.kunde || 'ohne Namen')} <span class="${statusKlasse(b.status)}">${esc(b.status)}</span><span class="best-kanal" style="${kanalStil}">${esc(b.kanal)}</span>${zPruefen && b.status !== 'Storniert' ? '<span class="badge-pruefen">Zahlung prüfen</span>' : ''}</div>
           <div class="best-pos">${pos.map(posZeile).join('<br>')}</div>${alter}</div>
-        <div class="best-betrag">${euro(b.preis)}<small>${pos.length > 1 ? pos.length + ' Kronen' : medienEsc(b.zahlung || '')}</small></div>
+        <div class="best-betrag">${euro(b.preis)}<small>${pos.length > 1 ? pos.length + ' Kronen' : esc(b.zahlung || '')}</small></div>
       </summary>
       <div class="best-body">
         <div class="best-schritt">${zahlungBox}${schritte}${naechster}</div>
         <dl class="best-details">
-          <div class="best-artikel was-naehen"><dt>${offen ? 'Was zu tun ist' : 'Artikel'}</dt><dd><ul>${pos.map(x => `<li>${medienEsc(x.variante)} · ${medienEsc(x.farbe)} · ${medienEsc(x.groesse)} · <em>${medienEsc(persText(x.pers))}</em></li>`).join('')}</ul></dd></div>
-          <div><dt>Lieferadresse</dt><dd>${b.adresse ? medienEsc(b.kunde) + '<br>' + medienEsc(adresseSauber(b.adresse)).replace(/, /g, '<br>')
+          <div class="best-artikel was-naehen"><dt>${offen ? 'Was zu tun ist' : 'Artikel'}</dt><dd><ul>${pos.map(x => `<li>${esc(x.variante)} · ${esc(x.farbe)} · ${esc(x.groesse)} · <em>${esc(persText(x.pers))}</em></li>`).join('')}</ul></dd></div>
+          <div><dt>Lieferadresse</dt><dd>${b.adresse ? esc(b.kunde) + '<br>' + esc(adresseSauber(b.adresse)).replace(/, /g, '<br>')
             + `<br><button class="kopier-knopf" onclick="adresseKopieren(${nr})">Adresse kopieren</button>` : '–'}</dd></div>
-          <div><dt>Kontakt</dt><dd>${b.email ? `<a href="mailto:${medienEsc(b.email)}?subject=${encodeURIComponent('Deine Bestellung ' + b.nr)}">${medienEsc(b.email)}</a>` : '–'}</dd></div>
-          <div><dt>Bestellung</dt><dd>${medienEsc(b.nr)}<br>${medienEsc(b.datum)}${b.uhrzeit ? ' um ' + medienEsc(b.uhrzeit) + ' Uhr' : ''} · ${medienEsc(b.kanal)}${b.plattformNr ? '<br>' + medienEsc(b.kanal) + '-Nr. ' + medienEsc(b.plattformNr) + (b.shop ? ' (' + medienEsc(b.shop) + ')' : '') : ''}${b.artikel && b.kiste ? '<br><span class="leise">Lager: ' + medienEsc(b.kiste === 'nicht vom Lager' ? 'nicht vom Lager' : 'aus Kiste ' + b.kiste) + '</span>' : ''}</dd></div>
-          ${b.seriennummern ? `<div><dt>MK-Nummern</dt><dd><span class="serien-zeile">${b.seriennummern.split(/\s*,\s*/).map(x => `<span class="mk">${medienEsc(x)}</span>`).join('')}</span>
-            <button class="kopier-knopf" onclick="textKopieren(${jsArg(b.seriennummern)}, 'MK-Nummern kopiert ✓')">Kopieren</button>${b.rechnungsnr ? '<br><span class="leise">Rechnung ' + medienEsc(b.rechnungsnr) + '</span>' : ''}</dd></div>` : ''}
-          <div><dt>Zahlung</dt><dd>${medienEsc(b.zahlung || '–')} · ${euro(b.preis)}${zOk ? '<br><span class="zahlung-ok">✓ bei PayPal bestätigt</span>' : ''}${b.paypalId ? '<br><span class="leise">PayPal ' + medienEsc(b.paypalId) + '</span>' : ''}</dd></div>
-          ${b.notiz ? `<div class="best-artikel"><dt>Notiz</dt><dd>${medienEsc(b.notiz)}</dd></div>` : ''}
+          <div><dt>Kontakt</dt><dd>${b.email ? `<a href="mailto:${esc(b.email)}?subject=${encodeURIComponent('Deine Bestellung ' + b.nr)}">${esc(b.email)}</a>` : '–'}</dd></div>
+          <div><dt>Bestellung</dt><dd>${esc(b.nr)}<br>${esc(b.datum)}${b.uhrzeit ? ' um ' + esc(b.uhrzeit) + ' Uhr' : ''} · ${esc(b.kanal)}${b.plattformNr ? '<br>' + esc(b.kanal) + '-Nr. ' + esc(b.plattformNr) + (b.shop ? ' (' + esc(b.shop) + ')' : '') : ''}${b.artikel && b.kiste ? '<br><span class="leise">Lager: ' + esc(b.kiste === 'nicht vom Lager' ? 'nicht vom Lager' : 'aus Kiste ' + b.kiste) + '</span>' : ''}</dd></div>
+          ${b.seriennummern ? `<div><dt>MK-Nummern</dt><dd><span class="serien-zeile">${b.seriennummern.split(/\s*,\s*/).map(x => `<span class="mk">${esc(x)}</span>`).join('')}</span>
+            <button class="kopier-knopf" onclick="textKopieren(${jsArg(b.seriennummern)}, 'MK-Nummern kopiert ✓')">Kopieren</button>${b.rechnungsnr ? '<br><span class="leise">Rechnung ' + esc(b.rechnungsnr) + '</span>' : ''}</dd></div>` : ''}
+          <div><dt>Zahlung</dt><dd>${esc(b.zahlung || '–')} · ${euro(b.preis)}${zOk ? '<br><span class="zahlung-ok">✓ bei PayPal bestätigt</span>' : ''}${b.paypalId ? '<br><span class="leise">PayPal ' + esc(b.paypalId) + '</span>' : ''}</dd></div>
+          ${b.notiz ? `<div class="best-artikel"><dt>Notiz</dt><dd>${esc(b.notiz)}</dd></div>` : ''}
         </dl>
         <div class="aktion-zeile re-aktion">${/^R-\d{5}$/.test(b.rechnungsnr || '')
-          ? `<span class="leise">Rechnung ${medienEsc(b.rechnungsnr)}</span><button class="btn btn-outline btn-sm" onclick="rechnungZurBestellung(${nr})">Rechnung drucken / PDF</button>`
+          ? `<span class="leise">Rechnung ${esc(b.rechnungsnr)}</span><button class="btn btn-outline btn-sm" onclick="rechnungZurBestellung(${nr})">Rechnung drucken / PDF</button>`
           : b.status !== 'Storniert' && !b.rechnungsnr && !(rechnungZuerst && versandSichtbar) ? `<button class="btn btn-outline btn-sm" onclick="rechnungAusBestellung(${nr})">Rechnung erstellen</button>` : ''}</div>
         <details class="best-mehr"><summary>Weitere Aktionen</summary>
           <div class="aktion-zeile"><label class="leise" for="st-${id}">Status von Hand setzen:</label>
@@ -271,7 +270,7 @@ function bestellKarte(b) {
             </select></div>
           <div class="leise" style="font-size:12px">Zum Beispiel, um eine versehentliche Änderung zurückzunehmen. „Storniert“ bucht die Kronen zurück ins Lager.</div>
           <div class="aktion-zeile" style="margin-top:10px"><label class="leise" for="re2-${id}">Rechnungsnummer:</label>
-            <input type="text" id="re2-${id}" value="${medienEsc(b.rechnungsnr || '')}" placeholder="nur für alte Papierkram-Rechnungen" style="max-width:200px;padding:7px 9px;border:1px solid var(--line2);border-radius:2px;font-size:15px">
+            <input type="text" id="re2-${id}" value="${esc(b.rechnungsnr || '')}" placeholder="nur für alte Papierkram-Rechnungen" style="max-width:200px;padding:7px 9px;border:1px solid var(--line2);border-radius:2px;font-size:15px">
             <button class="btn btn-outline btn-sm" onclick="rechnungKlick(${nr})">Speichern</button></div>
         </details>
       </div>
@@ -354,19 +353,19 @@ function renderStornoDialog() {
   const mailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email || '');
   let d = document.getElementById('stornoDialog');
   if (!d) { d = document.createElement('div'); d.id = 'stornoDialog'; d.className = 'dlg'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); document.body.appendChild(d); }
-  const hinweisPlattform = b.kanal === 'Etsy' || b.kanal === 'Amazon' ? ` <span class="leise">(${medienEsc(b.kanal)} informiert den Kunden meist selbst)</span>` : '';
+  const hinweisPlattform = b.kanal === 'Etsy' || b.kanal === 'Amazon' ? ` <span class="leise">(${esc(b.kanal)} informiert den Kunden meist selbst)</span>` : '';
   d.innerHTML = `<div class="dlg-box">
     <h2>Bestellung stornieren?</h2>
-    <div class="dlg-sub">${medienEsc(b.nr)} · ${medienEsc(b.kunde || 'ohne Namen')} · ${euro(b.preis)}<br>Die Kronen werden automatisch zurück ins Lager gebucht.</div>
+    <div class="dlg-sub">${esc(b.nr)} · ${esc(b.kunde || 'ohne Namen')} · ${euro(b.preis)}<br>Die Kronen werden automatisch zurück ins Lager gebucht.</div>
     <label class="feld" for="stGrund">Grund</label>
     <select id="stGrund" onchange="stornoFeld('grund', this.value)">${STORNO_GRUENDE.map(g => `<option value="${g.id}" ${g.id === s.grund ? 'selected' : ''}>${g.titel}</option>`).join('')}</select>
     ${/paypal/i.test(b.zahlung || '') ? `<label class="haken"><input type="checkbox" id="stErstattet" ${s.erstattet ? 'checked' : ''} onchange="stornoFeld('erstattet', this.checked)">
       <span>Das Geld ist bei PayPal schon zurückgezahlt</span></label>` : ''}
     <label class="haken"><input type="checkbox" id="stMail" ${s.mail ? 'checked' : ''} ${mailOk ? '' : 'disabled'} onchange="stornoFeld('mail', this.checked)">
-      <span>${mailOk ? 'Kunde per E-Mail informieren an <b>' + medienEsc(b.email) + '</b>' + hinweisPlattform : 'Keine E-Mail-Adresse hinterlegt, es geht keine Mail raus'}</span></label>
+      <span>${mailOk ? 'Kunde per E-Mail informieren an <b>' + esc(b.email) + '</b>' + hinweisPlattform : 'Keine E-Mail-Adresse hinterlegt, es geht keine Mail raus'}</span></label>
     ${s.mail ? `<div class="dlg-mail"><label class="feld" for="stText">Text der Mail (du kannst ihn ändern)</label>
-      <textarea id="stText" oninput="storno.text=this.value;storno.bearbeitet=true">${medienEsc(s.text)}</textarea>
-      <div class="leise" style="font-size:12px;margin-top:6px">Betreff: „Deine Bestellung ${medienEsc(b.nr)} wurde storniert“. Darunter stehen automatisch Bestellnummer, Betrag und die Kronen.</div></div>` : ''}
+      <textarea id="stText" oninput="storno.text=this.value;storno.bearbeitet=true">${esc(s.text)}</textarea>
+      <div class="leise" style="font-size:12px;margin-top:6px">Betreff: „Deine Bestellung ${esc(b.nr)} wurde storniert“. Darunter stehen automatisch Bestellnummer, Betrag und die Kronen.</div></div>` : ''}
     <div class="dlg-knoepfe">
       <button class="btn btn-outline" onclick="stornoSchliessen()">Abbrechen</button>
       <button class="btn btn-stornieren" id="stOk" onclick="stornoBestaetigen()">${s.mail ? 'Stornieren und Mail senden' : 'Stornieren ohne Mail'}</button>
@@ -521,14 +520,14 @@ function serienFelder(b, pos, ohneReNr) {
   if (serienAus || b.seriennummern) return '';           // schon vergeben (z. B. mit der Rechnung)
   const kr = mkPositionen(pos);
   if (!kr.length) return '';                             // keine Krone dabei: keine MK-Nummer
-  const id = medienEsc(b.nr), v = serienVorschlaege[b.nr];
+  const id = esc(b.nr), v = serienVorschlaege[b.nr];
   if (!v && !serienLaedt[b.nr]) { serienLaedt[b.nr] = true; setTimeout(() => serienLaden(b.nr, kr.length), 0); }
   return `<div class="serien" id="serien-${id}">
     <label class="titel">MK-Nummern für den Beileger</label>
-    <div class="serien-felder">${kr.map(({ x, i }, j) => `<label class="serien-feld">${medienEsc(x.variante)}${x.pers && x.pers !== 'ohne Namen' ? ' „' + medienEsc(x.pers) + '“' : ''}
-      <input type="text" id="mk-${id}-${j}" data-pos="${i}" value="${medienEsc(v ? v[j] || '' : '')}" placeholder="${v ? '' : 'wird geladen …'}" autocomplete="off" autocapitalize="characters"></label>`).join('')}</div>
+    <div class="serien-felder">${kr.map(({ x, i }, j) => `<label class="serien-feld">${esc(x.variante)}${x.pers && x.pers !== 'ohne Namen' ? ' „' + esc(x.pers) + '“' : ''}
+      <input type="text" id="mk-${id}-${j}" data-pos="${i}" value="${esc(v ? v[j] || '' : '')}" placeholder="${v ? '' : 'wird geladen …'}" autocomplete="off" autocapitalize="characters"></label>`).join('')}</div>
     <label class="haken"><input type="checkbox" id="mkan-${id}" checked><span>In die Seriennummernliste eintragen</span></label>
-    ${ohneReNr ? '' : `<label class="serien-feld" style="max-width:260px">Rechnungsnummer (optional)<input type="text" id="re-${id}" value="${medienEsc(b.rechnungsnr || '')}" autocomplete="off"></label>`}
+    ${ohneReNr ? '' : `<label class="serien-feld" style="max-width:260px">Rechnungsnummer (optional)<input type="text" id="re-${id}" value="${esc(b.rechnungsnr || '')}" autocomplete="off"></label>`}
   </div>`;
 }
 async function serienLaden(nr, anzahl) {
@@ -628,7 +627,7 @@ function renderFormular() {
   if (!box) return;
   if (!formular) { box.innerHTML = ''; return; }
   const f = formular;
-  const opt = (liste, wert) => liste.map(x => `<option ${x === wert ? 'selected' : ''}>${medienEsc(x)}</option>`).join('');
+  const opt = (liste, wert) => liste.map(x => `<option ${x === wert ? 'selected' : ''}>${esc(x)}</option>`).join('');
   const preis = p => f.kanal === 'Spende' ? 0 : p.preis != null && !isNaN(p.preis) ? p.preis : positionsPreis(p);
   const summe = f.positionen.reduce((n, p) => n + preis(p), 0);
   box.innerHTML = `<div class="card bf">
@@ -639,12 +638,12 @@ function renderFormular() {
     <div class="bf-grid">
       <div><label for="bfKanal">Kanal</label><select id="bfKanal" onchange="formularFeld('kanal', this.value)">${opt(KANAELE, f.kanal)}</select></div>
       <div><label for="bfDatum">Datum</label><input id="bfDatum" type="date" value="${f.datum}" onchange="formularFeld('datum', this.value)"></div>
-      ${f.kanal === 'Etsy' || f.kanal === 'Amazon' ? `<div class="voll"><label for="bfPlattformNr">Bestellnummer bei ${medienEsc(f.kanal)}</label>
-        <input id="bfPlattformNr" type="text" value="${medienEsc(f.plattformNr)}" oninput="formular.plattformNr=this.value" placeholder="${f.kanal === 'Amazon' ? 'z. B. 302-1234567-1234567' : 'z. B. 3456789012'}"></div>` : ''}
+      ${f.kanal === 'Etsy' || f.kanal === 'Amazon' ? `<div class="voll"><label for="bfPlattformNr">Bestellnummer bei ${esc(f.kanal)}</label>
+        <input id="bfPlattformNr" type="text" value="${esc(f.plattformNr)}" oninput="formular.plattformNr=this.value" placeholder="${f.kanal === 'Amazon' ? 'z. B. 302-1234567-1234567' : 'z. B. 3456789012'}"></div>` : ''}
       <div class="voll"><label>Kronen</label>
         ${f.positionen.map((p, i) => p.variante === SONSTIGES ? `<div class="bf-pos">
           <div><label>Krone</label><select onchange="positionFeld(${i}, 'variante', this.value)">${opt(kronenListe().concat([SONSTIGES]), p.variante)}</select></div>
-          <div style="grid-column:span 4"><label>Bezeichnung</label><input type="text" maxlength="60" value="${medienEsc(p.bezeichnung || '')}" placeholder="z. B. Zahlen-Set 1–9 oder Halloween-Sonderanfertigung" oninput="formular.positionen[${i}].bezeichnung=this.value"></div>
+          <div style="grid-column:span 4"><label>Bezeichnung</label><input type="text" maxlength="60" value="${esc(p.bezeichnung || '')}" placeholder="z. B. Zahlen-Set 1–9 oder Halloween-Sonderanfertigung" oninput="formular.positionen[${i}].bezeichnung=this.value"></div>
           <div><label>Preis €</label><input type="number" step="0.01" min="0" value="${preis(p)}" ${f.kanal === 'Spende' ? 'disabled title="Spende: 0 €"' : ''} onchange="positionFeld(${i}, 'preis', this.value)"></div>
           ${f.positionen.length > 1 ? `<button class="x" title="Entfernen" onclick="formular.positionen.splice(${i},1);renderFormular()">✕</button>` : '<span></span>'}
         </div>` : `<div class="bf-pos">
@@ -654,33 +653,33 @@ function renderFormular() {
           <div><label>Pets</label>${isZahlVariante(p.variante)
             ? `<select onchange="positionFeld(${i}, 'pets', this.value)">${[3, 6, 9].map(n => `<option value="${n}" ${n === p.pets ? 'selected' : ''}>${n}</option>`).join('')}</select>`
             : '<select disabled><option>–</option></select>'}</div>
-          <div><label>${isZahlVariante(p.variante) ? 'Zahlen' : 'Name'}</label><input type="text" maxlength="20" value="${medienEsc(p.pers)}" placeholder="${isZahlVariante(p.variante) ? '1 2 3' : 'ohne Namen'}" oninput="formular.positionen[${i}].pers=this.value"></div>
+          <div><label>${isZahlVariante(p.variante) ? 'Zahlen' : 'Name'}</label><input type="text" maxlength="20" value="${esc(p.pers)}" placeholder="${isZahlVariante(p.variante) ? '1 2 3' : 'ohne Namen'}" oninput="formular.positionen[${i}].pers=this.value"></div>
           <div><label>Preis €</label><input type="number" step="0.01" min="0" value="${preis(p)}" ${f.kanal === 'Spende' ? 'disabled title="Spende: 0 €"' : ''} onchange="positionFeld(${i}, 'preis', this.value)"></div>
           ${f.positionen.length > 1 ? `<button class="x" title="Krone entfernen" onclick="formular.positionen.splice(${i},1);renderFormular()">✕</button>` : '<span></span>'}
         </div>`).join('')}
         <button class="btn btn-teal btn-sm" onclick="formular.positionen.push(neuePosition());formular.direkt ? formularDirekt(true) : renderFormular()">+ weitere Krone</button>
       </div>
-      <div><label for="bfKunde">${f.kanal === 'Spende' ? 'Beschenkt / gesponsert an' : 'Kundenname'}</label><input id="bfKunde" type="text" value="${medienEsc(f.kunde)}" oninput="formular.kunde=this.value" placeholder="${f.kanal === 'Markt' ? 'optional' : ''}"></div>
-      <div><label for="bfEmail">E-Mail</label><input id="bfEmail" type="email" value="${medienEsc(f.email)}" oninput="formular.email=this.value" placeholder="optional"></div>
-      <div class="voll"><label for="bfAdresse">Lieferadresse</label><textarea id="bfAdresse" oninput="formular.adresse=this.value" placeholder="${f.kanal === 'Markt' ? 'bei Übergabe auf dem Markt nicht nötig' : 'Straße, PLZ Ort'}">${medienEsc(f.adresse)}</textarea></div>
+      <div><label for="bfKunde">${f.kanal === 'Spende' ? 'Beschenkt / gesponsert an' : 'Kundenname'}</label><input id="bfKunde" type="text" value="${esc(f.kunde)}" oninput="formular.kunde=this.value" placeholder="${f.kanal === 'Markt' ? 'optional' : ''}"></div>
+      <div><label for="bfEmail">E-Mail</label><input id="bfEmail" type="email" value="${esc(f.email)}" oninput="formular.email=this.value" placeholder="optional"></div>
+      <div class="voll"><label for="bfAdresse">Lieferadresse</label><textarea id="bfAdresse" oninput="formular.adresse=this.value" placeholder="${f.kanal === 'Markt' ? 'bei Übergabe auf dem Markt nicht nötig' : 'Straße, PLZ Ort'}">${esc(f.adresse)}</textarea></div>
       <div><label for="bfZahlung">Zahlung</label><select id="bfZahlung" onchange="formularFeld('zahlung', this.value)">${opt(ZAHLARTEN, f.zahlung)}</select></div>
       ${f.direkt ? '' : `<div><label for="bfStatus">Status</label><select id="bfStatus" onchange="formularFeld('status', this.value)">${opt(STATUS_LISTE.filter(x => x !== 'Storniert'), f.status)}</select></div>`}
       <div class="voll"><label for="bfKiste">Vom Lager abbuchen</label><select id="bfKiste" onchange="formularFeld('kiste', this.value)">
-        ${lagerKisten().map(k => `<option value="${medienEsc(k)}" ${k === f.kiste ? 'selected' : ''}>aus Kiste ${medienEsc(k)}</option>`).join('')}
+        ${lagerKisten().map(k => `<option value="${esc(k)}" ${k === f.kiste ? 'selected' : ''}>aus Kiste ${esc(k)}</option>`).join('')}
         <option value="" ${!f.kiste ? 'selected' : ''}>nicht vom Lager (auf Bestellung genäht)</option></select></div>
-      <div class="voll"><label for="bfNotiz">Notiz</label><input id="bfNotiz" type="text" value="${medienEsc(f.notiz)}" oninput="formular.notiz=this.value" placeholder="${f.kanal === 'Spende' ? 'z. B. Tombola Tierheim Bruchsal, Gewinnspiel Instagram' : 'z. B. Weihnachtsmarkt Bretten'}"></div>
+      <div class="voll"><label for="bfNotiz">Notiz</label><input id="bfNotiz" type="text" value="${esc(f.notiz)}" oninput="formular.notiz=this.value" placeholder="${f.kanal === 'Spende' ? 'z. B. Tombola Tierheim Bruchsal, Gewinnspiel Instagram' : 'z. B. Weihnachtsmarkt Bretten'}"></div>
     </div>
     <div class="bf-summe"><span class="leise" style="font-family:var(--f-sans);font-size:13px;margin-right:8px">Summe</span><span id="bfSumme">${euro(summe)}</span></div>
     <label class="haken" style="margin-top:14px"><input type="checkbox" id="bfDirekt" ${f.direkt ? 'checked' : ''} onchange="formularDirekt(this.checked)">
       <span><b>${f.kanal === 'Markt' ? 'Schon übergeben' : f.kanal === 'Spende' ? 'Schon verschenkt' : 'Schon verschickt'}</b> – gleich ${f.kanal === 'Markt' ? 'als übergeben' : f.kanal === 'Spende' ? 'als erledigt (mit Sendungsnummer: versendet, sonst: übergeben)' : 'als versendet'} speichern, mit MK-Nummern</span></label>
     ${f.direkt ? `<div class="versand-box">
       ${f.kanal === 'Markt' ? '' : `<label class="titel" for="bfSendung">DHL-Sendungsnummer</label>
-      <input type="text" id="bfSendung" value="${medienEsc(f.sendung)}" oninput="formular.sendung=this.value" placeholder="optional" autocomplete="off" autocapitalize="characters">`}
+      <input type="text" id="bfSendung" value="${esc(f.sendung)}" oninput="formular.sendung=this.value" placeholder="optional" autocomplete="off" autocapitalize="characters">`}
       ${serienAus || !formularKronen().length ? '' : `<div class="serien"><label class="titel">MK-Nummern für den Beileger</label>
-        <div class="serien-felder">${formularKronen().map(({ p }, i) => `<label class="serien-feld">${medienEsc(p.variante)}${p.pers ? ' „' + medienEsc(p.pers) + '“' : ''}
-          <input type="text" id="bfMk-${i}" value="${medienEsc(f.mk[i] || '')}" placeholder="${f.mk.length ? '' : 'wird geladen …'}" oninput="formular.mk[${i}]=this.value" autocomplete="off" autocapitalize="characters"></label>`).join('')}</div>
+        <div class="serien-felder">${formularKronen().map(({ p }, i) => `<label class="serien-feld">${esc(p.variante)}${p.pers ? ' „' + esc(p.pers) + '“' : ''}
+          <input type="text" id="bfMk-${i}" value="${esc(f.mk[i] || '')}" placeholder="${f.mk.length ? '' : 'wird geladen …'}" oninput="formular.mk[${i}]=this.value" autocomplete="off" autocapitalize="characters"></label>`).join('')}</div>
         <label class="haken"><input type="checkbox" id="bfMkAn" ${f.mkEintragen ? 'checked' : ''} onchange="formular.mkEintragen=this.checked"><span>In die Seriennummernliste eintragen</span></label></div>`}
-      <label class="serien-feld" style="max-width:260px">Rechnungsnummer (optional)<input type="text" id="bfRechnung" value="${medienEsc(f.rechnungsnr)}" oninput="formular.rechnungsnr=this.value" autocomplete="off"></label>
+      <label class="serien-feld" style="max-width:260px">Rechnungsnummer (optional)<input type="text" id="bfRechnung" value="${esc(f.rechnungsnr)}" oninput="formular.rechnungsnr=this.value" autocomplete="off"></label>
     </div>` : ''}
     <div class="btn-row"><button class="btn btn-primary" id="bfSpeichern" onclick="formularSpeichern()">${f.direkt ? (f.kanal === 'Markt' ? 'Speichern als übergeben' : f.kanal === 'Spende' ? 'Speichern als verschenkt' : 'Speichern als versendet') : 'Bestellung speichern'}</button>
       <button class="btn btn-outline" onclick="formularSchliessen()">Abbrechen</button></div>

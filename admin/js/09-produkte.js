@@ -5,7 +5,6 @@
 // PREISE
 // ============================================================
 const PREIS_ID = (v, g) => ('price_' + v + '_' + g).replace(/[^a-zA-Z0-9_]/g, '_');
-const euroTxt = x => (Math.round(x * 100) / 100).toFixed(2).replace('.', ',') + ' €';
 const preisWert = id => { const el = document.getElementById(id); return el ? (parseFloat(el.value) || 0) : 0; };
 const preisFeld = (id, wert, extra) =>
   `<span class="preis-feld"><input type="number" step="0.01" min="0" id="${id}" value="${wert}" ${extra || ''}><span>€</span></span>`;
@@ -34,8 +33,8 @@ function renderPreise() {
         ${groessenFuer(v).map(g => `
           <label for="${id(v, g)}">${g}</label>
           ${preisFeld(id(v, g), (currentPrices[v] && currentPrices[v][g]) || 0, 'oninput="zahlPreiseAktualisieren()"')}
-          <div class="endpreis" data-v="${medienEsc(v)}" data-g="${g}" data-p="6"></div>
-          <div class="endpreis" data-v="${medienEsc(v)}" data-g="${g}" data-p="9"></div>
+          <div class="endpreis" data-v="${esc(v)}" data-g="${g}" data-p="6"></div>
+          <div class="endpreis" data-v="${esc(v)}" data-g="${g}" data-p="9"></div>
         `).join('')}
       </div>
     </div>`;
@@ -57,7 +56,7 @@ function renderPreise() {
 function zahlPreiseAktualisieren() {
   document.querySelectorAll('#priceGrid .endpreis').forEach(el => {
     const basis = preisWert(PREIS_ID(el.dataset.v, el.dataset.g));
-    el.textContent = euroTxt(basis + preisWert(PREIS_ID(AUFPREIS_KEY, el.dataset.p + ' Pets')));
+    el.textContent = euro(basis + preisWert(PREIS_ID(AUFPREIS_KEY, el.dataset.p + ' Pets')));
   });
 }
 
@@ -168,7 +167,6 @@ const medienAuswahl = {};                         // gewählte Farbe je Krone ('
 let medienZiel = null;                            // { v, k } für den laufenden Upload
 
 const clName_ = () => localStorage.getItem('mkw_cl_name') || 'dw6amyijc';
-const medienEsc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const medienSlug = t => String(t).toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 
 function medienEintrag(v, k, anlegen) {
@@ -213,7 +211,7 @@ const hauptUrl = (id, ext, w) => `https://res.cloudinary.com/${clName_()}/image/
 
 function hauptKachel(id, ext, onErsetzen, titel) {
   if (!id) return `<div class="medien-tile haupt ohne-bild"><div class="leer">Kein fester Name hinterlegt – bitte in katalog.json eintragen</div><div class="tag">★ Hauptfoto</div></div>`;
-  return `<div class="medien-tile haupt" data-id="${medienEsc(id)}">
+  return `<div class="medien-tile haupt" data-id="${esc(id)}">
       <img src="${hauptUrl(id, ext, 440)}" alt="" onerror="this.parentNode.classList.add('ohne-bild')">
       <div class="leer">Noch kein Hauptfoto</div>
       <div class="tag">★ ${titel || 'Hauptfoto'}</div>
@@ -269,12 +267,12 @@ function renderMedien() {
     const optionen = ['_default', ...info.farben].map(f => {
       const name = f === '_default' ? 'Alle Farben (Kollektionsbild)' : f;
       const stern = medienHatEigene(v, f) ? ' ★' : '';
-      return `<option value="${medienEsc(f)}" ${f === k ? 'selected' : ''}>${medienEsc(name + stern)}</option>`;
+      return `<option value="${esc(f)}" ${f === k ? 'selected' : ''}>${esc(name + stern)}</option>`;
     }).join('');
 
     const hid = hauptId(v, k);
     const teilt = teilenFoto(v, k, hid);
-    const extra = teilt.length ? `Dasselbe Hauptfoto gilt auch für ${medienEsc(teilt.join(', '))}. Ersetzen ändert es dort mit.` : '';
+    const extra = teilt.length ? `Dasselbe Hauptfoto gilt auch für ${esc(teilt.join(', '))}. Ersetzen ändert es dort mit.` : '';
 
     let hint = '';
     if (k !== '_default' && !e.bilder.length) hint = 'Diese Farbe hat keine eigenen weiteren Fotos – im Shop werden die von „Alle Farben“ gezeigt.';
@@ -305,7 +303,7 @@ function renderMedien() {
       <details class="fv-krone" ${medienOffen[v] ? 'open' : ''} data-vi="${vi}" ontoggle="medienOffen[kronenListe()[this.dataset.vi]]=this.open">
         <summary>
           ${kollektion ? `<img class="fv-sum-img" src="${hauptUrl(kollektion, 'jpg', 104)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<div class="fv-sum-img"></div>'}
-          <div class="fv-sum-txt"><div class="fv-sum-name">${medienEsc(v)}</div><div class="fv-sum-meta">${medienEsc(meta)}</div></div>
+          <div class="fv-sum-txt"><div class="fv-sum-name">${esc(v)}</div><div class="fv-sum-meta">${esc(meta)}</div></div>
           <span class="fv-sum-chev">▼</span>
         </summary>
         <div class="fv-body">
@@ -313,7 +311,7 @@ function renderMedien() {
             <label for="fvFarbe${vi}">Farbe</label>
             <select id="fvFarbe${vi}" onchange="medienAuswahl[kronenListe()[${vi}]]=this.value;renderMedien()">${optionen}</select>
           </div>
-          ${hint ? `<div class="medien-hint">${medienEsc(hint)}</div>` : ''}
+          ${hint ? `<div class="medien-hint">${esc(hint)}</div>` : ''}
           <div class="medien-row">${hauptKachel(hid, 'jpg', `hauptWaehle(${vi})`)}${tiles}${addFoto}${video}</div>
           ${hauptWarnung(hid, extra)}
         </div>

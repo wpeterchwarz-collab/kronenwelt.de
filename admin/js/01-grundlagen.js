@@ -8,6 +8,12 @@ const GITHUB_USER = 'wpeterchwarz-collab';
 const GITHUB_REPO = 'kronenwelt.de';
 const CL_BASE = 'https://res.cloudinary.com/';
 
+// ---------- Gemeinsame Hilfsfunktionen (für alle Admin-Dateien) ----------
+// Text sicher in HTML einsetzen (auch in Attribute mit "…" oder '…')
+const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// Betrag mit zwei Nachkommastellen und Euro-Zeichen: 12.5 → „12,50 €“
+const euro = x => (Math.round((x || 0) * 100) / 100).toFixed(2).replace('.', ',') + ' €';
+
 // Preise & Strukturbaum (wird von GitHub geladen)
 const GROESSEN = ['Gross', 'Klein', 'Mini', 'Extra Mini'];
 let VARIANTEN_LIST = ['Party', 'Einfarbig', 'Glitzer', 'Edel & Wild',
