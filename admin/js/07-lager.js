@@ -30,7 +30,7 @@ function kisteFarbe(k) {
   return KISTEN_RESERVE[Math.max(0, fremde.indexOf(k)) % KISTEN_RESERVE.length];
 }
 const kisteStil = k => { const [a, b] = kisteFarbe(k); return `--k:${a};--kb:${b}`; };
-const kisteTag = k => `<span class="kiste-tag" style="${kisteStil(k)}">${medienEsc(k)}</span>`;
+const kisteTag = k => `<span class="kiste-tag" style="${kisteStil(k)}">${esc(k)}</span>`;
 const KISTE_ICON = '<svg viewBox="0 0 24 24"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5"/><path d="M12 12v9"/></svg>';
 // Wie viele Artikel fehlen in einer Kiste (unter Mindestbestand oder verkauft, aber nicht da)?
 const kisteFehlt = k => Object.keys(lagerArtikel().nachSku).filter(sku => lagerFehlt(sku, k) > 0).length;
@@ -162,7 +162,7 @@ function renderLager(laedt) {
   if (!KATALOG) { box.innerHTML = '<div class="card best-leer"><p>Der Produktkatalog (katalog.json) wird noch geladen …</p></div>'; return; }
   if (laedt) { box.innerHTML = '<div class="card best-leer"><p>Lager wird geladen …</p></div>'; return; }
   if (lagerFehler && !lagerDaten) {
-    box.innerHTML = `<div class="card best-leer"><div class="card-title">Keine Verbindung</div><p>${medienEsc(lagerFehler)}</p>
+    box.innerHTML = `<div class="card best-leer"><div class="card-title">Keine Verbindung</div><p>${esc(lagerFehler)}</p>
       <button class="btn btn-teal" onclick="ladeLager(true)">Nochmal versuchen</button></div>`;
     return;
   }
@@ -174,8 +174,8 @@ function renderLager(laedt) {
   const modusName = { bestand: 'Bestand ansehen', zaehlen: 'Zählen', mindest: 'Mindestbestand festlegen' }[m];
   const kachel = kk => {
     const fehlt = kisteFehlt(kk);
-    return `<button class="kiste-kachel ${kk === k ? 'active' : ''}" style="${kisteStil(kk)}" data-kiste="${medienEsc(kk)}" onclick="lagerKisteWaehlen(${jsArg(kk)})" aria-pressed="${kk === k}">
-      <span class="kk-name">${KISTE_ICON}${medienEsc(kk)}</span>
+    return `<button class="kiste-kachel ${kk === k ? 'active' : ''}" style="${kisteStil(kk)}" data-kiste="${esc(kk)}" onclick="lagerKisteWaehlen(${jsArg(kk)})" aria-pressed="${kk === k}">
+      <span class="kk-name">${KISTE_ICON}${esc(kk)}</span>
       <b>${lagerSumme(kk)}<small>Stück</small></b>
       ${fehlt ? `<span class="kk-warn">${fehlt} ${fehlt === 1 ? 'Artikel fehlt' : 'Artikel fehlen'}</span>` : `<span class="kk-sub">${euro(lagerWert(kk))}</span>`}
     </button>`;
@@ -201,7 +201,7 @@ function renderLager(laedt) {
     <div class="kiste-banner" id="kisteBanner" style="${k ? kisteStil(k) : ''}">
       <div>
         <div class="kb-label">${k ? 'Du arbeitest in der Kiste' : m === 'bestand' ? 'Überblick' : modusName}</div>
-        <div class="kb-titel">${k ? medienEsc(k) : m === 'bestand' ? 'Alle Kisten' : 'Welche Kiste?'}</div>
+        <div class="kb-titel">${k ? esc(k) : m === 'bestand' ? 'Alle Kisten' : 'Welche Kiste?'}</div>
         <div class="lg-wert">${k || m === 'bestand' ? kronen(stueck) + ' · Wert ' + euro(wert) : 'Tippe oben auf eine Kiste.'}</div>
       </div>
       <div class="lg-modus" role="tablist">
@@ -210,9 +210,9 @@ function renderLager(laedt) {
       </div>
     </div>
     ${m === 'bestand' && !k ? `<p class="lg-hinweis">Hier siehst du alle Kisten zusammen. Zum Zählen oder für den Mindestbestand oben eine Kiste antippen.</p>` : ''}
-    ${m === 'zaehlen' && k ? `<p class="lg-hinweis">Zähle, was in der Kiste <b>${medienEsc(k)}</b> liegt, und trage die Zahl ein. Gespeichert wird nur, was du änderst. Der Unterschied wird als Inventur gebucht.</p>` : ''}
-    ${m === 'mindest' && k ? `<p class="lg-hinweis">So viele Kronen sollen mindestens in der Kiste <b>${medienEsc(k)}</b> liegen. Fällt der Bestand darunter, kommt die Krone auf die Nähliste. 0 = egal.</p>
-      <div class="lg-alle">Alle Artikel in ${medienEsc(k)} auf <input type="number" min="0" max="99" id="lgAlleWert" value="1" inputmode="numeric"> <button class="btn btn-outline btn-sm" onclick="lagerAlleSetzen()">setzen</button></div>` : ''}
+    ${m === 'zaehlen' && k ? `<p class="lg-hinweis">Zähle, was in der Kiste <b>${esc(k)}</b> liegt, und trage die Zahl ein. Gespeichert wird nur, was du änderst. Der Unterschied wird als Inventur gebucht.</p>` : ''}
+    ${m === 'mindest' && k ? `<p class="lg-hinweis">So viele Kronen sollen mindestens in der Kiste <b>${esc(k)}</b> liegen. Fällt der Bestand darunter, kommt die Krone auf die Nähliste. 0 = egal.</p>
+      <div class="lg-alle">Alle Artikel in ${esc(k)} auf <input type="number" min="0" max="99" id="lgAlleWert" value="1" inputmode="numeric"> <button class="btn btn-outline btn-sm" onclick="lagerAlleSetzen()">setzen</button></div>` : ''}
     <div class="lg-liste ${k ? 'in-kiste' : ''}" id="lagerListe" style="${k ? kisteStil(k) : ''}"></div>
     <div id="lagerLeiste"></div>
     <div class="lg-unten"><section class="card">
@@ -274,19 +274,19 @@ function renderLagerListe() {
         const n = k ? lagerBestand(sku, k) : lagerBestand(sku, null);
         const min = k ? lagerMindest(sku, k) : 0;
         const fehlt = k ? lagerFehlt(sku, k) : lagerKisten().some(kk => lagerFehlt(sku, kk));
-        return `<span class="lg-zelle ${n < 0 ? 'minus' : fehlt ? 'unter' : n === 0 ? 'null' : ''}" title="${medienEsc(artikelName(sku))}">${n < 0 ? '−' + (-n) : n}</span>${min ? `<span class="lg-min">min ${min}</span>` : ''}`;
+        return `<span class="lg-zelle ${n < 0 ? 'minus' : fehlt ? 'unter' : n === 0 ? 'null' : ''}" title="${esc(artikelName(sku))}">${n < 0 ? '−' + (-n) : n}</span>${min ? `<span class="lg-min">min ${min}</span>` : ''}`;
       }
       const alt = m === 'zaehlen' ? lagerBestand(sku, k) : lagerMindest(sku, k);
       const v = lagerEingabe[sku] != null ? lagerEingabe[sku] : alt;
       return `<input type="number" min="0" max="999" inputmode="numeric" data-sku="${sku}" value="${v}" class="${lagerEingabe[sku] != null && lagerEingabe[sku] !== alt ? 'geaendert' : ''}"
-        aria-label="${medienEsc(artikelName(sku))}" onfocus="this.select()" oninput="lagerEingabeSetzen(this)">`;
+        aria-label="${esc(artikelName(sku))}" onfocus="this.select()" oninput="lagerEingabeSetzen(this)">`;
     };
-    return `<details class="lg-produkt" data-produkt="${medienEsc(p.name)}" ${offen ? 'open' : ''} ontoggle="lagerOffen[this.dataset.produkt]=this.open">
-      <summary><span>${medienEsc(p.name)}${warn ? '<span class="lg-punkt" title="unter Mindestbestand"></span>' : ''}</span>
-        <span class="lg-anzahl">${summe}<small>${k ? 'in ' + medienEsc(k) : 'Stück'}</small></span></summary>
+    return `<details class="lg-produkt" data-produkt="${esc(p.name)}" ${offen ? 'open' : ''} ontoggle="lagerOffen[this.dataset.produkt]=this.open">
+      <summary><span>${esc(p.name)}${warn ? '<span class="lg-punkt" title="unter Mindestbestand"></span>' : ''}</span>
+        <span class="lg-anzahl">${summe}<small>${k ? 'in ' + esc(k) : 'Stück'}</small></span></summary>
       <div class="lg-tabelle-rahmen"><table class="lg-tabelle">
-        <thead><tr><th>Farbe</th>${p.groessen.map(g => `<th>${medienEsc(g)}</th>`).join('')}</tr></thead>
-        <tbody>${p.farben.map((f, i) => `<tr><td>${medienEsc(f)}</td>${p.zeilen[i].map(s => `<td>${zelle(s)}</td>`).join('')}</tr>`).join('')}</tbody>
+        <thead><tr><th>Farbe</th>${p.groessen.map(g => `<th>${esc(g)}</th>`).join('')}</tr></thead>
+        <tbody>${p.farben.map((f, i) => `<tr><td>${esc(f)}</td>${p.zeilen[i].map(s => `<td>${zelle(s)}</td>`).join('')}</tr>`).join('')}</tbody>
       </table></div>
     </details>`;
   }).join('');
@@ -352,8 +352,8 @@ function renderNaehliste() {
   box.innerHTML = `<section class="card naeh" id="naehliste">
     <div class="card-title">Nähliste</div>
     <div class="card-sub" style="margin-bottom:8px">${naehen ? naehen + (naehen === 1 ? ' Krone' : ' Kronen') + ' nähen' : 'Nichts zu nähen'}${nl.some(x => x.ausWerkstatt) ? ', der Rest liegt schon in der Werkstatt' : ''}.</div>
-    ${nl.slice(0, 40).map(x => `<div class="naeh-zeile" data-sku="${x.sku}" data-kiste="${medienEsc(x.kiste)}">
-      <div><div class="naeh-name">${medienEsc(artikelName(x.sku))}</div>
+    ${nl.slice(0, 40).map(x => `<div class="naeh-zeile" data-sku="${x.sku}" data-kiste="${esc(x.kiste)}">
+      <div><div class="naeh-name">${esc(artikelName(x.sku))}</div>
         <div class="naeh-info">${kisteTag(x.kiste)} ${x.offen ? `<b style="color:var(--err)">${-lagerBestand(x.sku, x.kiste)} verkauft, nicht auf Lager</b>` : lagerBestand(x.sku, x.kiste) + ' da, ' + lagerMindest(x.sku, x.kiste) + ' sollen'} · fehlt ${x.fehlt}</div></div>
       <div class="naeh-knoepfe">
         ${x.ausWerkstatt ? `<button class="btn btn-teal btn-sm" onclick="naehUmlagern(${jsArg(x.sku)}, ${jsArg(x.kiste)}, ${x.ausWerkstatt})">${x.ausWerkstatt} aus Werkstatt</button>` : ''}
@@ -390,8 +390,8 @@ function renderBewegungen() {
   if (!box) return;
   const l = (lagerDaten.bewegungen || []).slice(0, 20);
   box.innerHTML = l.length ? l.map(b => `<li>
-      <span class="d">${medienEsc(b.datum)}</span>
-      <span>${medienEsc(b.artikel || artikelName(b.sku))}<br><span class="leise">${medienEsc(b.grund)} · ${kisteTag(b.kiste)}${b.nr ? ' · ' + medienEsc(b.nr) : ''}${b.notiz ? ' · ' + medienEsc(b.notiz) : ''}</span></span>
+      <span class="d">${esc(b.datum)}</span>
+      <span>${esc(b.artikel || artikelName(b.sku))}<br><span class="leise">${esc(b.grund)} · ${kisteTag(b.kiste)}${b.nr ? ' · ' + esc(b.nr) : ''}${b.notiz ? ' · ' + esc(b.notiz) : ''}</span></span>
       <span class="m ${b.menge > 0 ? 'plus' : 'minus'}">${b.menge > 0 ? '+' + b.menge : '−' + (-b.menge)}</span></li>`).join('')
     : '<li class="leise" style="display:block">Noch keine Buchungen.</li>';
 }
@@ -430,11 +430,11 @@ function renderBuchung() {
   if (!box) return;
   if (!buchung) { box.innerHTML = ''; return; }
   const b = buchung, art = BUCHUNGSARTEN.find(x => x.id === b.art);
-  const opt = (liste, wert) => liste.map(x => `<option ${x === wert ? 'selected' : ''}>${medienEsc(x)}</option>`).join('');
+  const opt = (liste, wert) => liste.map(x => `<option ${x === wert ? 'selected' : ''}>${esc(x)}</option>`).join('');
   const produkte = lagerArtikel().produkte;
   box.innerHTML = `<div class="card bf">
     <div class="card-title">Buchung</div>
-    <div class="card-sub">${medienEsc(art.text)}</div>
+    <div class="card-sub">${esc(art.text)}</div>
     <div class="bf-grid">
       <div><label for="lbArt">Was passiert?</label><select id="lbArt" onchange="buchungFeld('art', this.value)">
         ${BUCHUNGSARTEN.map(x => `<option value="${x.id}" ${x.id === b.art ? 'selected' : ''}>${x.titel}</option>`).join('')}</select></div>
@@ -452,11 +452,11 @@ function renderBuchung() {
           <div><label>Größe</label><select onchange="buchungPosFeld(${i}, 'groesse', this.value)">${opt(pr.groessen, p.groesse)}</select></div>
           <div><label>Stück</label><input type="number" min="1" max="500" inputmode="numeric" value="${p.menge}" onchange="buchungPosFeld(${i}, 'menge', this.value)"></div>
           ${b.positionen.length > 1 ? `<button class="x" title="Zeile entfernen" onclick="buchung.positionen.splice(${i},1);renderBuchung()">✕</button>` : '<span></span>'}
-          <div class="leise" style="grid-column:1/-1;font-size:12px">${medienEsc(b.kiste)}: ${da} da${b.art !== 'Genäht' && p.menge > da ? ' · <b style="color:var(--err)">mehr als vorhanden</b>' : ''}</div>
+          <div class="leise" style="grid-column:1/-1;font-size:12px">${esc(b.kiste)}: ${da} da${b.art !== 'Genäht' && p.menge > da ? ' · <b style="color:var(--err)">mehr als vorhanden</b>' : ''}</div>
         </div>`; }).join('')}
         <button class="btn btn-teal btn-sm" onclick="buchung.positionen.push(neueBuchungsPosition());renderBuchung()">+ weitere Krone</button>
       </div>
-      <div class="voll"><label for="lbNotiz">Notiz</label><input id="lbNotiz" type="text" maxlength="200" value="${medienEsc(b.notiz)}" oninput="buchung.notiz=this.value" placeholder="optional, z. B. Geschenk an …"></div>
+      <div class="voll"><label for="lbNotiz">Notiz</label><input id="lbNotiz" type="text" maxlength="200" value="${esc(b.notiz)}" oninput="buchung.notiz=this.value" placeholder="optional, z. B. Geschenk an …"></div>
     </div>
     <div class="btn-row"><button class="btn btn-primary" id="lbSpeichern" onclick="buchungSpeichern()">Buchen</button>
       <button class="btn btn-outline" onclick="buchung=null;renderBuchung()">Abbrechen</button></div>
@@ -489,12 +489,12 @@ function renderStartBestellungen() {
     box.innerHTML = '<div class="leise">Noch nicht verbunden. <a href="#einstellungen" onclick="geheZu(\'einstellungen\');return false" style="color:var(--petrol-d)">Jetzt einrichten</a></div>';
     return;
   }
-  if (bestellFehler && !bestellungen) { box.innerHTML = `<div class="leise">${medienEsc(bestellFehler)}</div>`; return; }
+  if (bestellFehler && !bestellungen) { box.innerHTML = `<div class="leise">${esc(bestellFehler)}</div>`; return; }
   if (!bestellungen) { box.innerHTML = '<div class="leise">Wird geladen …</div>'; return; }
   if (!bestellungen.length) { box.innerHTML = '<div class="leise">Noch keine Bestellungen.</div>'; return; }
   box.innerHTML = bestellungen.slice(0, 3).map(b =>
     `<div class="start-best" onclick="oeffneBestellung(${JSON.stringify(b.nr).replace(/"/g, '&quot;')})">
-      <span>${medienEsc(b.datum)} · ${medienEsc(b.kunde || b.kanal)} <span class="${statusKlasse(b.status)}">${medienEsc(b.status)}</span><br><small class="leise">${medienEsc(positionen(b).map(x => x.variante).join(', '))}</small></span>
+      <span>${esc(b.datum)} · ${esc(b.kunde || b.kanal)} <span class="${statusKlasse(b.status)}">${esc(b.status)}</span><br><small class="leise">${esc(positionen(b).map(x => x.variante).join(', '))}</small></span>
       <span>${euro(b.preis)}</span></div>`).join('') +
     `<div style="margin-top:12px"><button class="schnell-btn" style="width:100%" onclick="geheZu('bestellungen')">Alle Bestellungen</button></div>`;
 }
@@ -537,7 +537,7 @@ function verlaufZeigen(box, liste) {
     };
     box.innerHTML = liste.map(c => {
       const titel = String(c.commit.message || '').split('\n')[0].replace(/^Admin: /, '');
-      return `<div class="verlauf-zeile"><span>${medienEsc(titel)}</span><span>${wann(c.commit.author.date)}</span></div>`;
+      return `<div class="verlauf-zeile"><span>${esc(titel)}</span><span>${wann(c.commit.author.date)}</span></div>`;
     }).join('') || '<div class="leise">Noch nichts gespeichert.</div>';
   }
 }

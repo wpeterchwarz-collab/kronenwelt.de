@@ -81,7 +81,7 @@ function renderStartMonat() {
   const titel = document.getElementById('startMonatTitel');
   if (titel) titel.textContent = new Date().toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
   if (!apiKonfiguriert()) { box.innerHTML = '<div class="leise">Sobald die Bestelltabelle verbunden ist, stehen hier Umsatz und Bestellungen.</div>'; return; }
-  if (!bestellungen) { box.innerHTML = `<div class="leise">${bestellFehler ? medienEsc(bestellFehler) : 'Wird geladen …'}</div>`; return; }
+  if (!bestellungen) { box.innerHTML = `<div class="leise">${bestellFehler ? esc(bestellFehler) : 'Wird geladen …'}</div>`; return; }
   const s = startStatistik(bestellungen);
   const mo = s.monat, vm = s.vormonat;
   const trend = (jetzt, vorher, fmt) => {
@@ -97,7 +97,7 @@ function renderStartMonat() {
   const kan = Object.entries(mo.kanaele).sort((a, b) => b[1] - a[1]);
   const max = Math.max(1, ...kan.map(k => k[1]));
   const kanaele = kan.length ? `<div class="kanal-balken">${kan.map(([k, w]) =>
-    `<span>${medienEsc(k)}</span><span class="bar"><i style="width:${Math.max(2, Math.round(w / max * 100))}%"></i></span><span class="wert">${euroKurz(w)}</span>`).join('')}</div>`
+    `<span>${esc(k)}</span><span class="bar"><i style="width:${Math.max(2, Math.round(w / max * 100))}%"></i></span><span class="wert">${euroKurz(w)}</span>`).join('')}</div>`
     : '<div class="leise" style="margin-bottom:14px">Diesen Monat noch kein Verkauf.</div>';
   const ju = s.jahresumsatz.umsatz, anteil = ju / KLEINUNTERNEHMER_GRENZE;
   const stufe = anteil >= 1 ? 'drueber' : anteil >= 0.8 ? 'knapp' : '';
@@ -160,12 +160,12 @@ function todoHtml(p) {
   const liste = (p.liste || []).slice(0, 5).map(b => {
     const wt = werktageSeit(b.datum), warn = wt != null && wt >= LIEFERZEIT_WARNUNG && b.kanal !== 'Markt';
     return `<button class="todo-best" onclick="oeffneBestellung(${jsArg(b.nr)})">
-      <span>${istUngesehen(b) ? '<span class="frisch-punkt" title="Neu seit deinem letzten Besuch"></span>' : ''}${shopPunkt(b)}${medienEsc(b.kunde || b.kanal)} <small>· ${medienEsc(positionen(b).map(x => x.variante).join(', '))} · ${medienEsc(b.kanal)}</small></span>
+      <span>${istUngesehen(b) ? '<span class="frisch-punkt" title="Neu seit deinem letzten Besuch"></span>' : ''}${shopPunkt(b)}${esc(b.kunde || b.kanal)} <small>· ${esc(positionen(b).map(x => x.variante).join(', '))} · ${esc(b.kanal)}</small></span>
       <span class="alter ${warn ? 'warn' : ''}">${wt == null ? '' : wt === 0 ? 'heute' : wt + (wt === 1 ? ' Werktag' : ' Werktage')}</span></button>`;
   }).join('') + ((p.liste || []).length > 5 ? `<div class="leise" style="padding:4px 0 0 21px">und ${p.liste.length - 5} weitere</div>` : '');
   return `<button class="todo" ${klick}>
       <span class="todo-punkt ${p.stufe}" ${p.stufe === 'leise' ? 'style="background:var(--line2)"' : ''}></span>
-      <div><div class="todo-titel">${medienEsc(p.titel)}</div>${p.text ? `<div class="todo-text">${medienEsc(p.text)}</div>` : ''}</div>
+      <div><div class="todo-titel">${esc(p.titel)}</div>${p.text ? `<div class="todo-text">${esc(p.text)}</div>` : ''}</div>
     </button>` + liste;
 }
 function renderTodo() {

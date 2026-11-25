@@ -208,6 +208,21 @@ test.describe('Zahlenkronen', () => {
     await page.click('.chip[data-v="Zahlenkrone Konfetti"]');
     await expect(page.locator('.pet-slot:not(.empty)')).not.toHaveClass(/naht/);
   });
+
+  test('ein Klick auf Krone, Farbe oder Grösse wird nur einmal verarbeitet', async ({ page }) => {
+    await openShop(page);
+    await page.evaluate(() => {
+      window.__vorschau = 0; window.__farben = 0;
+      const u = updatePreview, r = renderColorChips;
+      window.updatePreview = (...a) => { window.__vorschau++; return u(...a); };
+      window.renderColorChips = (...a) => { window.__farben++; return r(...a); };
+    });
+    await page.click('.chip[data-v="Glitzer"]');
+    expect(await page.evaluate(() => [window.__farben, window.__vorschau])).toEqual([1, 1]);
+    await page.locator('#colorChips [data-c]').nth(1).click();
+    await page.click('.szcard[data-s="Klein"]');
+    expect(await page.evaluate(() => window.__vorschau)).toBe(3);
+  });
 });
 
 test.describe('Warenkorb-Sicherheit', () => {

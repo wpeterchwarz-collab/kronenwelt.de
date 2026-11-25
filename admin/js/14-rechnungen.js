@@ -32,9 +32,7 @@ const RECHNUNG_LOGO = `<svg viewBox="0 0 200 200" width="110" height="110" xmlns
   <text font-family="Arial, Helvetica, sans-serif" font-size="8" letter-spacing="2.5" fill="#6f6560"><textPath href="#reBogenUnten" startOffset="50%" text-anchor="middle">HANDMADE</textPath></text>
 </svg>`;
 
-const rEsc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const rBetrag = x => (Math.round((x || 0) * 100) / 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const rMenge = x => (Math.round((x || 0) * 100) / 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const rHeute = () => { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear(); };
 const rDatumPlus = (t, tage) => {
   const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t || ''); if (!m) return '';
@@ -53,7 +51,7 @@ function rStatus(r) {
   const f = datumZuIso(r.faellig || rDatumPlus(r.datum, 14));
   return f && f < datumZuIso(rHeute()) ? 'Überfällig' : 'Offen';
 }
-const rStatusBadge = st => `<span class="re-status re-st-${({ 'Überfällig': 'ueberfaellig' })[st] || st.toLowerCase()}">${medienEsc(st)}</span>`;
+const rStatusBadge = st => `<span class="re-status re-st-${({ 'Überfällig': 'ueberfaellig' })[st] || st.toLowerCase()}">${esc(st)}</span>`;
 
 async function ladeRechnungen(neu) {
   if (!apiKonfiguriert()) { renderRechnungen(); return; }
@@ -186,7 +184,7 @@ function renderRechnungen() {
   const knopf = document.getElementById('btnNeueRechnung');
   if (knopf) knopf.style.display = apiKonfiguriert() && !entwurf ? '' : 'none';
   if (!apiKonfiguriert()) { box.innerHTML = '<div class="card leise">Zuerst unter „Einstellungen“ die Verbindung zur Google-Tabelle einrichten.</div>'; return; }
-  if (rechnungFehler) { box.innerHTML = `<div class="card leise">⚠ ${medienEsc(rechnungFehler)}</div>`; return; }
+  if (rechnungFehler) { box.innerHTML = `<div class="card leise">⚠ ${esc(rechnungFehler)}</div>`; return; }
   if (!rechnungen) { box.innerHTML = '<div class="card leise">Wird geladen …</div>'; return; }
   box.innerHTML = (entwurf ? entwurfHtml() : '') + listeHtml();
   if (entwurf) entwurfSummeZeigen();
@@ -194,14 +192,14 @@ function renderRechnungen() {
 
 function entwurfHtml() {
   const e = entwurf;
-  const feld = (id, label, wert, typ, extra) => `<label class="re-feld">${label}<input type="${typ || 'text'}" id="${id}" value="${medienEsc(wert)}" ${extra || ''}></label>`;
+  const feld = (id, label, wert, typ, extra) => `<label class="re-feld">${label}<input type="${typ || 'text'}" id="${id}" value="${esc(wert)}" ${extra || ''}></label>`;
   return `<div class="card re-entwurf" id="reEntwurf">
     <div class="card-title">Neue Rechnung</div>
-    <div class="leise" style="margin:-4px 0 10px">Bekommt beim Festschreiben die Nummer ${medienEsc(rechnungInfo.naechste || '')}.</div>
-    ${e.bestellnr ? `<div class="leise" style="margin-bottom:10px">Zur Bestellung ${medienEsc(e.bestellnr)} · ${euro(e.bestellPreis)}</div>` : ''}
+    <div class="leise" style="margin:-4px 0 10px">Bekommt beim Festschreiben die Nummer ${esc(rechnungInfo.naechste || '')}.</div>
+    ${e.bestellnr ? `<div class="leise" style="margin-bottom:10px">Zur Bestellung ${esc(e.bestellnr)} · ${euro(e.bestellPreis)}</div>` : ''}
     <div class="re-raster">
       <label class="re-feld re-breit">Empfänger (Name und Anschrift, je Zeile)
-        <textarea id="reEmpfaenger" rows="4" oninput="entwurf.empfaenger=this.value;entwurfSummeZeigen()">${medienEsc(e.empfaenger)}</textarea></label>
+        <textarea id="reEmpfaenger" rows="4" oninput="entwurf.empfaenger=this.value;entwurfSummeZeigen()">${esc(e.empfaenger)}</textarea></label>
       ${feld('reBetreff', 'Betreff', e.betreff, 'text', 'oninput="entwurf.betreff=this.value"')}
       ${feld('reDatum', 'Rechnungsdatum', datumZuIso(e.datum), 'date', 'onchange="entwurf.datum=isoZuDatum(this.value)"')}
       ${feld('reLeistung', 'Leistungsdatum', datumZuIso(e.leistungsdatum), 'date', 'onchange="entwurf.leistungsdatum=isoZuDatum(this.value)"')}
@@ -213,7 +211,7 @@ function entwurfHtml() {
     <table class="re-pos">
       <thead><tr><th>Beschreibung</th><th>Menge</th><th>Einzelpreis €</th><th>Gesamt</th><th></th></tr></thead>
       <tbody>${e.positionen.map((p, i) => `<tr>
-        <td><textarea rows="2" placeholder="Beschreibung" aria-label="Beschreibung ${i + 1}" oninput="entwurf.positionen[${i}].text=this.value">${medienEsc(p.text)}</textarea></td>
+        <td><textarea rows="2" placeholder="Beschreibung" aria-label="Beschreibung ${i + 1}" oninput="entwurf.positionen[${i}].text=this.value">${esc(p.text)}</textarea></td>
         <td><input type="number" step="1" min="1" title="Menge" aria-label="Menge ${i + 1}" value="${p.menge}" oninput="entwurf.positionen[${i}].menge=parseFloat(this.value)||0;entwurfSummeZeigen()"></td>
         <td><input type="number" step="0.01" title="Einzelpreis in €" placeholder="Preis €" aria-label="Preis ${i + 1}" value="${p.preis}" oninput="entwurf.positionen[${i}].preis=parseFloat(this.value)||0;entwurfSummeZeigen()"></td>
         <td class="re-zahl" id="reZeile${i}">${rBetrag((p.menge || 0) * (p.preis || 0))}</td>
@@ -224,7 +222,7 @@ function entwurfHtml() {
       <div class="re-summe">Gesamt <b id="reSumme"></b></div></div>
     <div id="reHinweise" class="leise" style="margin-bottom:10px"></div>
     <div class="re-raster">
-      <label class="re-feld re-breit">Hinweis (z. B. wie bezahlt wurde)<textarea id="reHinweis" rows="2" oninput="entwurf.hinweis=this.value">${medienEsc(e.hinweis)}</textarea></label>
+      <label class="re-feld re-breit">Hinweis (z. B. wie bezahlt wurde)<textarea id="reHinweis" rows="2" oninput="entwurf.hinweis=this.value">${esc(e.hinweis)}</textarea></label>
       ${feld('reSerien', 'MK-Nummern (optional)', e.seriennummern, 'text', 'oninput="entwurf.seriennummern=this.value"')}
     </div>
     <div class="leise" style="font-size:12px;margin:6px 0 12px">Auf jeder Rechnung steht automatisch: „${RECHNUNG_19}“</div>
@@ -250,7 +248,7 @@ function entwurfSummeZeigen() {
 
 function zahlungsOptionen(gewaehlt) {
   const liste = ZAHLUNGSARTEN.indexOf(gewaehlt) < 0 && gewaehlt ? ZAHLUNGSARTEN.concat([gewaehlt]) : ZAHLUNGSARTEN;
-  return liste.map(z => `<option ${z === gewaehlt ? 'selected' : ''}>${medienEsc(z)}</option>`).join('');
+  return liste.map(z => `<option ${z === gewaehlt ? 'selected' : ''}>${esc(z)}</option>`).join('');
 }
 
 function rechnungJahre() {
@@ -311,14 +309,14 @@ function rechnungFilterSetzen(feld, wert) {
 }
 
 function listeHtml() {
-  if (!alleRechnungen().length) return `<div class="card leise">Noch keine Rechnungen hier. Die nächste bekommt die Nummer ${medienEsc(rechnungInfo.naechste || 'R-01272')}.
+  if (!alleRechnungen().length) return `<div class="card leise">Noch keine Rechnungen hier. Die nächste bekommt die Nummer ${esc(rechnungInfo.naechste || 'R-01272')}.
     ${papierkramHtml()}</div>`;
   const f = rechnungFilter;
   return `<div class="card re-karte">
     <div class="re-filter">
       <label>Jahr <select id="reFJahr" onchange="rechnungFilterSetzen('jahr', this.value)"><option value="">Alle</option>
         ${rechnungJahre().map(j => `<option ${j === f.jahr ? 'selected' : ''}>${j}</option>`).join('')}</select></label>
-      <input type="search" id="reFSuche" placeholder="Suchen (Nr., Name, Betreff)" aria-label="Rechnungen durchsuchen" value="${medienEsc(f.suche)}" oninput="rechnungFilterSetzen('suche', this.value)">
+      <input type="search" id="reFSuche" placeholder="Suchen (Nr., Name, Betreff)" aria-label="Rechnungen durchsuchen" value="${esc(f.suche)}" oninput="rechnungFilterSetzen('suche', this.value)">
     </div>
     ${uebersichtHtml()}
     ${listeZeilenHtml()}
@@ -362,17 +360,17 @@ function listeZeilenHtml() {
       `<button type="button" onclick="rechnungAnsehen(${nr})">Ansehen</button>`,
       r.art === 'Rechnung' && !r.storniertDurch ? `<button type="button" class="re-menue-rot" onclick="rechnungStornoKlick(${nr})">Stornieren</button>` : ''
     ].join('');
-    return `<div class="re-zeile ${r.storniertDurch ? "storniert" : ""} re-z-${({ 'Überfällig': 'ueberfaellig' })[st] || st.toLowerCase()}" data-nr="${medienEsc(r.nr)}">
-      <div class="re-nr">${shopPunkt({ shop: rechnungShop(r).etsy })}<b>${medienEsc(r.nr)}</b>
-        <div class="leise">${r.storniertDurch ? 'storniert durch ' + medienEsc(r.storniertDurch) : medienEsc(r.betreff || '')}</div></div>
-      <div class="re-kunde">${medienEsc(name)}</div>
-      <div class="re-st">${rStatusBadge(st)}${st === 'Bezahlt' ? `<div class="leise re-klein">${medienEsc(r.bezahltAm)}${r.zahlungsart ? ' · ' + medienEsc(r.zahlungsart) : ''}</div>` : ''}</div>
-      <div class="re-datum"><span class="re-mobil leise">Datum </span>${medienEsc(r.datum)}</div>
-      <div class="re-faellig ${st === 'Überfällig' ? 're-rot' : ''}">${r.faellig && st !== 'Storniert' && st !== 'Storno' ? '<span class="re-mobil leise">fällig </span>' + medienEsc(r.faellig) : ''}</div>
+    return `<div class="re-zeile ${r.storniertDurch ? "storniert" : ""} re-z-${({ 'Überfällig': 'ueberfaellig' })[st] || st.toLowerCase()}" data-nr="${esc(r.nr)}">
+      <div class="re-nr">${shopPunkt({ shop: rechnungShop(r).etsy })}<b>${esc(r.nr)}</b>
+        <div class="leise">${r.storniertDurch ? 'storniert durch ' + esc(r.storniertDurch) : esc(r.betreff || '')}</div></div>
+      <div class="re-kunde">${esc(name)}</div>
+      <div class="re-st">${rStatusBadge(st)}${st === 'Bezahlt' ? `<div class="leise re-klein">${esc(r.bezahltAm)}${r.zahlungsart ? ' · ' + esc(r.zahlungsart) : ''}</div>` : ''}</div>
+      <div class="re-datum"><span class="re-mobil leise">Datum </span>${esc(r.datum)}</div>
+      <div class="re-faellig ${st === 'Überfällig' ? 're-rot' : ''}">${r.faellig && st !== 'Storniert' && st !== 'Storno' ? '<span class="re-mobil leise">fällig </span>' + esc(r.faellig) : ''}</div>
       <div class="re-zahl re-betrag"><b>€ ${rBetrag(r.gesamt)}</b></div>
       <div class="re-symbole">
         <button type="button" class="re-symbol" title="Drucken / PDF" aria-label="Drucken / PDF" onclick="rechnungDrucken(${nr})">${RE_DRUCKER}</button>
-        <div class="re-menue-wrap"><button type="button" class="re-symbol" title="Weitere Aktionen" aria-label="Weitere Aktionen zu ${medienEsc(r.nr)}" aria-expanded="${menueFuer === r.nr}" onclick="event.stopPropagation();menueUmschalten(${nr})">⋮</button>
+        <div class="re-menue-wrap"><button type="button" class="re-symbol" title="Weitere Aktionen" aria-label="Weitere Aktionen zu ${esc(r.nr)}" aria-expanded="${menueFuer === r.nr}" onclick="event.stopPropagation();menueUmschalten(${nr})">⋮</button>
           ${menueFuer === r.nr ? `<div class="re-menue" role="menu" onclick="event.stopPropagation()">${menue}</div>` : ''}</div>
       </div>
       ${zahlungFormFuer === r.nr ? `<div class="re-zahlung-form">
@@ -388,16 +386,16 @@ function listeZeilenHtml() {
 // Zeile einer alten Rechnung aus Papierkram: nur ansehen (Original-PDF), nichts ändern
 function papierkramZeileHtml(r, nr, st, name) {
   const cls = ({ 'Überfällig': 'ueberfaellig' })[st] || st.toLowerCase();
-  return `<div class="re-zeile re-papierkram ${r.storniertDurch ? 'storniert' : ''} re-z-${cls}" data-nr="${medienEsc(r.nr)}">
-      <div class="re-nr">${shopPunkt({ shop: rechnungShop(r).etsy })}<b>${medienEsc(r.nr)}</b> <span class="re-quelle" title="Alte Rechnung, aus Papierkram übernommen">Papierkram</span>
-        <div class="leise">${r.storniertDurch && r.storniertDurch !== 'Papierkram' ? 'storniert durch ' + medienEsc(r.storniertDurch) : medienEsc(r.betreff || '')}</div></div>
-      <div class="re-kunde">${medienEsc(name)}</div>
-      <div class="re-st">${rStatusBadge(st)}${st === 'Bezahlt' ? `<div class="leise re-klein">${medienEsc(r.bezahltAm)}${r.zahlungsart ? ' · ' + medienEsc(r.zahlungsart) : ''}</div>` : ''}</div>
-      <div class="re-datum"><span class="re-mobil leise">Datum </span>${medienEsc(r.datum)}</div>
+  return `<div class="re-zeile re-papierkram ${r.storniertDurch ? 'storniert' : ''} re-z-${cls}" data-nr="${esc(r.nr)}">
+      <div class="re-nr">${shopPunkt({ shop: rechnungShop(r).etsy })}<b>${esc(r.nr)}</b> <span class="re-quelle" title="Alte Rechnung, aus Papierkram übernommen">Papierkram</span>
+        <div class="leise">${r.storniertDurch && r.storniertDurch !== 'Papierkram' ? 'storniert durch ' + esc(r.storniertDurch) : esc(r.betreff || '')}</div></div>
+      <div class="re-kunde">${esc(name)}</div>
+      <div class="re-st">${rStatusBadge(st)}${st === 'Bezahlt' ? `<div class="leise re-klein">${esc(r.bezahltAm)}${r.zahlungsart ? ' · ' + esc(r.zahlungsart) : ''}</div>` : ''}</div>
+      <div class="re-datum"><span class="re-mobil leise">Datum </span>${esc(r.datum)}</div>
       <div class="re-faellig"></div>
       <div class="re-zahl re-betrag"><b>€ ${rBetrag(r.gesamt)}</b></div>
       <div class="re-symbole">
-        <button type="button" class="re-symbol" title="Original-PDF öffnen" aria-label="Original-PDF ${medienEsc(r.nr)} öffnen" onclick="papierkramPdf(${nr})">${RE_DRUCKER}</button>
+        <button type="button" class="re-symbol" title="Original-PDF öffnen" aria-label="Original-PDF ${esc(r.nr)} öffnen" onclick="papierkramPdf(${nr})">${RE_DRUCKER}</button>
         <span class="re-symbol-platz"></span>
       </div>
     </div>`;
@@ -416,7 +414,7 @@ function papierkramHtml() {
   if (!papierkram.length) return `<div class="re-pk leise">Ältere Rechnungen (bis R-01271) sind noch in Papierkram.
     In Papierkram unter Rechnungen mit Jahr „Alle“ auf „CSV“ klicken und die Datei hier einlesen: ${knopf('Aus Papierkram übernehmen')}</div>`;
   const nrs = papierkram.map(r => r.nr).filter(n => /^R-\d{5}$/.test(n)).sort();
-  return `<div class="re-pk leise">Enthält ${papierkram.length.toLocaleString('de-DE')} Rechnungen aus Papierkram (${medienEsc(nrs[0] || '')} bis ${medienEsc(nrs[nrs.length - 1] || '')}). ${knopf('CSV neu einlesen')}
+  return `<div class="re-pk leise">Enthält ${papierkram.length.toLocaleString('de-DE')} Rechnungen aus Papierkram (${esc(nrs[0] || '')} bis ${esc(nrs[nrs.length - 1] || '')}). ${knopf('CSV neu einlesen')}
     ${papierkramOrdner ? '' : '<div>Original-PDFs: Ordner „Rechnungen_Papierkram“ in Google Drive noch nicht gefunden (im Apps Script einmal „papierkramOrdnerPruefen“ ausführen).</div>'}</div>`;
 }
 
@@ -638,9 +636,9 @@ function rechnungHtml(r, a, istEntwurf) {
   const titel = storno ? 'Stornorechnung' : 'Rechnung';
   const name1 = String(r.empfaenger || '').split('\n')[0].trim();
   const dateiname = (titel + '_' + r.nr + '_' + name1 + '_' + datumZuIso(r.datum)).replace(/[^\wäöüÄÖÜß.-]+/g, '_');
-  const zeilen = t => rEsc(t).replace(/\n/g, '<br>');
-  const fuss = (kopf, liste) => `<div><b>${kopf}</b>${liste.filter(Boolean).map(x => '<br>' + rEsc(x)).join('')}</div>`;
-  return `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>${rEsc(dateiname)}</title>
+  const zeilen = t => esc(t).replace(/\n/g, '<br>');
+  const fuss = (kopf, liste) => `<div><b>${kopf}</b>${liste.filter(Boolean).map(x => '<br>' + esc(x)).join('')}</div>`;
+  return `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>${esc(dateiname)}</title>
 <style>
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
@@ -665,19 +663,19 @@ function rechnungHtml(r, a, istEntwurf) {
 </style></head><body><div class="seite">
   ${istEntwurf ? '<div class="entwurf">ENTWURF</div>' : ''}
   <div class="kopf">${RECHNUNG_LOGO}<h1>${titel}</h1></div>
-  <div class="absender"><b>${rEsc(a.name)}</b><span>|</span>${rEsc(a.strasse)}<span>|</span>${rEsc(a.ort)}</div>
+  <div class="absender"><b>${esc(a.name)}</b><span>|</span>${esc(a.strasse)}<span>|</span>${esc(a.ort)}</div>
   <div class="empf">${zeilen(r.empfaenger)}</div>
   <div class="info">
     <div><b>Betreff</b>${zeilen(r.betreff || '–')}</div>
-    <div><b>${storno ? 'Stornonummer' : 'Rechnungsnummer'}</b>${rEsc(r.nr)}${r.bezug ? '<br>zu ' + rEsc(r.bezug) : ''}</div>
-    <div><b>Leistungsdatum</b>${rEsc(r.leistungsdatum)}</div>
-    <div><b>Datum</b>${rEsc(r.datum)}</div>
+    <div><b>${storno ? 'Stornonummer' : 'Rechnungsnummer'}</b>${esc(r.nr)}${r.bezug ? '<br>zu ' + esc(r.bezug) : ''}</div>
+    <div><b>Leistungsdatum</b>${esc(r.leistungsdatum)}</div>
+    <div><b>Datum</b>${esc(r.datum)}</div>
   </div>
   <table><thead><tr><th>Pos.</th><th>Beschreibung</th><th class="z">Menge</th><th class="z">USt.</th><th class="z">Einzelpreis</th><th class="z">Gesamt</th></tr></thead>
-  <tbody>${(r.positionen || []).map((p, i) => `<tr><td>${i + 1}.</td><td>${zeilen(p.text)}</td><td class="z">${rMenge(p.menge)}</td><td class="z">0%</td>
+  <tbody>${(r.positionen || []).map((p, i) => `<tr><td>${i + 1}.</td><td>${zeilen(p.text)}</td><td class="z">${rBetrag(p.menge)}</td><td class="z">0%</td>
     <td class="z">${rBetrag(p.preis)}</td><td class="z">${rBetrag(p.menge * p.preis)}</td></tr>`).join('')}</tbody></table>
   <div class="summe"><span>Gesamt</span><span>€ ${rBetrag(r.gesamt)}</span></div>
-  <div class="texte"><p>${RECHNUNG_19}</p>${r.hinweis ? '<p>' + zeilen(r.hinweis) + '</p>' : ''}${r.seriennummern && !(r.positionen || []).some(p => /MK-\d{4}-\d{3,}/.test(p.text)) ? '<p>' + rEsc(r.seriennummern) + '</p>' : ''}</div>
+  <div class="texte"><p>${RECHNUNG_19}</p>${r.hinweis ? '<p>' + zeilen(r.hinweis) + '</p>' : ''}${r.seriennummern && !(r.positionen || []).some(p => /MK-\d{4}-\d{3,}/.test(p.text)) ? '<p>' + esc(r.seriennummern) + '</p>' : ''}</div>
   <div class="fuss">
     ${fuss(a.name, [a.strasse, a.ort, a.ustid ? 'USt-ID: ' + a.ustid : '', a.inhaber ? 'Inhaber: ' + a.inhaber : ''])}
     ${fuss('Kontakt', [a.telefon ? 'Telefon: ' + a.telefon : '', a.email ? 'E-Mail: ' + a.email : ''])}

@@ -4,23 +4,25 @@
 // ============================================================
 // GALERIE
 // ============================================================
+// Alle Werte entschärft (esc): ein " oder < in Name/Dateiname darf das Formular nicht zerbrechen.
 function renderGalerie() {
-  const clName = localStorage.getItem('mkw_cl_name') || 'dw6amyijc';
+  const clName = esc(localStorage.getItem('mkw_cl_name') || 'dw6amyijc');
+  const e = esc;
   const list = document.getElementById('galerieList');
   list.innerHTML = currentGalerie.map((item, i) => `
     <div class="galerie-item" id="galerieItem_${i}">
       <img class="galerie-thumb"
-        src="https://res.cloudinary.com/${clName}/image/upload/${item.datei}.jpg"
-        alt="${item.name}"
+        src="https://res.cloudinary.com/${clName}/image/upload/${e(item.datei)}.jpg"
+        alt="${e(item.name)}"
         onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\'><rect width=\'60\' height=\'60\' fill=\'%23e6e2dc\'/></svg>'">
       <div class="galerie-fields">
-        <input type="text" placeholder="Dateiname (z.B. bonnie)" value="${item.datei}"
+        <input type="text" placeholder="Dateiname (z.B. bonnie)" value="${e(item.datei)}"
           onchange="updateGalerieItem(${i}, 'datei', this.value)">
-        <input type="text" placeholder="Name (z.B. Bonnie)" value="${item.name}"
+        <input type="text" placeholder="Name (z.B. Bonnie)" value="${e(item.name)}"
           onchange="updateGalerieItem(${i}, 'name', this.value)">
-        <input type="text" placeholder="Rasse (z.B. Dackel)" value="${item.rasse || ''}"
+        <input type="text" placeholder="Rasse (z.B. Dackel)" value="${e(item.rasse)}"
           onchange="updateGalerieItem(${i}, 'rasse', this.value)">
-        <input type="text" placeholder="Krone (z.B. Party · Rosa)" value="${item.krone || ''}"
+        <input type="text" placeholder="Krone (z.B. Party · Rosa)" value="${e(item.krone)}"
           onchange="updateGalerieItem(${i}, 'krone', this.value)">
       </div>
       <button class="galerie-del" onclick="deleteGalerieItem(${i})">🗑️</button>

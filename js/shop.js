@@ -972,39 +972,7 @@ function updatePreview() {
 }
 
 function initConfigurator() {
-  // Variante
-  document.querySelectorAll('[data-v]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-v]').forEach(b => b.classList.remove('on'));
-      btn.classList.add('on');
-      state.variant = btn.dataset.v;
-      renderColorChips(state.variant);
-      updatePreview();
-    });
-  });
-
-  // Farbe (event delegation – Chips sind dynamisch)
-  document.getElementById('colorChips').addEventListener('click', e => {
-    const chip = e.target.closest('[data-c]');
-    if (!chip) return;
-    document.querySelectorAll('[data-c]').forEach(b => b.classList.remove('on'));
-    chip.classList.add('on');
-    state.color = chip.dataset.c;
-    state.bg    = chip.dataset.bg;
-    state.sc    = chip.dataset.sc;
-    state.dot   = chip.dataset.dot;
-    updatePreview();
-  });
-
-  // Grösse
-  document.querySelectorAll('[data-s]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-s]').forEach(b => b.classList.remove('on'));
-      btn.classList.add('on');
-      state.size = btn.dataset.s;
-      updatePreview(); // Preis aktualisieren
-    });
-  });
+  // Krone, Farbe und Grösse wählen die Knöpfe selbst (onclick="selectV/selectC/selectS") – hier keine zweiten Listener.
 
   // Personalisierung
   const nameInput = document.getElementById('nIn');
