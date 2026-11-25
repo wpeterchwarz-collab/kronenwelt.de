@@ -3,7 +3,8 @@ name: Google-Produktdatei und Unterseiten aktualisieren
 # Erzeugt neu, sobald sich Katalog, Fotos oder Seitentexte ändern
 # (z.B. wenn Sara im Admin Preise anpasst):
 #   - merchant-feed.xml (Produktdatei für Google)
-#   - die Unterseiten, die Produktkarten in index.html und sitemap.xml (scripts/seiten.js)
+#   - die Unterseiten, die Produktkarten in index.html, sitemap.xml und
+#     js/katalog-notfall.js (Notfall-Katalog des Shops) (scripts/seiten.js)
 on:
   push:
     branches: [main]

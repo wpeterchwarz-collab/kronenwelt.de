@@ -2,6 +2,7 @@
 //   1. die Unterseiten (z. B. zahlenkrone-hund.html) aus vorlagen/unterseite.html
 //   2. die Produktkarten und Seitenlinks in index.html (zwischen den ERZEUGT-Markierungen)
 //   3. sitemap.xml
+//   4. js/katalog-notfall.js – Kopie von katalog.json für den Shop, falls katalog.json nicht lädt
 // Preise, Fotos, Farben und Größen stehen danach fest im HTML – gut für Google, kein JavaScript nötig.
 // Läuft automatisch per GitHub Action, sobald sich katalog.json oder seiten.json ändert.
 //
@@ -243,8 +244,22 @@ function startseite(html, daten) {
   html = ersetzeBereich(html, 'MEHR', seiten.length
     ? `  <p class="mehr-seiten">Mehr erfahren: ${seiten.map(s => `<a href="${esc(s.datei)}">${esc(s.linkText || s.h1)}</a>`).join(' · ')}</p>` : '');
   html = ersetzeBereich(html, 'SEITENLINKS', seitenLinksHtml(seiten, null));
+  // Versionsnummer = Prüfsumme des Inhalts → Browser holen die Datei neu, sobald sich der Katalog ändert
+  html = ersetzeBereich(html, 'NOTFALL', `<script src="js/katalog-notfall.js?v=${kurzHash(notfallKatalog(katalog))}"></script>`);
   return html;
 }
+
+/* ---------- Notfall-Katalog für den Shop (js/katalog-notfall.js) ----------
+   Gleiche Daten wie katalog.json, nur ohne Erklärungen (_info) und Google-Texte, die der Shop nicht braucht. */
+function notfallKatalog(katalog) {
+  const k = JSON.parse(JSON.stringify(katalog));
+  delete k._info;
+  (k.produkte || []).forEach(p => { if (p.texte) { delete p.texte.googleTitel; delete p.texte.googleText; } });
+  return '// ERZEUGT aus katalog.json von scripts/seiten.js – nicht von Hand ändern.\n'
+    + '// Notfall-Stand für den Shop (js/shop.js), falls katalog.json nicht geladen werden kann.\n'
+    + 'const KATALOG_NOTFALL = ' + JSON.stringify(k) + ';\n';
+}
+const kurzHash = t => require('crypto').createHash('sha1').update(t).digest('hex').slice(0, 8);
 
 function sitemap(seiten) {
   const urls = [SHOP, ...seiten.map(s => SHOP + s.datei), ...FESTE_SEITEN.map(d => SHOP + d)];
@@ -270,6 +285,7 @@ function erzeuge() {
   });
   dateien['index.html'] = startseite(lies('index.html'), daten);
   dateien['sitemap.xml'] = sitemap(daten.seiten);
+  dateien['js/katalog-notfall.js'] = notfallKatalog(katalog);
   return dateien;
 }
 
